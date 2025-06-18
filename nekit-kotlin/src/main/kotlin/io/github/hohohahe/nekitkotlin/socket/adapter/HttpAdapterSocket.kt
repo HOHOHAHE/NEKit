@@ -172,8 +172,8 @@ class HttpAdapterSocket(
     override fun close() {
         logger.debug { "Closing HttpAdapterSocket for proxy $proxyHost:${proxyPort.value}, target ${targetSession?.host}" }
         _isReady.value = false
-        if (rawTcpSocket.isOpen) {
-            rawTcpSocket.close()
-        }
+        // Always attempt to close the underlying socket,
+        // its implementation should handle being closed multiple times or if not open.
+        rawTcpSocket.close()
     }
 }

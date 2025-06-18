@@ -23,11 +23,10 @@ class HttpAdapterSocketTest {
 
     @BeforeEach
     fun setUp() {
-        mockRawSocket = mockk<RawTcpSocket>(relaxed = true)
-        coEvery { mockRawSocket.isOpen } returns true
-        coEvery { mockRawSocket.connect(any(), any()) } just runs
-        coEvery { mockRawSocket.write(any()) } returns 0 // Placeholder, actual size should be returned
-        coEvery { mockRawSocket.close() } just runs
+        mockRawSocket = mockk<RawTcpSocket>(relaxed = true) // Keep it relaxed
+        // General mocks, will be overridden by tests if specific behavior is needed for isOpen or connect
+        coEvery { mockRawSocket.write(any()) } returns 0
+        coEvery { mockRawSocket.close() } just Runs
     }
 
     private fun prepareReadResponse(response: String) {
@@ -65,6 +64,11 @@ class HttpAdapterSocketTest {
 
     @Test
     fun `openSocket successfully connects and handshakes`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state: not open
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // After connect, it's open
+        }
+
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
 
@@ -73,11 +77,11 @@ class HttpAdapterSocketTest {
 
         coEvery { mockRawSocket.write(any()) } coAnswers {
             val buffer = firstArg<ByteBuffer>()
-            // Verify CONNECT request format (basic check)
             val requestString = StandardCharsets.US_ASCII.decode(buffer).toString()
             assertTrue(requestString.startsWith("CONNECT target.example.com:443 HTTP/1.1"))
             assertTrue(requestString.contains("Host: target.example.com:443"))
-            buffer.limit() // Simulate all bytes written
+            buffer.position(buffer.limit()) // Simulate all bytes written by advancing position
+            requestString.length
         }
 
         adapter.openSocket(targetSession)
@@ -87,9 +91,16 @@ class HttpAdapterSocketTest {
 
     @Test
     fun `openSocket handles multi-chunk proxy response`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // After connect
+        }
+
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(80))
         prepareReadResponseChunks(listOf("HTTP/1.1 200 OK\r\n", "Proxy-Agent: TestProxy\r\n", "\r\n"))
+        coEvery { mockRawSocket.write(any()) } coAnswers { firstArg<ByteBuffer>().limit() }
+
 
         adapter.openSocket(targetSession)
         assertTrue(adapter.isReady.value)
@@ -98,6 +109,13 @@ class HttpAdapterSocketTest {
 
     @Test
     fun `openSocket throws if proxy returns non-200 status`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // After connect
+        }
+        coEvery { mockRawSocket.write(any()) } coAnswers { firstArg<ByteBuffer>().limit() }
+
+
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
 
@@ -105,17 +123,20 @@ class HttpAdapterSocketTest {
         prepareReadResponse(proxyResponse)
 
         assertThrows(IOException::class.java) {
-            runBlocking { // Needed for suspend function call within assertThrows
+            runBlocking {
                  adapter.openSocket(targetSession)
             }
         }
         assertFalse(adapter.isReady.value)
-        coVerify { mockRawSocket.close() } // Should close on failure
+        coVerify { mockRawSocket.close() }
     }
 
     @Test
     fun `openSocket throws on connection failure to proxy`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state
         coEvery { mockRawSocket.connect(proxyHost, proxyPort) } throws IOException("Connection refused")
+        // isOpen remains false because connect failed
+
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
 
@@ -125,5 +146,8 @@ class HttpAdapterSocketTest {
             }
         }
         assertFalse(adapter.isReady.value)
+        // Depending on HttpAdapterSocket's error handling, close might be called on the raw socket
+        // In the current implementation of HttpAdapterSocket, close() is called in the catch block.
+        coVerify { mockRawSocket.close() }
     }
 }

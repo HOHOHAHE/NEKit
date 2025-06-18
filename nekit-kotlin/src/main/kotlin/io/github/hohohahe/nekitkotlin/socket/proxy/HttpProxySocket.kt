@@ -59,9 +59,17 @@ class HttpProxySocket(private val clientSocket: RawTcpSocket) : ProxySocket {
             readAndParseHttpRequest()
         } catch (e: Exception) {
             logger.error(e) { "Failed to handle HTTP proxy request from ${remoteAddress}" }
-            respondToFailure("Error parsing request: ${e.message}")
-            connectSessionChannel.close(e) // Close channel with error
-            close()
+            // Ensure channel is closed with the specific exception *before* sending a generic response
+            if (!connectSessionChannel.isClosedForSend) {
+                connectSessionChannel.close(e)
+            }
+            respondToFailure("Error parsing request: ${e.message}") // This will attempt to send a response
+            // close() is already called by respondToFailure -> respondWithStatusCode's (previous) finally block,
+            // but it's better to be explicit here if respondWithStatusCode is changed.
+            // If respondWithStatusCode no longer closes, this close() is essential.
+            if (isOpen) { // Check if still open, as respondToFailure might have closed it
+                close()
+            }
         }
     }
 
@@ -207,10 +215,12 @@ class HttpProxySocket(private val clientSocket: RawTcpSocket) : ProxySocket {
             }
         } catch (e: Exception) {
             logger.error(e) { "Failed to send HTTP $code $message to ${remoteAddress}" }
-        } finally {
-             // Consider closing the connection after sending an error response.
-            close()
+            // The caller should decide if the socket needs to be closed based on the error.
+            // For instance, if sending a 405, we might keep the connection open,
+            // but for a 502 after a critical failure, we'd close.
+            // The original logic in handleIncomingConnection's catch block handles the close.
         }
+        // Removed close() from here; it should be handled by the calling context (e.g., error handler in handleIncomingConnection)
     }
 
 

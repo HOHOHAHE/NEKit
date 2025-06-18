@@ -27,8 +27,8 @@ class Socks5AdapterSocketTest {
     fun setUp() {
         mockRawSocket = mockk<RawTcpSocket>(relaxed = true)
         capturedWrites.clear()
-        coEvery { mockRawSocket.isOpen } returns true
-        coEvery { mockRawSocket.connect(any(), any()) } just runs
+        // coEvery { mockRawSocket.isOpen } returns true // REMOVED - To be set by each test
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } just Runs // General case, can be overridden
         coEvery { mockRawSocket.write(any()) } coAnswers {
             val buffer = firstArg<ByteBuffer>()
             val bytes = ByteArray(buffer.remaining())
@@ -60,6 +60,11 @@ class Socks5AdapterSocketTest {
 
     @Test
     fun `openSocket successfully handshakes and connects (IPv4)`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state for this test
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // State after successful connect
+        }
+
         val adapter = Socks5AdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("1.2.3.4", Port(80)) // Target is IPv4
 
@@ -86,6 +91,11 @@ class Socks5AdapterSocketTest {
 
     @Test
     fun `openSocket successfully handshakes and connects (Domain)`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state for this test
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // State after successful connect
+        }
+
         val adapter = Socks5AdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetHost = "domain.example"
         val targetPort = Port(443)
@@ -114,6 +124,11 @@ class Socks5AdapterSocketTest {
 
     @Test
     fun `openSocket throws if handshake fails (no acceptable methods)`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state for this test
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // Connects, but handshake will fail
+        }
+
         val adapter = Socks5AdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
         // Proxy handshake response: VER=5, METHOD=NO_ACCEPTABLE_METHODS
@@ -130,6 +145,11 @@ class Socks5AdapterSocketTest {
 
     @Test
     fun `openSocket throws if connect reply is failure`() = runTest {
+        coEvery { mockRawSocket.isOpen } returns false // Initial state for this test
+        coEvery { mockRawSocket.connect(proxyHost, proxyPort) } coAnswers {
+            coEvery { mockRawSocket.isOpen } returns true // Connects, but SOCKS reply will be failure
+        }
+
         val adapter = Socks5AdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
 

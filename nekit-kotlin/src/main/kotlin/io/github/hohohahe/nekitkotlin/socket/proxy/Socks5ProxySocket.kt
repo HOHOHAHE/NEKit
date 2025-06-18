@@ -63,10 +63,16 @@ class Socks5ProxySocket(private val clientSocket: RawTcpSocket) : ProxySocket {
             // Try to send a failure reply if possible, depending on where the error occurred.
             // If handshake failed early, client might not expect a SOCKS5 reply.
             if (e is Socks5ErrorReplyException) {
-                 try {
-                    sendReply(e.replyCode, null, null) // Use the specific reply code from the exception
-                } catch (replyEx: Exception) {
-                    logger.error(replyEx) {"Failed to send SOCKS5 error reply"}
+                // If the specific error is METHOD_NO_ACCEPTABLE_METHODS,
+                // it's assumed performHandshake already sent the [0x05, 0xFF] reply.
+                if (e.replyCode != METHOD_NO_ACCEPTABLE_METHODS) {
+                    try {
+                        sendReply(e.replyCode, null, null) // Use the specific reply code from the exception
+                    } catch (replyEx: Exception) {
+                        logger.error(replyEx) {"Failed to send SOCKS5 error reply"}
+                    }
+                } else {
+                    logger.debug { "SOCKS5: METHOD_NO_ACCEPTABLE_METHODS reply already sent by performHandshake. Suppressing duplicate send." }
                 }
             } else if (clientSocket.isOpen) {
                 // Generic failure if not a specific SOCKS error

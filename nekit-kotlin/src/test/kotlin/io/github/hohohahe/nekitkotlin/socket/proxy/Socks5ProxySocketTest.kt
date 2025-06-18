@@ -211,11 +211,8 @@ class Socks5ProxySocketTest {
                 0x00, // REP_SUCCEEDED
                 0x00, // RSV
                 0x01, // ATYP_IPV4
-                // IP address bytes for 0.0.0.0 (as localAddress is not an InetSocketAddress to get port)
-                // Or, if localAddress was parseable and its type was IPv4:
-                // 192.toByte(), 168.toByte(), 1.toByte(), 100.toByte(),
-                // For now, the default bound address is 0.0.0.0, port 0 due to simplified mocking
-                0,0,0,0, // Simplified BND.ADDR (0.0.0.0)
+                // IP address bytes for 192.168.1.100, as per mockClientSocket.localAddress
+                192.toByte(), 168.toByte(), 1.toByte(), 100.toByte(), // BND.ADDR (192.168.1.100)
                 0,0   // Simplified BND.PORT (0)
             ),
             // The actual reply might differ slightly if localAddress is more detailed in a real scenario.
@@ -227,9 +224,9 @@ class Socks5ProxySocketTest {
          assertEquals(0x00.toByte(), reply[1]) // REP_SUCCEEDED
          assertEquals(0x00.toByte(), reply[2]) // RSV
          // ATYP and BND.ADDR/PORT depend on how sendReply resolves them.
-         // Given the current mock, it will likely default to ATYP_IPV4 and 0.0.0.0:0
+         // Given the current mock, it will likely default to ATYP_IPV4 and 192.168.1.100:0
          assertEquals(0x01.toByte(), reply[3]) // ATYP_IPV4 (default)
-         assertArrayEquals(byteArrayOf(0,0,0,0), reply.sliceArray(4..7)) // BND.ADDR (0.0.0.0)
+         assertArrayEquals(byteArrayOf(192.toByte(), 168.toByte(), 1.toByte(), 100.toByte()), reply.sliceArray(4..7)) // BND.ADDR (192.168.1.100)
          assertArrayEquals(byteArrayOf(0,0), reply.sliceArray(8..9))   // BND.PORT (0)
     }
 }

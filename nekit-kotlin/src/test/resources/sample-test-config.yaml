@@ -1,0 +1,30 @@
+# Sample Test Configuration for Nekit-Kotlin
+
+servers:
+  - port: 19080
+    type: "SOCKS5"
+  - port: 19081
+    type: "HTTP"
+
+rules:
+  - type: "DomainList"
+    domains:
+      - "test.com"
+      - ".nekitempty.org"
+    matcher: "Suffix"
+    adapter:
+      type: "Direct"
+
+  - type: "Direct" # A direct rule
+    adapter:
+      type: "HTTP" # Using an HTTP adapter for this direct rule
+      host: "proxy.example.com"
+      port: 8000
+      auth:
+        username: "testuser"
+        password: "testpassword"
+
+defaultAdapter:
+  type: "SOCKS5"
+  host: "default.socks.proxy"
+  port: 1080

@@ -4,10 +4,10 @@ import io.github.hohohahe.nekitkotlin.core.ConnectSession
 import io.github.hohohahe.nekitkotlin.core.IpAddress
 import io.github.hohohahe.nekitkotlin.core.Port
 // Import RuleManager and related classes
-import io.github.hohohahe.nekitkotlin.rule.DirectRule
+import io.github.hohohahe.nekitkotlin.rule.AllRule // Import AllRule
 import io.github.hohohahe.nekitkotlin.rule.RuleManager
 import io.github.hohohahe.nekitkotlin.socket.adapter.AdapterSocket // Keep this for type casting if needed
-import io.github.hohohahe.nekitkotlin.socket.adapter.DirectAdapterSocket
+import io.github.hohohahe.nekitkotlin.socket.adapter.factory.DirectAdapterFactory // Import DirectAdapterFactory
 import io.github.hohohahe.nekitkotlin.socket.proxy.DummyProxySocket
 import io.github.hohohahe.nekitkotlin.socket.raw.NettyRawTcpSocket
 import io.github.hohohahe.nekitkotlin.socket.raw.RawTcpSocket // For mock
@@ -76,7 +76,7 @@ class TunnelDirectPathTest {
         serverEventLoopGroup.shutdownGracefully().syncUninterruptibly()
         logger.info { "TestEchoServer stopped." }
     }
-
+    
     @BeforeEach
     fun setupClientGroup() {
          clientEventLoopGroup = NioEventLoopGroup(1)
@@ -128,13 +128,13 @@ class TunnelDirectPathTest {
         }
 
         val proxySocket = DummyProxySocket(targetSession, mockClientRawSocket)
-
+        
         // Setup RuleManager with a DirectRule
-        val ruleManager = RuleManager(listOf(DirectRule()))
+        val ruleManager = RuleManager(listOf(AllRule(DirectAdapterFactory())))
 
         val tunnelScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         // AdapterSocket will now be created by the Tunnel via RuleManager
-        val tunnel = Tunnel(tunnelScope, proxySocket, ruleManager)
+        val tunnel = Tunnel(tunnelScope, proxySocket, ruleManager) 
 
         val tunnelJob = launch {
             tunnel.openAndRelay()
@@ -150,7 +150,7 @@ class TunnelDirectPathTest {
 
         val messageToEcho = "Hello RuleManager Tunnel!"
         val clientMessageBuffer = ByteBuffer.wrap(messageToEcho.toByteArray(StandardCharsets.UTF_8))
-
+        
         logger.debug { "Test: Sending message '$messageToEcho' from mock client to tunnel." }
         clientToServerChannel.send(clientMessageBuffer)
 

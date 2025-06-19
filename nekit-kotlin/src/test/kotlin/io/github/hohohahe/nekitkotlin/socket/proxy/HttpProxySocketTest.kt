@@ -45,16 +45,16 @@ class HttpProxySocketTest {
             len
         }
     }
-
+    
     private fun prepareSocketReadChunks(chunks: List<String>) {
         val chunkQueue = ArrayDeque(chunks.map { ByteBuffer.wrap(it.toByteArray(StandardCharsets.US_ASCII)) })
-
+        
         coEvery { mockClientSocket.read(any()) } coAnswers {
             val buffer = firstArg<ByteBuffer>() // The buffer provided by HttpProxySocket
             if (chunkQueue.isEmpty()) return@coAnswers -1 // EOF if no more chunks
 
             val currentChunk = chunkQueue.first() // Peek the current chunk
-
+            
             val bytesToRead = minOf(buffer.remaining(), currentChunk.remaining())
             if (bytesToRead == 0 && currentChunk.hasRemaining()) { // Buffer full but chunk still has data
                 return@coAnswers 0 // Indicate buffer is full, can't read more now
@@ -89,15 +89,15 @@ class HttpProxySocketTest {
         val job = launch { httpProxySocket.handleIncomingConnection() }
 
         val session = withTimeoutOrNull(1000) { httpProxySocket.getConnectSession().first() }
-
+        
         assertNotNull(session)
         assertEquals("example.com", session!!.host)
         assertEquals(Port(443), session.port)
-
+        
         job.join() // Ensure handler completes
         coVerify { mockClientSocket.close() wasNot Called } // Should not close on success yet
     }
-
+    
     @Test
     fun `getConnectSession parses valid HTTP CONNECT request in chunks`() = runTest {
         val chunks = listOf(
@@ -111,7 +111,7 @@ class HttpProxySocketTest {
         val httpProxySocket = HttpProxySocket(mockClientSocket)
         val job = launch { httpProxySocket.handleIncomingConnection() }
         val session = withTimeoutOrNull(1000) { httpProxySocket.getConnectSession().first() }
-
+        
         assertNotNull(session)
         assertEquals("example.com", session!!.host)
         assertEquals(Port(80), session.port)
@@ -130,7 +130,7 @@ class HttpProxySocketTest {
             try {
                 httpProxySocket.handleIncomingConnection()
                 // We expect an exception, so flow should not emit normally
-                httpProxySocket.getConnectSession().first()
+                httpProxySocket.getConnectSession().first() 
             } catch (e: IOException) {
                 if (e.message?.contains("Unsupported HTTP method") == true) {
                     exceptionThrown = true
@@ -147,7 +147,7 @@ class HttpProxySocketTest {
         }) }
         coVerify { mockClientSocket.close() } // Should close after sending error
     }
-
+    
     @Test
     fun `handleIncomingConnection throws for malformed CONNECT target`() = runTest {
         val request = "CONNECT example.com HTTP/1.1\r\nHost: example.com\r\n\r\n" // Missing port
@@ -166,7 +166,7 @@ class HttpProxySocketTest {
             }
         }
         job.join()
-
+        
         assertTrue(exceptionThrown, "IOException for malformed CONNECT target should be thrown")
         coVerify { mockClientSocket.write(match { byteBuffer -> // Should send a 502 or similar
             val responseString = String(byteBuffer.array(), byteBuffer.arrayOffset(), byteBuffer.remaining(), StandardCharsets.US_ASCII)
@@ -197,7 +197,7 @@ class HttpProxySocketTest {
         })}
          coVerify { mockClientSocket.close() } // Failure response should also close
     }
-
+    
     @Test
     fun `closes socket if read fails during header parsing`() = runTest {
         coEvery { mockClientSocket.read(any()) } returns -1 // Simulate immediate EOF
@@ -207,7 +207,7 @@ class HttpProxySocketTest {
         val job = launch {
             try {
                 httpProxySocket.handleIncomingConnection()
-                httpProxySocket.getConnectSession().first()
+                httpProxySocket.getConnectSession().first() 
             } catch (e: IOException) {
                  if (e.message?.contains("Connection closed by client") == true) {
                     exceptionThrown = true

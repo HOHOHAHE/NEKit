@@ -42,7 +42,7 @@ class Socks5ProxySocketTest {
             bytes.size
         }
     }
-
+    
     // Helper to simulate sequential reads from the client
     private fun prepareSocketReads(vararg byteArrays: ByteArray) {
         val readQueue = ArrayDeque(byteArrays.map { ByteBuffer.wrap(it) })
@@ -52,7 +52,7 @@ class Socks5ProxySocketTest {
 
             val currentSourceBuffer = readQueue.first()
             val bytesToCopy = minOf(buffer.remaining(), currentSourceBuffer.remaining())
-
+            
             if (bytesToCopy > 0) {
                 val temp = ByteArray(bytesToCopy)
                 currentSourceBuffer.get(temp)
@@ -90,7 +90,7 @@ class Socks5ProxySocketTest {
 
         assertEquals(1, capturedWrites.size, "Should have written 1 reply (handshake response)")
         assertArrayEquals(byteArrayOf(0x05, 0x00), capturedWrites[0], "Handshake response should select NO_AUTH")
-
+        
         coVerify { socksSocket.respondToSuccess() wasNot Called } // respondToSuccess is called by Tunnel
     }
 
@@ -118,7 +118,7 @@ class Socks5ProxySocketTest {
         assertEquals(1, capturedWrites.size)
         assertArrayEquals(byteArrayOf(0x05, 0x00), capturedWrites[0])
     }
-
+    
     @Test
     fun `handshake fails if no acceptable auth method`() = runTest {
         // Client: VER=5, NMETHODS=1, METHODS=[USERNAME_PASSWORD (0x02)] - we don't support this
@@ -153,7 +153,7 @@ class Socks5ProxySocketTest {
         // Client: VER=5, CMD=BIND (0x02), RSV=0, ATYP=IPV4, ...
         val clientRequest = byteArrayOf(0x05, 0x02, 0x00, 0x01, 1, 2, 3, 4, 0, 80)
         prepareSocketReads(clientHandshake, clientRequest)
-
+        
         val socksSocket = Socks5ProxySocket(mockClientSocket)
         var exceptionThrown = false
         val job = launch {
@@ -180,13 +180,13 @@ class Socks5ProxySocketTest {
         // Let's check the captured writes.
         // 1. Handshake response: [0x05, 0x00]
         // 2. Failure response from handleIncomingConnection (after request parsing fails)
-        assertEquals(2, capturedWrites.size)
+        assertEquals(2, capturedWrites.size) 
         assertArrayEquals(byteArrayOf(0x05, 0x00), capturedWrites[0]) // Handshake OK
-
+        
         val failureReply = capturedWrites[1]
         assertEquals(0x05.toByte(), failureReply[0], "Failure reply VER") // VER
         assertEquals(0x01.toByte(), failureReply[1], "Failure reply REP (General Failure)") // REP (General Failure)
-
+        
         coVerify { mockClientSocket.close() }
     }
 
@@ -213,7 +213,7 @@ class Socks5ProxySocketTest {
                 0x01, // ATYP_IPV4
                 // IP address bytes for 0.0.0.0 (as localAddress is not an InetSocketAddress to get port)
                 // Or, if localAddress was parseable and its type was IPv4:
-                // 192.toByte(), 168.toByte(), 1.toByte(), 100.toByte(),
+                // 192.toByte(), 168.toByte(), 1.toByte(), 100.toByte(), 
                 // For now, the default bound address is 0.0.0.0, port 0 due to simplified mocking
                 0,0,0,0, // Simplified BND.ADDR (0.0.0.0)
                 0,0   // Simplified BND.PORT (0)

@@ -36,7 +36,7 @@ class RuleManagerTest {
         val session = ConnectSession("example.com", Port(80))
         val rule1 = MockRule(matches = false, null)
         val rule2 = MockRule(matches = false, null)
-
+        
         val defaultFactory = DirectAdapterFactory()
         val ruleManager = RuleManager(listOf(rule1, rule2), defaultAdapterFactory = defaultFactory)
         val resultFactory = ruleManager.match(session)
@@ -51,7 +51,7 @@ class RuleManagerTest {
 
         val ruleManager = RuleManager(listOf(rule1)) // No explicit default factory
         val resultFactory = ruleManager.match(session)
-
+        
         assertInstanceOf(DirectAdapterFactory::class.java, resultFactory, "Should use internal DirectAdapterFactory if no default is provided and no rules match")
     }
 }

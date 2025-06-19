@@ -21,15 +21,16 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("io.netty:netty-handler:4.1.100.Final")
     implementation("io.netty:netty-codec:4.1.100.Final")
-    implementation("io.netty:netty-codec-http:4.1.100.Final") // <--- ADD THIS LINE
+        implementation("io.netty:netty-codec-http:4.1.100.Final")
     implementation("io.netty:netty-transport:4.1.100.Final")
-    // implementation("io.netty:netty-transport-native-epoll:4.1.100.Final:linux-x86_64")
 
-    // Logging
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
     implementation("org.slf4j:slf4j-api:2.0.9")
     implementation("ch.qos.logback:logback-classic:1.4.11")
 
+        // Jackson for YAML Configuration
+        implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3") 
+        implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.3") // For YAML
 
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
@@ -43,14 +44,14 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         // Set main compilation JVM target to 1.8 if that's the library's target
         // If the library itself can be 11, then this can be 11 too.
         // For broad compatibility, libraries often target 1.8.
-        jvmTarget = "1.8"
+        jvmTarget = "1.8" 
         freeCompilerArgs = freeCompilerArgs + "-Xjvm-default=all-compatibility"
     }
 }
 
 tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlin") {
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "11" 
     }
 }
 

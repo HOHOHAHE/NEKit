@@ -43,7 +43,7 @@ class HttpAdapterSocketTest {
             }
         }
     }
-
+    
     private fun prepareReadResponseChunks(chunks: List<String>) {
         val chunkQueue = ArrayDeque(chunks.map { ByteBuffer.wrap(it.toByteArray(StandardCharsets.US_ASCII)) })
         coEvery { mockRawSocket.read(any()) } coAnswers {
@@ -67,10 +67,10 @@ class HttpAdapterSocketTest {
     fun `openSocket successfully connects and handshakes`() = runTest {
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
-
+        
         val proxyResponse = "HTTP/1.1 200 Connection Established\r\n\r\n"
         prepareReadResponse(proxyResponse)
-
+        
         coEvery { mockRawSocket.write(any()) } coAnswers {
             val buffer = firstArg<ByteBuffer>()
             // Verify CONNECT request format (basic check)
@@ -84,7 +84,7 @@ class HttpAdapterSocketTest {
         assertTrue(adapter.isReady.value)
         coVerify { mockRawSocket.connect(proxyHost, proxyPort) }
     }
-
+    
     @Test
     fun `openSocket handles multi-chunk proxy response`() = runTest {
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
@@ -100,7 +100,7 @@ class HttpAdapterSocketTest {
     fun `openSocket throws if proxy returns non-200 status`() = runTest {
         val adapter = HttpAdapterSocket(proxyHost, proxyPort, mockRawSocket)
         val targetSession = ConnectSession("target.example.com", Port(443))
-
+        
         val proxyResponse = "HTTP/1.1 503 Service Unavailable\r\n\r\n"
         prepareReadResponse(proxyResponse)
 

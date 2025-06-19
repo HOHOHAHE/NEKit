@@ -1,8 +1,9 @@
 package io.github.hohohahe.nekitkotlin.proxyserver
 
 import io.github.hohohahe.nekitkotlin.core.Port
-import io.github.hohohahe.nekitkotlin.rule.DirectRule
+import io.github.hohohahe.nekitkotlin.rule.AllRule // Import AllRule
 import io.github.hohohahe.nekitkotlin.rule.RuleManager
+import io.github.hohohahe.nekitkotlin.socket.adapter.factory.DirectAdapterFactory // Import DirectAdapterFactory
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
@@ -43,7 +44,7 @@ class NettyProxyServerIntegrationTest {
     private val targetServerPort = Port(18088) // Different from proxy port
     private lateinit var targetServerBossGroup: NioEventLoopGroup
     private lateinit var targetServerWorkerGroup: NioEventLoopGroup
-
+    
     private var proxyServer: NettyProxyServer? = null
     private val proxyPort = Port(18089)
     private lateinit var proxyBossGroup: NioEventLoopGroup
@@ -87,7 +88,7 @@ class NettyProxyServerIntegrationTest {
         targetServerWorkerGroup.shutdownGracefully().syncUninterruptibly()
         logger.info { "TestTargetServer stopped." }
     }
-
+    
     @BeforeEach
     fun setupProxyGroups() {
         proxyBossGroup = NioEventLoopGroup(1)
@@ -107,11 +108,11 @@ class NettyProxyServerIntegrationTest {
     @Test
     @Disabled("This test uses actual HTTP client and might be flaky or require specific setup")
     fun `HTTP proxy successfully relays GET request via curl or Java HTTP client`() = runTest(timeout = 20.seconds) {
-        val ruleManager = RuleManager(listOf(DirectRule())) // All traffic direct
+        val ruleManager = RuleManager(listOf(AllRule(DirectAdapterFactory()))) // All traffic direct via AllRule
         proxyServer = NettyProxyServer(proxyPort, ProxyType.HTTP, ruleManager, proxyBossGroup, proxyWorkerGroup)
-
+        
         launch { proxyServer!!.start() } // Start server in a separate coroutine
-
+        
         // Wait for server to start - needs a better mechanism
         var attempts = 0
         while (attempts < 100 && proxyServer?.isRunning() != true) {
@@ -137,7 +138,7 @@ class NettyProxyServerIntegrationTest {
             connection.requestMethod = "GET"
             connection.connectTimeout = 5000
             connection.readTimeout = 5000
-
+            
             withContext(Dispatchers.IO) {
                 statusCode = connection.responseCode
                 if (statusCode == HttpURLConnection.HTTP_OK) {
@@ -161,7 +162,7 @@ class NettyProxyServerIntegrationTest {
             logger.error(e) { "Exception during HTTP client request via proxy" }
             Assertions.fail("HTTP client request via proxy failed: ${e.message}", e)
         }
-
+        
         Assertions.assertEquals(HttpURLConnection.HTTP_OK, statusCode, "Status code should be 200 OK. Response: $responseContent")
         Assertions.assertEquals("Hello from target server!", responseContent, "Response content should match target server's response.")
     }

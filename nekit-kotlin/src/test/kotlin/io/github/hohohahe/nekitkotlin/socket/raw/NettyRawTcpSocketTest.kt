@@ -93,7 +93,7 @@ class NettyRawTcpSocketTest {
 
                 val tempReadBuffer = ByteBuffer.allocate(32)
                 // Attempt to read the echo. It might be empty if the server closes fast.
-                socket.read(tempReadBuffer)
+                socket.read(tempReadBuffer) 
 
                 // Close the socket from our side to ensure EOF on subsequent reads
                 socket.close()

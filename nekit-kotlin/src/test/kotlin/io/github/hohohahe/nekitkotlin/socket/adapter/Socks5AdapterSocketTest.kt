@@ -38,7 +38,7 @@ class Socks5AdapterSocketTest {
         }
         coEvery { mockRawSocket.close() } just runs
     }
-
+    
     private fun prepareReadSequence(vararg byteArrays: ByteArray) {
         val readQueue = ArrayDeque(byteArrays.map { ByteBuffer.wrap(it) })
         coEvery { mockRawSocket.read(any()) } coAnswers {
@@ -100,7 +100,7 @@ class Socks5AdapterSocketTest {
 
         assertEquals(2, capturedWrites.size)
         assertArrayEquals(byteArrayOf(0x05, 0x01, 0x00), capturedWrites[0]) // Handshake
-
+        
         val domainBytes = targetHost.toByteArray()
         val expectedConnectRequest = ByteArrayOutputStream().apply {
             write(byteArrayOf(0x05, 0x01, 0x00, 0x03)) // VER, CMD, RSV, ATYP_DOMAIN

@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.0" // Using a recent Kotlin version
+    kotlin("jvm") version "1.9.20" // Upgrading Kotlin to support JVM 21
     application // For setting mainClassName and creating distributions if needed
 }
 
@@ -50,7 +50,7 @@ dependencies {
 sourceSets {
     main {
         kotlin {
-            setSrcDirs(listOf("src_kt/Utils")) // Temporarily focus on Utils
+            srcDir("src_kt") // Include all Kotlin source files under src_kt
             // To revert, use: srcDir("src_kt")
         }
         resources {
@@ -71,7 +71,7 @@ sourceSets {
 // Configure Kotlin compilation options
 tasks.withType<KotlinCompile> {
     kotlinOptions {
-        jvmTarget = "11" // Or "1.8", "17", etc., depending on project requirements
+        jvmTarget = "21" // Setting JVM target to 21 to match user's Java version
         freeCompilerArgs = listOf("-Xjsr305=strict") // Example compiler arg
     }
 }

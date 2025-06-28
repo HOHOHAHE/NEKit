@@ -1,3 +1,24 @@
+# === Gradle ===
+.gradle/
+/build/
+
+# Gradle Wrapper files (except properties and scripts)
+!gradle/wrapper/gradle-wrapper.properties
+gradle/wrapper/gradle-wrapper.jar
+
+# Logs
+*.log
+
+# Kotlin/Java specific
+out/
+
+# === IDEs ===
+*.iml
+.idea/
+*.ipr
+*.iws
+*.swp
+
 #### joe made this: http://goel.io/joe
 
 #####=== Emacs ===#####
@@ -40,7 +61,8 @@ tramp
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*

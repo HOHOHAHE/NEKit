@@ -8,23 +8,7 @@ import com.example.project.RawSocket.RawUDPSocketProtocol
 import com.example.project.RawSocket.RawUDPSocketDelegate
 
 
-// --- Placeholder for DNSSession ---
-// This should be defined in its own file: DNSSession.kt
-// For now, defining a minimal placeholder based on usage.
-class DNSSession(val requestMessage: DNSMessage) { // Assuming DNSMessage.kt is available
-    // Add other properties if DNSSession has more (e.g., client address, query name, etc.)
-    constructor(queryName: String, queryType: DNSType) : this(DNSMessage().apply {
-        this.recursionDesired = true
-        this.queries.add(DNSQuery(queryName, queryType))
-        // this.build() // Assuming build() is called before accessing payload if needed by resolver
-    })
-    // The Swift `session.requestMessage.payload` implies payload is readily available.
-    // If DNSMessage.build() returns ByteArray?, ensure it's called and handled.
-    // For simplicity, assume requestMessage has a payload: ByteArray property after build.
-    // Let's refine: DNSMessage.build() returns ByteArray?, so DNSSession might build it.
-    val builtRequestPayload: ByteArray? by lazy { requestMessage.build() }
-}
-// --- End Placeholder for DNSSession ---
+import IPStack.DNS.DNSSession // Replaced placeholder with actual import
 
 
 import org.slf4j.LoggerFactory

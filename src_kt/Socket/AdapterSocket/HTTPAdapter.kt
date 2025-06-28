@@ -1,30 +1,21 @@
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob // Added for managed scope
+import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException
 import java.nio.charset.StandardCharsets
-import org.slf4j.LoggerFactory // Added import
+import org.slf4j.LoggerFactory
 
-// Assuming AdapterSocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, HTTPAuthentication.kt (Utils),
-// RawSocketFactory.kt, SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt,
-// ObserverFactory.kt, HTTPURL.kt (Utils) are available.
-
-// --- HTTPAdapterException Definitions ---
-sealed class HTTPAdapterException(message: String) : Exception(message) {
-    object InvalidURLInSession : HTTPAdapterException("Invalid URL constructed from session host/port for CONNECT request.")
-    object ConnectRequestSerializationFailure : HTTPAdapterException("Failed to serialize HTTP CONNECT request header.")
-    object ProxyConnectResponseInvalid : HTTPAdapterException("Invalid or non-200 response from proxy for CONNECT request.")
-}
-// --- End HTTPAdapterException Definitions ---
-
-// --- Placeholder for HTTP Constants ---
-// TODO: Move to a common HTTP utilities file.
-object HTTPConstants {
-    val CRLF = "\r\n"
-    val DOUBLE_CRLF: ByteArray = "\r\n\r\n".toByteArray(StandardCharsets.US_ASCII)
-    val HTTP_1_1 = "HTTP/1.1"
-}
-// --- End Placeholder for HTTP Constants ---
+import Utils.HTTPConstants // Corrected import for HTTPConstants
+import RawSocket.RawTCPSocketProtocol // Assuming this is the correct import for RawTCPSocketProtocol
+import Messages.ConnectSession
+import Utils.HTTPAuthentication
+import RawSocket.RawSocketFactory
+import Socket.SocketStatus
+import Event.Event.AdapterSocketEvent
+// Assuming EventSource.kt, ObserverFactory.kt, HTTPURL.kt (Utils) are available
+// No direct import needed for EventSource, ObserverFactory, HTTPURL if used via fully qualified names or if they are in common packages.
 
 /**
  * Adapter for connecting to a remote host through an HTTP proxy using the CONNECT method.
@@ -43,6 +34,9 @@ open class HTTPAdapter(
     protected var secured: Boolean = false, // Subclass (SecureHTTPAdapter) will set this to true
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket()
 ) : AdapterSocket(initialRawSocket, observe = true) {
+
+   // Managed CoroutineScope for the HTTPAdapter lifecycle
+   private val httpAdapterScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val httpAdapterLogger = LoggerFactory.getLogger(this::class.java) // Specific logger
 
@@ -83,8 +77,7 @@ open class HTTPAdapter(
 
         httpAdapterLogger.info("Connecting to proxy {}:{} (TLS: {}) for session: {}", serverHost, serverPort, secured, session)
 
-        val connectionScope = CoroutineScope(Dispatchers.Default) // TODO: Use a managed scope from AdapterSocket
-        connectionScope.launch {
+        httpAdapterScope.launch { // Using managed scope
             try {
                 currentRawSocket.connectTo(
                     host = serverHost,
@@ -133,8 +126,7 @@ open class HTTPAdapter(
             internalState = State.SENDING_CONNECT_REQUEST
             httpAdapterLogger.debug("Sending CONNECT request:\n{}", connectRequestString) // DEBUG for potentially large header
 
-            val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-            writeScope.launch {
+            httpAdapterScope.launch { // Using managed scope
                 try {
                     // AdapterSocket.write calls rawSocket.write
                     this@HTTPAdapter.write(requestData) // Use our own write which calls rawSocket.write
@@ -210,11 +202,10 @@ open class HTTPAdapter(
     }
 
     override fun didDisconnect(socket: RawTCPSocketProtocol) {
-        // This is called from RawTCPSocketDelegate when the underlying raw socket disconnects.
-        // AdapterSocket's base implementation already updates status, signals event, and calls delegate.
         httpAdapterLogger.info("Underlying raw socket disconnected. Current internal state: {}", internalState)
         val wasForwarding = (internalState == State.FORWARDING)
         internalState = State.STOPPED
+        httpAdapterScope.cancel("HTTPAdapter disconnected") // Cancel scope on disconnect
         super.didDisconnect(socket) // Let AdapterSocket base handle common disconnect logic
         if (!wasForwarding && _status != SocketStatus.CLOSED) {
             // If disconnect happened before FORWARDING state, it might be a connection setup error.
@@ -224,10 +215,9 @@ open class HTTPAdapter(
     }
 
     override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
-        // This is called from RawTCPSocketDelegate for errors on the raw socket.
-        // AdapterSocket's base implementation signals event and calls forceDisconnect.
         httpAdapterLogger.error("Raw socket error. Current internal state: {}. Error: {}", internalState, error.message, error)
         internalState = State.STOPPED
+        httpAdapterScope.cancel("HTTPAdapter error occurred") // Cancel scope on error
         super.didErrorOccur(error, on) // Let AdapterSocket base handle common error logic (signals event, force disconnects)
     }
 

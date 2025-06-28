@@ -1,22 +1,9 @@
 import java.lang.ref.WeakReference
 
-// Assuming RawTCPSocketProtocol.kt (from RawSocket) is available.
-// Assuming ConnectSession.kt (from Messages) is available.
-// Placeholders for AdapterSocket and ProxySocket will be refined later.
-
-// --- Placeholder for AdapterSocket (specific type of SocketProtocol) ---
-// TODO: Replace with actual AdapterSocket.kt definition
-interface AdapterSocket : SocketProtocol {
-    // AdapterSocket specific methods/properties if any
-}
-// --- End Placeholder ---
-
-// --- Placeholder for ProxySocket (specific type of SocketProtocol) ---
-// TODO: Replace with actual ProxySocket.kt definition
-interface ProxySocket : SocketProtocol {
-    // ProxySocket specific methods/properties if any
-}
-// --- End Placeholder ---
+import Socket.AdapterSocket.AdapterSocket
+import Socket.ProxySocket.ProxySocket
+import RawSocket.RawTCPSocketProtocol // Assuming this is the correct import for RawTCPSocketProtocol
+import Messages.ConnectSession
 
 
 /**

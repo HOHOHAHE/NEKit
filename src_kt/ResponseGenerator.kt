@@ -1,5 +1,5 @@
 // Assuming ConnectSession.kt from the Messages package is available and imported.
-// import com.example.project.messages.ConnectSession // Example import
+import Messages.ConnectSession
 
 /**
  * Base class for generating responses, typically HTTP responses, based on a ConnectSession.

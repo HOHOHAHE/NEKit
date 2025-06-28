@@ -1,26 +1,36 @@
-// Assuming AdapterFactory.kt is available.
+package Socket.AdapterSocket.Factory
+
+import Messages.ConnectSession
+import Socket.AdapterSocket.AdapterSocket
+import org.slf4j.LoggerFactory // Added import
 
 /**
- * Base factory for creating adapter sockets that connect to a specific server.
- * It holds the server's host and port information.
+ * Base class for adapter factories that require a server host and port.
  *
- * Subclasses are expected to override [getAdapterFor] to create specific types of
- * [AdapterSocket] instances (e.g., HTTP, SOCKS5) configured with this server information.
- * If [getAdapterFor] is not overridden, it defaults to the behavior in [AdapterFactory],
- * which typically creates a [DirectAdapter].
- *
- * @property serverHost The hostname or IP address of the server.
- * @property serverPort The port number of the server.
+ * In Swift, this was `ServerAdapterFactory`.
  */
 open class ServerAdapterFactory(
-    val serverHost: String,
-    val serverPort: Int
-) : AdapterFactory() { // Extends the base AdapterFactory
+    open val serverHost: String,
+    open val serverPort: Int
+) : AdapterFactory() {
 
-    // No override of getAdapterFor here.
-    // If a subclass of ServerAdapterFactory does not override getAdapterFor,
-    // it will inherit AdapterFactory.getAdapterFor, which (in my current translation)
-    // returns a DirectAdapter. This might be desired if a "server" could also be direct,
-    // but more likely, concrete subclasses like HTTPAdapterFactory, SOCKS5AdapterFactory, etc.,
-    // MUST override getAdapterFor to return their specific adapter type.
+    private val logger = LoggerFactory.getLogger(ServerAdapterFactory::class.java)
+
+    /**
+     * Default constructor.
+     */
+    constructor() : this("", 0) // Primary constructor must be called
+
+    /**
+     * Builds an adapter socket for the given connect session.
+     * Subclasses should override this method to provide specific adapter types.
+     * The base implementation returns a [DirectAdapter] (via superclass method).
+     *
+     * @param session The connect session for which to create an adapter.
+     * @return An [AdapterSocket] instance.
+     */
+    override fun getAdapterFor(session: ConnectSession): AdapterSocket {
+        logger.warn("ServerAdapterFactory.getAdapterFor called, returning default DirectAdapter. Subclass should override.")
+        return super.getAdapterFor(session)
+    }
 }

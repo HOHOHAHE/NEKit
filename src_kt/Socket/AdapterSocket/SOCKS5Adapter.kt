@@ -1,10 +1,13 @@
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob // Added for managed scope
+import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterSocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, IPAddress.kt (Utils), Port.kt (Utils),
 // SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt, ObserverFactory.kt are available.
@@ -34,6 +37,11 @@ open class SOCKS5Adapter(
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket()
 ) : AdapterSocket(initialRawSocket) {
 
+   private val socks5AdapterLogger = LoggerFactory.getLogger(SOCKS5Adapter::class.java)
+
+   // Managed CoroutineScope for the SOCKS5Adapter lifecycle
+   private val socks5AdapterScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     private enum class State {
         IDLE,
         CONNECTING_TO_PROXY,      // Raw socket connecting to SOCKS5 server
@@ -53,7 +61,7 @@ open class SOCKS5Adapter(
     private var connectReplyAtyp: Byte = 0 // To store ATYP from connect reply header
 
     init {
-        println("INFO: SOCKS5Adapter created for proxy $serverHost:$serverPort.")
+        socks5AdapterLogger.info("SOCKS5Adapter created for proxy {}:{}.", serverHost, serverPort)
     }
 
     override fun openSocketWith(session: ConnectSession) {
@@ -71,15 +79,14 @@ open class SOCKS5Adapter(
         internalState = State.CONNECTING_TO_PROXY
         _status = SocketStatus.CONNECTING
         observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
-        println("INFO: SOCKS5Adapter: Connecting to SOCKS5 proxy $serverHost:$serverPort for session: $session")
+        socks5AdapterLogger.info("Connecting to SOCKS5 proxy {}:{} for session: {}", serverHost, serverPort, session)
 
-        val connectionScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-        connectionScope.launch {
+        socks5AdapterScope.launch { // Using managed scope
             try {
                 currentRawSocket.connectTo(host = serverHost, port = serverPort)
                 // Result handled by didConnect (from RawTCPSocketDelegate)
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5Adapter: Failed to connect to proxy $serverHost:$serverPort: ${e.message}")
+                socks5AdapterLogger.error("Failed to connect to proxy {}:{}: {}", serverHost, serverPort, e.message, e)
                 handleConnectionFailure(e)
             }
         }
@@ -89,15 +96,14 @@ open class SOCKS5Adapter(
     override fun didConnect(socket: RawTCPSocketProtocol) {
         // DO NOT call super.didConnect(socket) here, as SOCKS5 handshake is not yet complete.
         // AdapterSocket.didConnect signals delegate?.didConnectWith(this), which is premature.
-        println("INFO: SOCKS5Adapter: Raw socket connected to proxy. Sending SOCKS5 greeting.")
+        socks5AdapterLogger.info("Raw socket connected to proxy. Sending SOCKS5 greeting.")
         internalState = State.SENT_GREETING
-        val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-        writeScope.launch {
+        socks5AdapterScope.launch { // Using managed scope
             try {
                 this@SOCKS5Adapter.write(socks5GreetingMessage) // Write greeting
                 // After write completes (in didWrite), we'll expect server's auth choice
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5Adapter: Failed to write SOCKS5 greeting: ${e.message}")
+                socks5AdapterLogger.error("Failed to write SOCKS5 greeting: {}", e.message, e)
                 handleConnectionFailure(e)
             }
         }
@@ -110,12 +116,12 @@ open class SOCKS5Adapter(
         when (internalState) {
             State.SENT_GREETING -> {
                 internalState = State.READING_AUTH_RESPONSE
-                println("INFO: SOCKS5Adapter: Greeting sent. Reading auth method response (2 bytes).")
+                socks5AdapterLogger.info("Greeting sent. Reading auth method response (2 bytes).")
                 rawSocket?.readDataTo(length = 2)
             }
             State.SENT_CONNECT_REQUEST -> {
                 internalState = State.READING_CONNECT_REPLY_HEADER
-                println("INFO: SOCKS5Adapter: Connect request sent. Reading connect reply header (4 bytes: VER,REP,RSV,ATYP).")
+                socks5AdapterLogger.info("Connect request sent. Reading connect reply header (4 bytes: VER,REP,RSV,ATYP).")
                 // Some SOCKS servers might send BND.ADDR and BND.PORT immediately if address is fixed size (IPv4/IPv6)
                 // Reading 4 bytes for VER, REP, RSV, ATYP first is safer.
                 // Swift read 5 bytes: VER, REP, RSV, ATYP, first_byte_of_BND.ADDR or DOMAIN_LEN
@@ -127,7 +133,7 @@ open class SOCKS5Adapter(
                 delegate?.get()?.didWrite(data, this)
             }
             else -> {
-                println("WARN: SOCKS5Adapter: didWrite called in unexpected state: $internalState")
+                socks5AdapterLogger.warn("didWrite called in unexpected state: {}", internalState)
             }
         }
     }
@@ -143,21 +149,21 @@ open class SOCKS5Adapter(
                     sendConnectRequest()
                 } else {
                     val errorMsg = "SOCKS5 Auth method negotiation failed. Received: ${data.joinToString { it.toUByte().toString(16) }}"
-                    System.err.println("ERROR: SOCKS5Adapter: $errorMsg")
+                    socks5AdapterLogger.error(errorMsg)
                     handleConnectionFailure(IOException(errorMsg))
                 }
             }
             State.READING_CONNECT_REPLY_HEADER -> { // We read 4 bytes: VER, REP, RSV, ATYP
                 if (data.size < 4 || data[0] != SOCKS_VERSION_5) {
                     val errorMsg = "Invalid SOCKS5 connect reply header: ${data.joinToString { it.toUByte().toString(16) }}"
-                    System.err.println("ERROR: SOCKS5Adapter: $errorMsg")
+                    socks5AdapterLogger.error(errorMsg)
                     handleConnectionFailure(IOException(errorMsg))
                     return
                 }
                 val replyCode = data[1]
                 if (replyCode != SOCKS5_REPLY_SUCCESS) {
                     val errorMsg = "SOCKS5 server denied connection. Reply code: $replyCode"
-                    System.err.println("ERROR: SOCKS5Adapter: $errorMsg")
+                    socks5AdapterLogger.error(errorMsg)
                     handleConnectionFailure(IOException(errorMsg))
                     return
                 }
@@ -171,20 +177,20 @@ open class SOCKS5Adapter(
                         // This state machine needs to be more granular if we read byte by byte here.
                         // For now, assume the Swift logic of reading a fixed chunk then more was simplified.
                         // Let's read just the domain length byte.
-                        println("INFO: SOCKS5Adapter: Connect reply ATYP is DOMAIN. Reading domain length (1 byte).")
+                        socks5AdapterLogger.info("Connect reply ATYP is DOMAIN. Reading domain length (1 byte).")
                         internalState = State.READING_CONNECT_REPLY_ADDR_PORT // Special sub-state for domain
                         rawSocket?.readDataTo(length = 1) // Read the length byte for domain
                         return // Don't proceed further in this didRead call for domain
                     }
                     else -> {
                         val errorMsg = "Unknown ATYP in SOCKS5 connect reply: $connectReplyAtyp"
-                        System.err.println("ERROR: SOCKS5Adapter: $errorMsg")
+                        socks5AdapterLogger.error(errorMsg)
                         handleConnectionFailure(IOException(errorMsg))
                         return
                     }
                 }
                 internalState = State.READING_CONNECT_REPLY_ADDR_PORT
-                println("INFO: SOCKS5Adapter: Connect reply header OK. Reading BND.ADDR & BND.PORT ($remainingBytesToRead bytes).")
+                socks5AdapterLogger.info("Connect reply header OK. Reading BND.ADDR & BND.PORT ({} bytes).", remainingBytesToRead)
                 rawSocket?.readDataTo(length = remainingBytesToRead)
             }
             State.READING_CONNECT_REPLY_ADDR_PORT -> {
@@ -193,14 +199,14 @@ open class SOCKS5Adapter(
                 if (connectReplyAtyp == SOCKS5_ATYP_DOMAINNAME && data.size == 1) {
                     val domainLength = data[0].toUByte().toInt()
                     val remainingBytesToRead = domainLength + 2 // Domain + Port
-                    println("INFO: SOCKS5Adapter: Domain length is $domainLength. Reading domain and port ($remainingBytesToRead bytes).")
+                    socks5AdapterLogger.info("Domain length is {}. Reading domain and port ({} bytes).", domainLength, remainingBytesToRead)
                     // Still in READING_CONNECT_REPLY_ADDR_PORT but waiting for the rest
                     rawSocket?.readDataTo(length = remainingBytesToRead)
                     return // Don't mark as forwarding yet
                 }
                 // If we are here, it means we've read the BND.ADDR and BND.PORT
                 // (or for domain, domain_name + BND.PORT after reading length separately)
-                println("INFO: SOCKS5Adapter: Received full SOCKS5 connect reply. Handshake successful. BND.ADDR/PORT data size: ${data.size}")
+                socks5AdapterLogger.info("Received full SOCKS5 connect reply. Handshake successful. BND.ADDR/PORT data size: {}.", data.size)
                 internalState = State.FORWARDING
                 _status = SocketStatus.ESTABLISHED // Now the SOCKS5 tunnel is established
                 observer?.signal(AdapterSocketEvent.Connected(this)) // Signal internal event
@@ -212,7 +218,7 @@ open class SOCKS5Adapter(
                 delegate?.get()?.didRead(data, this)
             }
             else -> {
-                System.err.println("WARN: SOCKS5Adapter: didRead called in unexpected state: $internalState")
+                socks5AdapterLogger.warn("didRead called in unexpected state: {}", internalState)
             }
         }
     }
@@ -260,22 +266,34 @@ open class SOCKS5Adapter(
 
         val requestData = buffer.array()
         internalState = State.SENT_CONNECT_REQUEST
-        val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-        writeScope.launch {
+        socks5AdapterScope.launch { // Using managed scope
             try {
                 this@SOCKS5Adapter.write(requestData)
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5Adapter: Failed to write SOCKS5 connect request: ${e.message}")
+                socks5AdapterLogger.error("Failed to write SOCKS5 connect request: {}", e.message, e)
                 handleConnectionFailure(e)
             }
         }
     }
 
     private fun handleConnectionFailure(error: Throwable) {
-        println("ERROR: SOCKS5Adapter: Connection or handshake failure: ${error.message}")
+        socks5AdapterLogger.error("Connection or handshake failure: {}", error.message, error)
         internalState = State.STOPPED
+        socks5AdapterScope.cancel("SOCKS5Adapter connection failure") // Cancel scope on failure
         // Use AdapterSocket's forceDisconnect to ensure proper state update and delegate notification
         forceDisconnect(becauseOf = error)
+    }
+
+    override fun disconnect(becauseOf: Throwable?) {
+        internalState = State.STOPPED
+        socks5AdapterScope.cancel("SOCKS5Adapter disconnected") // Cancel scope on disconnect
+        super.disconnect(becauseOf)
+    }
+
+    override fun forceDisconnect(becauseOf: Throwable?) {
+        internalState = State.STOPPED
+        socks5AdapterScope.cancel("SOCKS5Adapter force-disconnected") // Cancel scope on force disconnect
+        super.forceDisconnect(becauseOf)
     }
 
     override fun toString(): String {

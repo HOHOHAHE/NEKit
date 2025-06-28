@@ -1,6 +1,7 @@
 import kotlinx.coroutines.*
+import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException // For creating an error object if needed
-import org.slf4j.LoggerFactory // Added import
+import org.slf4j.LoggerFactory
 
 // Assuming AdapterSocket.kt, ConnectSession.kt (Messages), QueueFactory.kt (placeholder),
 // SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt are available.
@@ -77,6 +78,7 @@ class RejectAdapter(
         if (_status == SocketStatus.CLOSED && _cancelled) return // Already processed a full disconnect
 
         rejectionJob?.cancel() // Cancel any pending delayed rejection
+        adapterScope.cancel("RejectAdapter disconnected") // Cancel the scope
 
         _status = SocketStatus.DISCONNECTING // Transition state
         _cancelled = true // Mark as cancelled by local action (rejection)
@@ -105,6 +107,7 @@ class RejectAdapter(
         if (_status == SocketStatus.CLOSED && _cancelled) return
 
         rejectionJob?.cancel()
+        adapterScope.cancel("RejectAdapter force-disconnected") // Cancel the scope
 
         _status = SocketStatus.DISCONNECTING
         _cancelled = true

@@ -3,38 +3,8 @@ import java.nio.ByteOrder
 
 // Assuming IPAddress.kt from Utils is available and handles IPv4.
 
-// --- Placeholders for Enums (if not defined elsewhere, e.g. in a common PacketEnums.kt) ---
-enum class IPVersion(val value: Int) {
-    IPv4(4),
-    IPv6(6);
-    // Unknown or other versions could be added.
-
-    companion object {
-        fun fromNibble(nibble: UByte): IPVersion? {
-            return when (nibble.toInt()) {
-                4 -> IPv4
-                6 -> IPv6
-                else -> null
-            }
-        }
-    }
-}
-
-// Using InternetProtocol enum as defined in DNSServer.kt context for consistency
-// enum class InternetProtocol { TCP, UDP, ICMP, UNKNOWN }
-// For clarity, let's call it TransportProtocol here if it's specific to L4.
-enum class TransportProtocol(val value: UByte) {
-    ICMP(1u),
-    TCP(6u),
-    UDP(17u),
-    UNKNOWN(0u); // Or some other value for unknown/unsupported
-
-    companion object {
-        fun fromByte(byte: UByte): TransportProtocol? {
-            return entries.find { it.value == byte } ?: UNKNOWN
-        }
-    }
-}
+import IPStack.Packet.IPVersion
+import IPStack.Packet.TransportProtocol
 
 // Enum for type of change affecting checksum
 internal enum class ChecksumChangeType {
@@ -42,7 +12,6 @@ internal enum class ChecksumChangeType {
     // PORT_PAIR, // If port checksumming was also handled here (TCP/UDP checksums are different)
     // OTHER_WORD // For generic 16-bit field changes
 }
-// --- End Placeholders ---
 
 
 /**

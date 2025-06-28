@@ -1,24 +1,15 @@
-// Placeholder for the Resolver dependency
-// TODO: Replace with actual Resolver class/object definition
+// This object acts as a holder for the primary queue/dispatcher used by the Resolver concept in the original Swift.
+// In Kotlin, the QueueFactory.getProcessingDispatcher() returns a CoroutineDispatcher.
+// The 'Resolver' here is a conceptual bridge, not a direct mapping to DNSServer.
 object Resolver {
-    // Assuming 'queue' is a settable property. Its type is unknown for now.
-    // If 'queue' is static in Swift, it would be in a companion object here if Resolver were a class.
-    // If Resolver is a singleton struct/class in Swift, 'object Resolver' is appropriate.
-    var queue: Any? = null
+    var queue: kotlinx.coroutines.CoroutineDispatcher? = null // Specific type from QueueFactory
 }
 
 import org.slf4j.LoggerFactory
 
 // Placeholder for the QueueFactory dependency
 // TODO: Replace with actual QueueFactory class/object definition
-object QueueFactory {
-    private val logger = LoggerFactory.getLogger(QueueFactory::class.java)
-    // Assuming getQueue() returns some queue object. Its type is unknown for now.
-    fun getQueue(): Any {
-        logger.info("getQueue() called - returning placeholder queue object.")
-        return object {} // Represents a generic queue object
-    }
-}
+import Tunnel.QueueFactory
 
 /**
  * Handles one-time global initialization tasks.
@@ -54,7 +45,8 @@ object GlobalInitializer {
 
         // Original Swift code: Resolver.queue = QueueFactory.getQueue()
         try {
-            Resolver.queue = QueueFactory.getQueue()
+            // Original Swift code: Resolver.queue = QueueFactory.getQueue()
+            Resolver.queue = QueueFactory.getProcessingDispatcher()
             logger.info("Resolver.queue has been set.")
         } catch (e: Exception) {
             logger.error("Failed during Resolver.queue initialization: {}", e.message, e)

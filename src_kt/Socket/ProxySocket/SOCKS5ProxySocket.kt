@@ -6,6 +6,7 @@ import java.net.UnknownHostException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob // Added import for SupervisorJob
 import java.io.ByteArrayOutputStream // Added missing import
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
@@ -35,10 +36,13 @@ class SOCKS5ProxySocket(
     observe: Boolean = true
 ) : ProxySocket(clientRawSocket, observe) {
 
-    private val socks5Logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
+   private val socks5Logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
 
-    private enum class ReadState(val descriptionVal: String) {
-        INVALID("invalid"),
+   // Managed CoroutineScope for the SOCKS5ProxySocket lifecycle
+   private val socks5Scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+   private enum class ReadState(val descriptionVal: String) {
+       INVALID("invalid"),
         READING_VERSION_NMETHODS("reading version and nmethods"),
         READING_METHODS("reading methods"),
         READING_REQUEST_HEADER("reading request header (VER, CMD, RSV, ATYP)"),
@@ -100,8 +104,7 @@ class SOCKS5ProxySocket(
         response.putInt(0) // BND.ADDR (0.0.0.0)
         response.putShort(0) // BND.PORT (0)
 
-        val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-        writeScope.launch {
+        socks5Scope.launch { // Using managed scope
             try {
                 write(response.array()) // Send error reply
                 // After write, didWrite might trigger further state changes or just log.
@@ -161,8 +164,7 @@ class SOCKS5ProxySocket(
                     }
                     val response = byteArrayOf(SOCKS_VERSION_5, SOCKS5_AUTH_METHOD_NONE)
                     internalWriteStatus = WriteState.SENDING_AUTH_RESPONSE // Next state after write
-                    // Write is suspend, launch in a scope
-                    CoroutineScope(Dispatchers.Default).launch { write(response) }
+                    socks5Scope.launch { write(response) } // Using managed scope
                 }
                 ReadState.READING_REQUEST_HEADER -> { // VER, CMD, RSV, ATYP
                     if (bufferBytes.size < 4) { rawSocket.readDataTo(length = 4 - bufferBytes.size); return }
@@ -303,8 +305,7 @@ class SOCKS5ProxySocket(
         response.putShort(0) // BND.PORT (0)
 
         internalWriteStatus = WriteState.SENDING_CONNECT_REPLY
-        val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
-        writeScope.launch {
+        socks5Scope.launch { // Using managed scope
             try {
                 write(response.array())
                 // didWrite callback will handle transition to FORWARDING state.
@@ -318,12 +319,14 @@ class SOCKS5ProxySocket(
     override fun disconnect(becauseOf: Throwable?) {
         internalReadStatus = ReadState.STOPPED
         internalWriteStatus = WriteState.STOPPED
+        socks5Scope.cancel("SOCKS5ProxySocket disconnected") // Cancel scope on disconnect
         super.disconnect(becauseOf)
     }
 
     override fun forceDisconnect(becauseOf: Throwable?) {
         internalReadStatus = ReadState.STOPPED
         internalWriteStatus = WriteState.STOPPED
+        socks5Scope.cancel("SOCKS5ProxySocket force-disconnected") // Cancel scope on force disconnect
         super.forceDisconnect(becauseOf)
     }
 }

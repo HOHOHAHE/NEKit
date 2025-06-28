@@ -2,53 +2,21 @@ import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
-import java.net.InetAddress // For Resolver placeholder
-import java.net.UnknownHostException // For Resolver placeholder
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming SocketProtocol.kt, SocketDelegate.kt, ProxySocket.kt, AdapterSocket.kt,
-// ConnectSession.kt (Messages), RuleManager.kt (Rule), AdapterFactory.kt (Factory),
-// TunnelEvent.kt (Event), Observer.kt (Event), ObserverFactory.kt (Event),
-// QueueFactory.kt (Tunnel), Opt.kt are available.
-
-// --- Placeholder for Resolver ---
-// TODO: Replace with actual DNS resolution mechanism (e.g., from IPStack.DNS or a robust library)
-object Resolver {
-    private val logger = LoggerFactory.getLogger(Resolver::class.java) // Logger for placeholder
-    // Simplified ResolverResult to match Swift's usage: resolver?.ipv4Result.first
-    data class ResolverResult(val ipv4Result: List<String>?) {
-        constructor(singleIPv4: String?) : this(singleIPv4?.let { listOf(it) })
-    }
-
-    fun resolve(hostname: String, timeoutSeconds: Int, callback: (result: ResolverResult?, error: Throwable?) -> Unit) {
-        // Simulate async DNS resolution.
-        // In a real app, use a proper DNS resolver client.
-        // This should use the Tunnel's dispatcher for the callback.
-        val resolverScope = CoroutineScope(Dispatchers.IO + SupervisorJob()) // Example global scope for DNS
-        resolverScope.launch {
-            try {
-                // Simulate timeout
-                // withTimeoutOrNull(timeoutSeconds * 1000L) {
-                val addresses = InetAddress.getAllByName(hostname)
-                val ipv4 = addresses.find { it is java.net.Inet4Address }?.hostAddress
-                // }
-                // if (ipv4 == null && timeoutSeconds > 0) { // If withTimeoutOrNull was used and timed out
-                //    callback(null, SocketTimeoutException("DNS resolution timed out for $hostname"))
-                // } else {
-                callback(ResolverResult(ipv4), null)
-                // }
-            } catch (e: UnknownHostException) {
-                logger.error("Unknown host {}: {}", hostname, e.message, e)
-                callback(null, e)
-            } catch (e: Exception) {
-                logger.error("Failed to resolve {}: {}", hostname, e.message, e)
-                callback(null, e)
-            }
-        }
-    }
-}
-// --- End Placeholder for Resolver ---
+import Socket.SocketProtocol
+import Socket.SocketDelegate
+import Socket.ProxySocket.ProxySocket
+import Socket.AdapterSocket.AdapterSocket
+import Messages.ConnectSession
+import Rule.RuleManager
+import Socket.AdapterSocket.Factory.AdapterFactory
+import Event.Event.TunnelEvent
+import Event.Observer
+import Event.ObserverFactory
+import Tunnel.QueueFactory
+import Opts.Opt
 
 interface TunnelDelegate {
     fun tunnelDidClose(tunnel: Tunnel)
@@ -165,35 +133,9 @@ class Tunnel(
             _status = Status.WAITING_TO_BE_READY
             observer?.signal(TunnelEvent.ReceivedRequest(session, from, this@Tunnel))
 
-            if (!session.isIP(session.host)) { // If host is not an IP, resolve it
-                logger.info("Host {} is not IP for tunnel {}, resolving DNS...", session.host, this)
-                Resolver.resolve(session.host, Opt.DNS_TIMEOUT) { result, err ->
-                    // Ensure callback is on tunnel's dispatcher for state safety
-                    tunnelScope.launch {
-                        if (err != null || result?.ipv4Result.isNullOrEmpty()) {
-                            logger.error("DNS resolution failed for host {} in tunnel {}: {}", session.host, this@Tunnel, err?.message, err)
-                            // session.ipAddress = "" // ConnectSession's ipAddress lazy property will handle this
-                            // Or, if ConnectSession needs explicit update:
-                            // session.updateResolvedIp("") // Assuming a method to set resolved IP
-                            // For now, assume ConnectSession.ipAddress handles re-query or stores original host.
-                            // If resolution fails, the rule matching might pick DNSFailRule or similar.
-                        } else {
-                            val resolvedIp = result!!.ipv4Result!!.first()
-                            println("INFO: Tunnel: DNS resolved ${session.host} to $resolvedIp")
-                            // ConnectSession.ipAddress is lazy. If its .host is used for connection,
-                            // and .host is still the domain, then adapter will resolve.
-                            // If adapter needs explicit IP, session should store this.
-                            // The Swift code sets session.ipAddress. My ConnectSession placeholder's ipAddress is lazy.
-                            // For now, let's assume ConnectSession's logic handles this.
-                            // If not, we'd need to update session: session.setResolvedIp(resolvedIp)
-                        }
-                        openAdapter(forSession = session)
-                    }
-                }
-            } else { // Host is already an IP
-                // session.ipAddress = session.host // ConnectSession's ipAddress lazy prop should handle this.
-                openAdapter(forSession = session)
-            }
+            // DNS resolution is now handled by ConnectSession's lazy ipAddress property.
+            // The AdapterFactory.getAdapterFor(session) will implicitly trigger it if needed.
+            openAdapter(forSession = session)
         }
     }
 

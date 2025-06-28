@@ -1,69 +1,9 @@
-import org.slf4j.LoggerFactory // Added import
-import kotlinx.coroutines.CoroutineScope // Added missing import
-import kotlinx.coroutines.Dispatchers // Added missing import
-import kotlinx.coroutines.launch // Added missing import
+import org.slf4j.LoggerFactory
 
-
-// Assuming ConnectSession.kt (Messages), AdapterSocket.kt (AdapterSocket),
-// RawSocketFactory.kt (RawSocket) are available.
-// Placeholder for DirectAdapter.kt needs to be defined or available.
-
-// --- Placeholder for DirectAdapter ---
-// TODO: Move to its own file: src_kt/Socket/AdapterSocket/DirectAdapter.kt
-// This placeholder needs to be consistent with how AdapterSocket expects rawSocket to be handled.
-// AdapterSocket's primary constructor now takes a RawTCPSocketProtocol?
-// For simplicity, let's assume RawSocketFactory.getRawSocket() returns a non-null functional socket.
-
-// If AdapterSocket expects rawSocket to be non-null via constructor:
-// open class DirectAdapter(initialRawSocket: RawTCPSocketProtocol) : AdapterSocket(initialRawSocket) {
-// If AdapterSocket has a settable rawSocket property (as it does in current AdapterSocket.kt):
-open class DirectAdapter : AdapterSocket(RawSocketFactory.getRawSocket()) {
-    private val logger = LoggerFactory.getLogger(DirectAdapter::class.java) // Logger for placeholder DirectAdapter
-    // RawSocketFactory.getRawSocket() is called here. AdapterSocket constructor takes it.
-    // The actual connection logic is typically in openSocketWith.
-
-    override fun openSocketWith(session: ConnectSession) {
-        super.openSocketWith(session) // Sets up session, registers delegate to rawSocket
-
-        val currentRawSocket = rawSocket ?: run {
-            logger.error("Raw socket is null in openSocketWith for session: {}. This should not happen if constructor provides it.", session)
-            _status = SocketStatus.CLOSED
-            this.delegate?.get()?.didDisconnect(this)
-            return
-        }
-
-        _status = SocketStatus.CONNECTING // Set status before attempting connection
-
-        // TODO: Implement actual direct connection logic using currentRawSocket.
-        // This involves calling currentRawSocket.connectTo and handling its async result via RawTCPSocketDelegate methods
-        // which are implemented by AdapterSocket (and thus by DirectAdapter).
-        logger.info("Attempting direct connection for session: {} to host {}:{}", session, session.host, session.port)
-
-        // Example of how connection might be initiated.
-        // The RawTCPSocketProtocol.connectTo is a suspend function.
-        // AdapterSocket.openSocketWith is not suspend, so launch in a scope.
-        // This scope should be managed by the AdapterSocket instance.
-        // For now, using a local scope for placeholder.
-        val tempScope = CoroutineScope(Dispatchers.Default) // Replace with proper scope management later
-        tempScope.launch {
-            try {
-                currentRawSocket.connectTo(session.host, session.port)
-                // Connection result will be handled by didConnect/didDisconnect callbacks (RawTCPSocketDelegate)
-                // which in turn update AdapterSocket status and call SocketDelegate.
-            } catch (e: Exception) {
-                logger.error("Failed to connect to {}:{}: {}", session.host, session.port, e.message, e)
-                // Ensure state is cleaned up and delegate notified if connectTo throws immediately
-                _status = SocketStatus.CLOSED
-                delegate?.get()?.didErrorOccur(e, this@DirectAdapter) // Assuming SocketDelegate has didErrorOccur
-                delegate?.get()?.didDisconnect(this@DirectAdapter)
-            }
-        }
-    }
-     override fun toString(): String {
-        return "<${this::class.simpleName ?: "DirectAdapter"} session: ${if(::_session.isInitialized) session.toString() else "uninitialized"}>"
-    }
-}
-// --- End Placeholder for DirectAdapter ---
+import Messages.ConnectSession
+import Socket.AdapterSocket.AdapterSocket
+import Socket.AdapterSocket.DirectAdapter // Corrected import for DirectAdapter
+import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
 
 
 /**

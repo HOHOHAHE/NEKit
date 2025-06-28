@@ -1,59 +1,20 @@
 package Messages
 
-import java.net.InetAddress // For Utils.DNS.resolve placeholder
-import java.net.UnknownHostException // For Utils.DNS.resolve placeholder
+import java.net.InetAddress
+import java.net.UnknownHostException
 
 import org.slf4j.LoggerFactory
 
-// Assuming IPAddress.kt, Port.kt (from Utils), DNSServer.kt, Rule.kt (placeholders) are available.
-// Assuming GeoIP.kt (from GeoIP) is available.
-
-// --- Placeholders for Utils (should be in proper Utils files) ---
-object Utils {
-    object DNS {
-        private val logger = LoggerFactory.getLogger(DNS::class.java)
-        fun resolve(hostname: String): String {
-            // TODO: Implement actual DNS resolution. Consider asynchronous if called from UI/main threads.
-            // This is a blocking call.
-            logger.info("resolve called for {} (Placeholder: blocking call)", hostname)
-            return try {
-                InetAddress.getByName(hostname).hostAddress
-            } catch (e: UnknownHostException) {
-                logger.error("Failed to resolve {}: {}", hostname, e.message, e)
-                hostname // Return original hostname on failure, as per some behaviors
-            }
-        }
-    }
-
-    // Utils.GeoIPLookup placeholder is removed as GeoIP.lookUp will be used directly.
-
-    object IP {
-        // No logger needed here if printlns were commented out or just for internal debug
-        fun isIPv4(hostString: String): Boolean {
-            // TODO: Implement robust IPv4 check.
-            // println("INFO: Utils.IP.isIPv4 called for $hostString (Placeholder: using IPAddress.parse)")
-            return IPAddress.parse(hostString)?.isIPv4 ?: false
-        }
-
-        fun isIPv6(hostString: String): Boolean {
-            // TODO: Implement robust IPv6 check.
-            // println("INFO: Utils.IP.isIPv6 called for $hostString (Placeholder: using IPAddress.parse)")
-            return IPAddress.parse(hostString)?.isIPv6 ?: false
-        }
-    }
-}
-// --- End Utils Placeholders ---
-
-// --- Other Placeholders (ensure these are consistent if defined elsewhere) ---
-// interface Rule // Defined in RuleParser.kt context
-// class DNSServer(...) // Defined in DNSServer.kt context
-// val DNSServer.Companion.currentServer: DNSServer? // Property on companion
+import Utils.IPAddress
+import Utils.Port
+import IPStack.DNS.DNSServer
+import Rule.Rule
+import GeoIP.GeoIP
 
 // Enum for event source, as defined in Swift
 enum class EventSource { // Renamed from EventSourceEnum for Kotlin style
     PROXY, ADAPTER, TUNNEL
 }
-// --- End Other Placeholders ---
 
 
 /**
@@ -86,10 +47,16 @@ class ConnectSession private constructor(
      */
     val ipAddress: String by lazy {
         logger.info("Lazily resolving IP for host '{}', requestedHost '{}'", host, requestedHost)
-        if (isIP(this.host)) { // Check if current `host` is an IP
+        if (IPAddress.parse(this.host)?.isIP == true) { // Check if current `host` is an IP
             this.host
         } else {
-            val resolvedIp = Utils.DNS.resolve(this.host)
+            val resolvedIp = try {
+                InetAddress.getByName(this.host).hostAddress
+            } catch (e: UnknownHostException) {
+                logger.error("Failed to resolve {}: {}", this.host, e.message, e)
+                this.host // Return original hostname on failure
+            }
+
             if (!fakeIPEnabled) {
                 resolvedIp
             } else {
@@ -196,8 +163,8 @@ class ConnectSession private constructor(
         return true
     }
 
-    fun isIPv4(hostToCheck: String = this.host): Boolean = Utils.IP.isIPv4(hostToCheck)
-    fun isIPv6(hostToCheck: String = this.host): Boolean = Utils.IP.isIPv6(hostToCheck)
+    fun isIPv4(hostToCheck: String = this.host): Boolean = IPAddress.parse(hostToCheck)?.isIPv4 ?: false
+    fun isIPv6(hostToCheck: String = this.host): Boolean = IPAddress.parse(hostToCheck)?.isIPv6 ?: false
     fun isIP(hostToCheck: String = this.host): Boolean = isIPv4(hostToCheck) || isIPv6(hostToCheck)
 
 
@@ -227,7 +194,7 @@ class ConnectSession private constructor(
 
                 // Pre-check if it's an IP that *might* be fake and fail lookup
                 val dnsServer = DNSServer.currentServer
-                if (dnsServer != null && Utils.IP.isIPv4(host)) { // Assuming fake IPs are IPv4 as per lookupRealIP logic
+                if (dnsServer != null && IPAddress.parse(host)?.isIPv4 == true) { // Assuming fake IPs are IPv4 as per lookupRealIP logic
                     val addressObj = IPAddress.parse(host)
                     if (addressObj != null && dnsServer.isFakeIP(addressObj)) {
                         if (dnsServer.lookupFakeIP(addressObj) == null) {

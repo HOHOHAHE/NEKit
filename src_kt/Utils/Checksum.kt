@@ -15,19 +15,19 @@ object Checksum {
     }
 
     fun computeChecksumUnfold(data: ByteArray, from: Int = 0, to: Int? = null, withPseudoHeaderChecksum: UInt = 0u): UInt {
-        // Assuming BinaryDataScanner.kt is in the same package or imported.
-        // The Swift version used littleEndian: true. Our BinaryDataScanner uses bigEndian by default for network order.
-        // However, checksum calculation is about summing words as they are, and then the host's endianness for the odd byte.
-        // The provided Swift BinaryDataScanner was initialized with littleEndian = true.
-        // Let's stick to that for direct translation, though IP checksum usually deals with network byte order (big endian).
-        // For checksum calculation, words are typically processed in network byte order.
-        // The provided Swift code's BinaryDataScanner was set to littleEndian: true. This is unusual for network checksums.
-        // Let's assume the *intent* was to process bytes as they appear in the array, forming 16-bit words.
-        // The Kotlin BinaryDataScanner uses ByteBuffer which respects specific endian order.
-        // If data is from network, it's big-endian. If it's host-generated and then checksummed, it depends.
-        // Given the "Intel and ARM are both little endian" comment in Swift, it implies it might be processing host-order data.
-        // Let's use the Kotlin BinaryDataScanner configured for Little Endian to match the Swift code's behavior.
-        val scanner = BinaryDataScanner(data, littleEndian = true) // Match Swift version's endianness choice
+        // TODO: CRITICAL REVIEW REQUIRED FOR ENDIANNESS.
+        // This implementation currently uses `littleEndian = true` for the BinaryDataScanner
+        // to match the behavior of the provided Swift source code's BinaryDataScanner, which was
+        // also explicitly set to little-endian.
+        // STANDARD IP CHECKSUM (RFC 1071) expects data to be summed as 16-bit words in
+        // NETWORK BYTE ORDER (BIG-ENDIAN).
+        // If the `data` ByteArray parameter contains data already in network byte order (e.g., an IP header
+        // read from the network), using a little-endian scanner here will incorrectly swap bytes
+        // of each 16-bit word before summing, leading to an incorrect checksum according to RFC 1071.
+        // If the intent is to checksum data that is natively little-endian in memory, then this might be
+        // what the original Swift code intended, but it would not be a standard IP checksum.
+        // For a standard IP checksum, `littleEndian` should be `false`.
+        val scanner = BinaryDataScanner(data, littleEndian = true) // MATCHING SWIFT'S UNUSUAL CHOICE
         scanner.skip(to = from)
         var result: UInt = withPseudoHeaderChecksum
         val actualEnd = to ?: data.size

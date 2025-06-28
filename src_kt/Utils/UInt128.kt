@@ -13,7 +13,9 @@ enum class UInt128Error {
 data class UInt128(val upperBits: ULong, val lowerBits: ULong) : Comparable<UInt128> {
 
     constructor(value: Int) : this(0uL, value.toULong())
-    constructor(value: Long) : this(0uL, value.toULong()) // Assumes positive, else conversion needed
+    constructor(value: Long) : this(0uL, value.toULong()) {
+        require(value >= 0L) { "Input Long value must be non-negative for UInt128 conversion. Value: $value" }
+    }
     constructor(value: UInt) : this(0uL, value.toULong())
     constructor(value: ULong) : this(0uL, value)
 

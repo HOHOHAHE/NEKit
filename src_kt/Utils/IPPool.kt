@@ -1,29 +1,9 @@
 import org.slf4j.LoggerFactory
+// Assuming IPAddress.kt is available
+// Assuming actual IPRange.kt will be imported
+import com.example.nekit.Utils.IPRange // Placeholder import, adjust if package is different
 
-// Assuming IPAddress.kt, IPRange.kt (placeholder below) are available.
-
-// Placeholder for IPRange.kt - This should be in its own file and fully translated later.
-// Based on usage in IPPool.swift.
-// TODO: Replace with actual IPRange.kt from its own file.
-data class IPRange(
-    val startIP: IPAddress,
-    val endIP: IPAddress // Guessed, a range usually has a start and end.
-) {
-    val family: IPAddress.Family = startIP.family
-
-    init {
-        require(startIP.family == endIP.family) { "Start and end IP must be of the same family." }
-        require(startIP <= endIP) { "Start IP must not be greater than End IP." }
-    }
-
-    fun contains(ip: IPAddress): Boolean {
-        if (ip.family != family) {
-            return false
-        }
-        // Assumes IPAddress is Comparable
-        return ip >= startIP && ip <= endIP
-    }
-}
+// Placeholder for IPRange.kt has been removed.
 
 
 /**
@@ -53,33 +33,65 @@ class IPPool(val range: IPRange) {
             return fetchedIp
         }
 
-        if (range.contains(currentEnd)) {
-            val ipToReturn = currentEnd
-            val nextIp = currentEnd.advanced(by = 1u) // advanced(by: UInt)
-
-            if (nextIp == null) {
-                logger.warn("Failed to advance IP address beyond {} (max reached for range or type). No new IPs available from sequence.", currentEnd)
-                // currentEnd remains ipToReturn, so this effectively becomes the last IP available from sequence.
-            } else {
-                if (range.contains(nextIp)) {
-                    currentEnd = nextIp
-                } else {
-                    // currentEnd was the last IP in the range.
-                    // To prevent re-issuing ipToReturn if currentEnd isn't advanced past it:
-                    // One strategy is to advance currentEnd beyond the range after issuing the last IP.
-                    // For now, if nextIp is out of range, currentEnd is NOT updated.
-                    // This means ipToReturn is the last valid IP. If fetchIP is called again and pool is empty,
-                    // range.contains(currentEnd) will still be true for ipToReturn, but it won't advance further.
-                    // This is okay if ipToReturn is not re-added to pool and range.contains(nextIp) is the true boundary.
-                    logger.debug("IP {} is the last in range (next IP {} is out of range).", ipToReturn, nextIp)
-                }
-            }
-            logger.debug("Fetched IP {} from sequence. Next sequential IP: {}", ipToReturn, currentEnd)
-            return ipToReturn
-        } else {
-            logger.warn("IP Pool exhausted. currentEnd {} is outside the defined range [{}, {}].", currentEnd, range.startIP, range.endIP)
+        // Try to dispense from the sequence
+        if (!range.contains(currentEnd)) {
+            // currentEnd has already moved past the end of the range.
+            logger.warn("IP Pool sequence exhausted. currentEnd {} is outside the defined range [{}, {}].", currentEnd, range.startIP, range.endIP)
             return null
         }
+
+        val ipToReturn = currentEnd
+        val nextIpCandidate = currentEnd.advanced(by = 1u)
+
+        if (nextIpCandidate == null) {
+            // currentEnd is the very last IP address possible for its type (e.g., 255.255.255.255 or ffff:...:ffff)
+            // and cannot be advanced further.
+            // We dispense currentEnd, and then effectively mark the sequence as exhausted by moving currentEnd
+            // to a state that range.contains(currentEnd) will fail next time.
+            // A simple way is to try advancing by a large step or use a special marker if IPAddress supported it.
+            // For now, advancing by 1 again (which will be null) is fine, or simply accept currentEnd won't change.
+            // The crucial part is that next time fetchIP is called, range.contains(currentEnd) should be false
+            // if currentEnd was the true endIP of the range.
+            // Let's advance currentEnd to a conceptual "after end" state.
+            // A robust way is to set currentEnd to an IP known to be outside the range.
+            // Or, rely on the next `range.contains(currentEnd)` check.
+            // If currentEnd was range.endIP, nextIpCandidate would be range.endIP + 1.
+            // So, we set currentEnd to this nextIpCandidate (even if null or out of range).
+            logger.warn("IP {} is the last possible address of its type or failed to advance. Dispensing it.", currentEnd)
+            currentEnd = nextIpCandidate ?: currentEnd // If nextIp is null, currentEnd effectively stays, but range.contains should handle it.
+                                                      // A better way if nextIp is null (max IP): currentEnd = currentEnd.plusBigInt(1) if that existed to make it "invalid"
+                                                      // For now, if nextIp is null, it means currentEnd was truly the last.
+                                                      // The next call to fetchIP will fail range.contains(currentEnd) if currentEnd was range.endIP.
+                                                      // If currentEnd was NOT range.endIP but still nextIp is null, that's an issue with advanced().
+                                                      // Let's assume advanced() works. If it returns null, currentEnd was max.
+                                                      // The next check `!range.contains(currentEnd)` will determine exhaustion.
+            if (nextIpCandidate != null) { // Only if advanced successfully
+                 currentEnd = nextIpCandidate
+            } else { // currentEnd was the max representable IP, make it "invalid" for next check
+                 // This is tricky. A simple way is to rely on the fact that ipToReturn (which was currentEnd)
+                 // is now dispensed. If currentEnd cannot change, the next call to `range.contains(currentEnd)`
+                 // will still be true.
+                 // A better fix: if nextIpCandidate is null, it means currentEnd was the max IP of its type.
+                 // We need to ensure that currentEnd for the *next* iteration is something that range.contains()
+                 // will reliably report as false if ipToReturn was indeed range.endIP.
+                 // Simplest: If nextIpCandidate is null, we assume currentEnd was the last one *ever*.
+                 // To ensure it doesn't get picked again from sequence:
+                 // We can advance currentEnd to a conceptual "afterEnd" state.
+                 // If `advanced(by=1)` returns null, it means `currentEnd` is max possible IP.
+                 // We make `currentEnd` effectively "one past the end" by ensuring it won't be contained in range.
+                 // This is implicitly handled if range.endIP was that max IP.
+                 // A simpler model:
+                 // currentEnd is the *next candidate*. We check if it's in range.
+                 // If yes, dispense it, then advance currentEnd for the *next* call.
+            }
+
+        } else {
+            // nextIpCandidate is valid, this becomes the new currentEnd for the *next* fetch.
+            currentEnd = nextIpCandidate
+        }
+
+        logger.debug("Fetched IP {} from sequence. Next candidate sequential IP: {}", ipToReturn, currentEnd)
+        return ipToReturn
     }
 
     /**

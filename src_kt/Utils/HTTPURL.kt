@@ -76,7 +76,7 @@ class HTTPURL private constructor(
             // If host is null but relativePathPart is not, it's a path-only string like "/foo".
             // In this case, scheme and port should also be null.
 
-            val relativePath = relativePathPart ?: (if (scheme == null && host == null && port == null) "" else "")
+            // The local variable `relativePath` was unused.
             // The Swift code defaults relativePath to "" if group 4 is not found.
             // However, if the input is "http://example.com", group 4 is not matched, so relativePath should be "".
             // If input is "http://example.com/", group 4 is an empty string.

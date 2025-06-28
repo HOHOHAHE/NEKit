@@ -1,44 +1,11 @@
 import org.slf4j.LoggerFactory
+// Assuming actual HTTPHeader.kt from Messages and Opt.kt are correctly imported
+import com.example.nekit.Messages.HTTPHeader // Assuming this is the correct package
+import com.example.nekit.Opt // Assuming this is the correct package
+import com.example.nekit.Messages.HTTPHeaderParseException // For catching parsing errors
 
-// Assuming HTTPHeader.kt and Opt.kt will be available in the same package or imported.
-
-// Placeholder for HTTPHeader.swift - Will be properly translated later
-// This is a simplified version based on usage in HTTPStreamScanner
-data class HTTPHeader(
-    val host: String? = null,
-    val contentLength: Int = 0,
-    val isConnect: Boolean = false,
-    // other fields like method, path, version, headers map etc. would be here
-) {
-    // This constructor is assumed by HTTPStreamScanner
-    // The actual parsing logic from ByteArray to HTTPHeader will be complex.
-    constructor(headerData: ByteArray) : this(
-        // Dummy parsing logic based on what HTTPStreamScanner might expect.
-        // A real parser would analyze the byte array.
-        host = 호출자_정의_헤더_파싱_로직_필요_host(headerData), // Placeholder for actual parsing
-        contentLength = 호출자_정의_헤더_파싱_로직_필요_contentLength(headerData), // Placeholder
-        isConnect = 호출자_정의_헤더_파싱_로직_필요_isConnect(headerData) // Placeholder
-    ) {
-        if (headerData.isEmpty()) throw IllegalArgumentException("Header data cannot be empty")
-        // In a real scenario, this constructor would parse the raw headerData
-        // to populate the fields of HTTPHeader.
-    }
-    companion object {
-        // No logger here as it's a data class, logging would be in parsing logic if complex
-    }
-}
-
-// Placeholder functions for parsing logic - these would be part of HTTPHeader proper parsing
-// If these were complex, they might have their own logging.
-private fun 호출자_정의_헤더_파싱_로직_필요_host(headerData: ByteArray): String? = "example.com"
-private fun 호출자_정의_헤더_파싱_로직_필요_contentLength(headerData: ByteArray): Int = if (호출자_정의_헤더_파싱_로직_필요_isConnect(headerData)) 0 else headerData.size // Example
-private fun 호출자_정의_헤더_파싱_로직_필요_isConnect(headerData: ByteArray): Boolean = false // Example
-
-
-// Placeholder for Opt constants - Will be properly translated later
-object Opt { // Opt might have its own logger if it had complex static init blocks
-    const val MAXHTTPContentBlockLength: Int = 8192 // A common default value
-}
+// Removed placeholder HTTPHeader data class, dummy parsing functions, and placeholder Opt object.
+// The actual HTTPHeader class (from Messages) and Opt object should be used.
 
 
 sealed class ReadAction {
@@ -87,17 +54,17 @@ class HTTPStreamScanner {
 
                     // "To temporarily solve a bug in firefox for mac"
                     if (currentHeader != null && newHeader.host != null && newHeader.host != currentHeader?.host) {
-                        logger.warn("Host changed in stream from ${currentHeader?.host} to ${newHeader.host}. Throwing UnsupportedStreamTypeException.")
-                        throw UnsupportedStreamTypeException("Host changed in stream")
+                        logger.warn("Host changed in stream from {} to {}. Throwing UnsupportedStreamTypeException.", currentHeader?.host, newHeader.host)
+                        throw UnsupportedStreamTypeException("Host changed in stream from ${currentHeader?.host} to ${newHeader.host}")
                     }
-                } catch (e: Exception) {
-                    logger.error("Error parsing HTTP header: ${e.message}", e)
+                } catch (e: HTTPHeaderParseException) { // Catch specific parse exception
+                    logger.error("Error parsing HTTP header: {}", e.message, e)
                     nextAction = ReadAction.Stop
-                    when(e) {
-                        is UnsupportedStreamTypeException -> throw e
-                        is IllegalArgumentException -> throw e // from HTTPHeader constructor
-                        else -> throw Exception("Failed to parse HTTP header", e) // Generic wrapper
-                    }
+                    throw e // Re-throw specific exception
+                } catch (e: Exception) { // Catch other potential exceptions during header processing
+                    logger.error("Unexpected error processing HTTP header: {}", e.message, e)
+                    nextAction = ReadAction.Stop
+                    throw Exception("Failed to process HTTP header", e) // Generic wrapper
                 }
 
                 if (currentHeader == null) { // First header

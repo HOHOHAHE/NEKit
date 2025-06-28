@@ -2,30 +2,16 @@ import java.security.Security
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import org.slf4j.LoggerFactory // Added import
-import org.bouncycastle.jce.provider.BouncyCastleProvider // Added import for BouncyCastle
+import org.slf4j.LoggerFactory
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-// --- Placeholder for CryptoEnum.CryptoOperation ---
-// This should be defined in its own file: CryptoEnum.kt
-enum class CryptoOp { // Renamed to avoid conflict if CryptoOperation is a class/interface
-    ENCRYPT, DECRYPT;
+// Assuming CryptoOp and StreamCrypto are defined in CryptoEnum.kt and StreamCryptoProtocol.kt respectively
+// and are correctly imported or accessible within the same package.
+// e.g.:
+// import com.example.nekit.Crypto.CryptoOp
+// import com.example.nekit.Crypto.StreamCrypto
 
-    fun toJceMode(): Int {
-        return when (this) {
-            ENCRYPT -> Cipher.ENCRYPT_MODE
-            DECRYPT -> Cipher.DECRYPT_MODE
-        }
-    }
-}
-// --- End Placeholder ---
-
-// --- Placeholder for StreamCryptoProtocol.swift ---
-// This should be defined in its own file: StreamCryptoProtocol.kt
-interface StreamCrypto { // Renamed to avoid conflict
-    fun update(data: ByteArray): ByteArray // Assuming it returns new data
-    // fun final(): ByteArray // Often present, but not in the provided Swift
-}
-// --- End Placeholder ---
+// --- Removed Placeholders for CryptoOp and StreamCrypto ---
 
 
 class CCCryptoAdapter(
@@ -36,7 +22,7 @@ class CCCryptoAdapter(
     key: ByteArray
 ) : StreamCrypto {
 
-    private val logger = LoggerFactory.getLogger(CCCryptoAdapter::class.java) // Added logger
+    private val logger = LoggerFactory.getLogger(CCCryptoAdapter::class.java)
 
     enum class Algorithm {
         AES, CAST, RC4; // Original names
@@ -64,10 +50,8 @@ class CCCryptoAdapter(
     private val cipher: Cipher
 
     init {
-        // Optional: Add BouncyCastle provider if needed for algorithms like CAST or specific modes
-        // if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-        //     Security.addProvider(BouncyCastleProvider())
-        // }
+        // BouncyCastle provider is now registered globally in GlobalInitializer.
+        // No need for individual registration here.
 
         val jceAlgorithmName = algorithm.toJceAlgorithmName()
         val jceModeString = mode.toJceModeString()
@@ -102,25 +86,27 @@ class CCCryptoAdapter(
 
             if (initialVector != null) {
                 // IV is used for modes like CFB.
-                // RC4 typically doesn't use an IV in JCE Cipher.init(), or it's handled differently.
-                // CommonCrypto's RC4 with an IV might be a specific variant.
+                // For RC4: Standard JCE RC4/ARCFOUR does not use an IV with Cipher.init().
+                // If an IV is provided for RC4, it implies a custom key derivation scheme
+                // (e.g., key = HASH(original_key + IV)) which should be performed *before*
+                // this adapter is called. This adapter expects the final, ready-to-use key.
+                // Shadowsocks RC4-MD5 handles this in CryptoStreamProcessor.
                 if (algorithm == Algorithm.RC4) {
-                    // TODO: Handle RC4 with IV if it's a non-standard key setup.
-                    // JCE RC4 cipher.init usually only takes key. Some implementations might mix IV into key.
-                    // For now, assume standard JCE RC4 init if IV is passed for RC4.
-                    // This might mean a custom key derivation if IV is used for RC4 keying.
-                    // Or, if the IV is for a specific RC4 variant not directly supported by JCE default.
-                    // One common way is to hash key+IV to form the actual RC4 key.
-                    // For now, let's try to pass it if it's not AES/CAST in CFB mode
-                     if (jceModeString != "NONE") { // Only use IV if mode expects it
-                        val ivSpec = IvParameterSpec(initialVector)
+                    if (initialVector != null && jceModeString == "NONE") {
+                        // This case is unusual for standard JCE RC4. The key should already be derived if IV was part of it.
+                        logger.warn("RC4 algorithm (mode NONE) received an initialVector. Standard JCE RC4 typically does not use an IV directly in Cipher.init(). Ensure the provided key is the final key. IV will be ignored for RC4 in NONE mode if not used by provider implicitly.")
+                        // Some providers might implicitly use IV for RC4 if passed, others error or ignore.
+                        // To be safe and standard, if mode is NONE (typical for RC4), don't pass IV.
+                        cipher.init(operation.toJceMode(), secretKeySpec)
+                    } else if (jceModeString != "NONE") { // Should not happen for RC4 as configured
+                        val ivSpec = IvParameterSpec(initialVector) // initialVector would be non-null here
                         cipher.init(operation.toJceMode(), secretKeySpec, ivSpec)
-                    } else {
-                         // Potentially a warning or error if IV provided for RC4 in NONE mode
+                    }
+                    else { // initialVector is null and mode is NONE
                         cipher.init(operation.toJceMode(), secretKeySpec)
                     }
-                } else { // For AES, CAST in CFB mode
-                    val ivSpec = IvParameterSpec(initialVector)
+                } else { // For AES, CAST in CFB mode (CFB requires an IV)
+                    val ivSpec = IvParameterSpec(initialVector) // initialVector must not be null here
                     cipher.init(operation.toJceMode(), secretKeySpec, ivSpec)
                 }
             } else { // No IV provided

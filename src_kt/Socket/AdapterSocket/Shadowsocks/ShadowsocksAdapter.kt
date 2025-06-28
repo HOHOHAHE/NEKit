@@ -203,12 +203,12 @@ class ShadowsocksAdapter(
         internalState = State.FORWARDING
         // Now call AdapterSocket's didConnect to signal that the adapter is fully established.
         // Pass this.rawSocket which should be the connected raw socket.
-        super.didConnectWith(this.rawSocket!!) // Sets _status = .ESTABLISHED, calls delegate.didConnect(this)
+        // AdapterSocket's didConnect method (which this effectively calls) will set status and notify delegate.didConnect
+        super.didConnect(this.rawSocket!!) // This calls the method from RawTCPSocketDelegate which sets status and calls delegate
 
-        // Also call didBecomeReadyToForwardWith on our delegate
-        // super.didConnectWith already calls delegate.didConnect(this).
-        // The specific readyForForward is also useful.
-        delegate?.get()?.didBecomeReadyToForwardWith(this)
+        // After the general "didConnect" (TCP connection established and obfuscation handshake done),
+        // explicitly signal that the socket is ready for data forwarding.
+        delegate?.get()?.didBecomeReadyToForward(this) // Matches SocketDelegate interface
     }
 
     private fun handleConnectionFailure(error: Throwable) {

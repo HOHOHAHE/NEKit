@@ -21,15 +21,23 @@ data class HTTPAuthentication(
      *
      * @return The Base64 encoded string, or null if encoding to UTF-8 fails (highly unlikely for typical strings).
      */
+import org.slf4j.LoggerFactory // Added import
+
+// ... (rest of the class definition)
+
+    companion object { // Companion object for the logger
+        private val logger = LoggerFactory.getLogger(HTTPAuthentication::class.java)
+    }
+
     fun encode(): String? {
         val authString = "$username:$password"
         return try {
             // Standard Base64 encoding for HTTP headers does not include line feeds.
-            // Swift's `endLineWithLineFeed` option is unusual for typical HTTP Basic Auth.
-            // Using standard Base64 encoding.
             Base64.getEncoder().encodeToString(authString.toByteArray(StandardCharsets.UTF_8))
         } catch (e: Exception) {
-            // In practice, UTF-8 encoding of a string like "$username:$password" should not fail.
+            // In practice, UTF-8 encoding of a string like "$username:$password" should not fail
+            // for typical credential characters, but good to log if it does.
+            logger.error("Error encoding HTTP authentication credentials to Base64: {}", e.message, e)
             null
         }
     }
@@ -45,9 +53,7 @@ data class HTTPAuthentication(
      */
     fun toAuthHeaderValue(): String {
         val encodedCredentials = encode()
-        // If encode() can return null, decide on behavior: throw exception or return placeholder?
-        // For HTTP Basic Auth, a missing token is problematic. Throwing or ensuring encode() doesn't fail is better.
-        // Given typical username/password, encode() should succeed.
-        return "Basic ${encodedCredentials!!}"
+            ?: throw IllegalArgumentException("Failed to encode HTTP authentication credentials; username or password might contain invalid characters for UTF-8 or Base64 encoding.")
+        return "Basic $encodedCredentials"
     }
 }

@@ -7,19 +7,8 @@ class Buffer(initialCapacity: Int = 32) {
     private var internalBuffer: ByteArray = ByteArray(0) // Cache for the stream's content
     private var offset = 0 // Read offset for the internalBuffer
 
-    // Rebuilds internalBuffer from stream and clears the stream
-    // This is done when we need to operate on the buffer as a whole (e.g. search)
-    private fun consolidateStream() {
-        if (stream.size() > 0) {
-            val newBytes = stream.toByteArray()
-            val combined = ByteArray(internalBuffer.size - offset + newBytes.size)
-            System.arraycopy(internalBuffer, offset, combined, 0, internalBuffer.size - offset)
-            System.arraycopy(newBytes, 0, combined, internalBuffer.size - offset, newBytes.size)
-            internalBuffer = combined
-            stream.reset() // Clear the stream as its content is now in internalBuffer
-            offset = 0 // Reset offset as internalBuffer is fresh
-        }
-    }
+    // The `consolidateStream()` method was found to be redundant with the logic
+    // already present in `getReadableBuffer()`. It has been removed.
 
     // Ensures internalBuffer is up-to-date with any appended data in stream
     // and provides a view from the current offset.

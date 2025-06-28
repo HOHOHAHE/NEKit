@@ -5,52 +5,12 @@ import java.nio.ByteOrder
 // We use Byte, Short, Int, Long respectively. Care must be taken with operations
 // where unsigned behavior is critical (e.g., when values exceed the positive range of signed types).
 
-interface BinaryReadable<T> {
-    fun toLittleEndian(): T
-    fun toBigEndian(): T
-}
-
-// For Byte (UInt8), endianness doesn't change the value.
-fun Byte.toLittleEndian(): Byte = this
-fun Byte.toBigEndian(): Byte = this
-
-// For Short (UInt16)
-fun Short.toLittleEndian(): Short {
-    return if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) this
-    else java.lang.Short.reverseBytes(this)
-}
-
-fun Short.toBigEndian(): Short {
-    return if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) this
-    else java.lang.Short.reverseBytes(this)
-}
-
-// For Int (UInt32)
-fun Int.toLittleEndian(): Int {
-    return if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) this
-    else java.lang.Integer.reverseBytes(this)
-}
-
-fun Int.toBigEndian(): Int {
-    return if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) this
-    else java.lang.Integer.reverseBytes(this)
-}
-
-// For Long (UInt64)
-fun Long.toLittleEndian(): Long {
-    return if (ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN) this
-    else java.lang.Long.reverseBytes(this)
-}
-
-fun Long.toBigEndian(): Long {
-    return if (ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN) this
-    else java.lang.Long.reverseBytes(this)
-}
-
+// The BinaryReadable<T> interface and associated endianness conversion extension functions
+// are removed. ByteBuffer handles endianness directly when reading multi-byte types.
 
 open class BinaryDataScanner(
     private val data: ByteArray,
-    private val littleEndian: Boolean
+    private val littleEndian: Boolean // Determines the byte order for multi-byte reads
 ) {
     private val buffer: ByteBuffer = ByteBuffer.wrap(data).apply {
         order(if (littleEndian) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN)

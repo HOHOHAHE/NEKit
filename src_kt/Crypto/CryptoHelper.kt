@@ -11,11 +11,9 @@ object CryptoHelper {
         CryptoAlgorithm.AES128_CFB to (16 to 16), // Key length to IV length
         CryptoAlgorithm.AES192_CFB to (24 to 16),
         CryptoAlgorithm.AES256_CFB to (32 to 16),
-        CryptoAlgorithm.CHACHA20 to (32 to 8),    // Note: ChaCha20 typically uses a 12-byte nonce/IV. Libsodium might use 8 for specific variants (XChaCha20 uses 24, original ChaCha20 8 or 12).
-                                                 // Common IETF ChaCha20 (RFC 8439) uses 12-byte nonce.
-                                                 // This might need adjustment based on the target cryptographic library.
-        CryptoAlgorithm.SALSA20 to (32 to 8),     // Salsa20 also typically uses an 8 or 24 byte nonce.
-        CryptoAlgorithm.RC4_MD5 to (16 to 16)     // RC4 key length, and an "IV" which for RC4-MD5 is often part of KDF or not a traditional IV.
+        CryptoAlgorithm.CHACHA20 to (32 to 12),   // Standard ChaCha20 (RFC 8439) uses a 12-byte nonce.
+        CryptoAlgorithm.SALSA20 to (32 to 8),    // Salsa20 often uses an 8-byte nonce. (XSalsa20 uses 24)
+        CryptoAlgorithm.RC4_MD5 to (16 to 16)    // Key length for RC4, and "IV" length for its KDF part.
     )
 
     fun getKeyLength(algorithm: CryptoAlgorithm): Int {
@@ -23,9 +21,9 @@ object CryptoHelper {
     }
 
     fun getIVLength(algorithm: CryptoAlgorithm): Int {
-        // For ChaCha20, standard (RFC 8439) is 12 bytes. LibSodium default might be 8 or 24 (XChaCha20).
-        // Let's use the value from the table but add a TODO for ChaCha20/Salsa20 IV length review.
-        // TODO: Review IV lengths for CHACHA20 (commonly 12 bytes) and SALSA20 (commonly 8 or 24 bytes) against specific library usage.
+        // IV lengths are now updated based on common JCE/BouncyCastle or standard algorithm usage.
+        // Specific variants (like XChaCha20 or XSalsa20) would need their own CryptoAlgorithm enum entries
+        // if their IV sizes differ and need to be distinguished by this helper.
         return algorithmInfo[algorithm]?.second ?: throw IllegalArgumentException("Unknown algorithm: $algorithm for IV length")
     }
 
@@ -39,7 +37,7 @@ object CryptoHelper {
         return iv
     }
 
-    // Placeholder for MD5 hashing logic, assuming MD5Hash.kt will provide it, or implement directly.
+    // MD5 hashing logic using java.security.MessageDigest.
     private fun md5Hash(data: ByteArray): ByteArray {
         return MessageDigest.getInstance("MD5").digest(data)
     }

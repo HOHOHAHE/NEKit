@@ -101,6 +101,14 @@ class ShadowsocksCryptoProcessor(
             currentData = processingBuffer.getAll() ?: ByteArray(0) // Get remaining data after IV
             processingBuffer.release() // Clear buffer
             logger.info("Read IV ({} bytes). Remaining data: {} bytes.", readIV!!.size, currentData.size)
+
+            // Provide the readIV to the inputStreamProcessor if it's an OTAStreamObfuscater
+            val streamObfuscater = inputStreamProcessor.get()
+            if (streamObfuscater is ShadowsocksOTAStreamObfuscater) {
+                streamObfuscater.setDecryptionIV(readIV!!)
+                logger.debug("Decryption IV provided to ShadowsocksOTAStreamObfuscater.")
+            }
+
             // Initialize decryptor now that readIV is available
             _decryptorInstance = getCrypto(CryptoOperation.DECRYPT)
         }

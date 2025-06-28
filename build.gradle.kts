@@ -39,9 +39,10 @@ dependencies {
     // and for TUN/TAP JNI integration if building that part.
     implementation("io.netty:netty-all:4.1.100.Final") // Check for latest stable version
 
+    // JNA for JNI access to native libraries (TUN/TAP, Libsodium, tun2socks)
+    implementation("net.java.dev.jna:jna:5.13.0")
+
     // TODO: Add other dependencies as they become clear, e.g.:
-    // - JNA or JNR-FFI for JNI access to native libraries (TUN/TAP, Libsodium, tun2socks)
-    //   implementation("net.java.dev.jna:jna:5.13.0")
     // - Specific Libsodium JVM binding if one is chosen (e.g., Kalium, libsodium-jni)
 }
 

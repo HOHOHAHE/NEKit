@@ -7,55 +7,15 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays // For Arrays.equals on byte arrays if not using contentEquals
 
-// --- Placeholders for types that need full translation later ---
-// Placeholder for UInt128.kt (Simplified for IPAddress structure)
-// TODO: Replace with actual UInt128.kt from its own file.
-data class UInt128(val high: ULong, val low: ULong) : Comparable<UInt128> {
-    constructor(value: UInt) : this(0uL, value.toULong())
-    constructor(value: ULong) : this(0uL, value)
+// Assuming actual UInt128.kt and IPInterval.kt are in the same package or correctly imported.
+// e.g.:
+// import com.example.nekit.Utils.UInt128
+// import com.example.nekit.Utils.IPInterval
+// For this diff, we assume they are directly accessible if in the same package.
 
-    // Dummy implementations for now
-    val byteSwapped: UInt128 get() {
-        // Highly simplified, real byte swapping for 128 bits is complex
-        return UInt128(low.toULong().toString(16).padStart(16, '0').chunked(2).reversed().joinToString("").toULong(16),
-                       high.toULong().toString(16).padStart(16, '0').chunked(2).reversed().joinToString("").toULong(16))
-
-    }
-    operator fun plus(other: UInt128): UInt128 = UInt128(high + other.high, low + other.low) // Incorrect, needs carry
-    operator fun plus(other: UInt): UInt128 = this + UInt128(other)
-
-    override fun compareTo(other: UInt128): Int {
-        if (high < other.high) return -1
-        if (high > other.high) return 1
-        if (low < other.low) return -1
-        if (low > other.low) return 1
-        return 0
-    }
-
-    fun toByteArray(): ByteArray {
-        val bb = ByteBuffer.allocate(16)
-        bb.putLong(high.toLong())
-        bb.putLong(low.toLong())
-        return bb.array()
-    }
-
-    companion object {
-        val ZERO = UInt128(0uL, 0uL)
-        fun fromBytes(bytes: ByteArray): UInt128 {
-            require(bytes.size == 16)
-            val bb = ByteBuffer.wrap(bytes)
-            return UInt128(bb.long.toULong(), bb.long.toULong())
-        }
-    }
-}
-
-// Placeholder for IPInterval.kt
-// TODO: Replace with actual IPInterval.kt from its own file.
-sealed class IPInterval {
-    data class IPv4(val value: UInt) : IPInterval()
-    data class IPv6(val value: UInt128) : IPInterval()
-}
-// --- End Placeholders ---
+// --- Removed Placeholders for UInt128 and IPInterval ---
+// These types are now expected to be defined in their own files (UInt128.kt, IPInterval.kt)
+// and imported or accessible via package scope.
 
 
 // Using java.net.InetAddress as the backing object

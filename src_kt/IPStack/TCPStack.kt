@@ -1,203 +1,158 @@
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.* // Ensure all necessary coroutine imports
 import java.lang.ref.WeakReference
-
 import org.slf4j.LoggerFactory
 
-// Assuming IPStackProtocol.kt, IPPacket.kt, QueueFactory.kt (placeholders) are available.
-// TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
+// Import JNA related interfaces and implementation
+import com.example.nekit.IPStack.Native.JnaLibTun2Socks
+import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
+import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
+import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
 
-// --- Placeholders for tun2socks library components ---
-// TODO: These interfaces require a JNI/JNA binding to a functional tun2socks native library,
-//       or a complete rewrite using a Java/Kotlin native IP stack.
+// Assuming IPStackProtocol.kt, IPPacket.kt, QueueFactory.kt are available.
+// Assuming actual TUNTCPSocket.kt will be used.
+// Assuming ProxyServerInterface and DirectProxySocket placeholders are defined elsewhere or actual implementations are available.
+// For this refactor, ensure these are resolvable:
+// import com.example.project.RawSocket.TUNTCPSocket // Adjust if package is different
+// import com.example.project.Socket.ProxySocket.DirectProxySocket // Adjust if package is different
+// import com.example.project.ProxyServer.ProxyServerInterface // Adjust if package is different
 
-interface TSTCPSocketInterface {
-    // Define methods and properties of TSTCPSocket that are used by TUNTCPSocket.
-    // This is a placeholder; actual methods depend on the tun2socks TSTCPSocket API.
-    // Example:
-    // fun read(buffer: ByteArray, offset: Int, length: Int): Int
-    // fun write(data: ByteArray, offset: Int, length: Int): Int
-    // fun close()
-    // val localAddress: String?
-    // val remoteAddress: String?
-    // fun getFD(): Int // Or some other identifier if needed by TUNTCPSocket
-    override fun toString(): String // For logging
-}
+// --- Removed Placeholders for TSTCPSocketInterface, TSIPStackDelegate, TSIPStackInterface, PlaceholderTSIPStack ---
 
-interface TSIPStackDelegate {
-    fun didAcceptTCPSocket(sock: TSTCPSocketInterface)
-}
-
-interface TSIPStackInterface {
-    var delegate: TSIPStackDelegate?
-    var processQueue: CoroutineDispatcher // In Swift it was DispatchQueue, mapping to CoroutineDispatcher
-    var outputBlock: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? // Matches IPStackProtocol.outputFunc
-
-    fun received(packet: ByteArray)
-    fun resumeTimer()
-    fun suspendTimer()
-}
-
-// Placeholder implementation of the tun2socks stack object.
-// In a real scenario, this object would be provided by the JNI/JNA binding.
-object PlaceholderTSIPStack : TSIPStackInterface {
-    private val logger = LoggerFactory.getLogger(PlaceholderTSIPStack::class.java)
-    override var delegate: TSIPStackDelegate? = null
-    override var processQueue: CoroutineDispatcher = Dispatchers.Default // Default dispatcher
-    override var outputBlock: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
-
-    init {
-        logger.warn("Using PlaceholderTSIPStack. Real tun2socks integration needed.")
-    }
-
-    override fun received(packet: ByteArray) {
-        logger.info("received {} bytes. (TODO: Implement native call)", packet.size)
-        // Simulate accepting a socket for testing structure
-        // delegate?.didAcceptTCPSocket(object : TSTCPSocketInterface {
-        //     override fun toString(): String = "DummyTSTCPSocket"
-        // })
-    }
-
-    override fun resumeTimer() {
-        logger.info("resumeTimer called. (TODO: Implement native call)")
-    }
-
-    override fun suspendTimer() {
-        logger.info("suspendTimer called. (TODO: Implement native call)")
-    }
-}
-// --- End tun2socks Placeholders ---
-
-
-// --- Placeholders for other dependent classes ---
-// These should be defined in their respective modules/files.
-
-// Assuming QueueFactory.getQueue() from Swift maps to getting a CoroutineDispatcher
-// object QueueFactory { // Already defined in DNSServer.kt context, ensure consistency
-//     fun getQueue(): CoroutineDispatcher = Dispatchers.Default // Example
-// }
-
-// Assuming ProxyServer, TUNTCPSocket, DirectProxySocket placeholders
-interface SocketInterface // Base for TUNTCPSocket if needed
-class TUNTCPSocket(socket: TSTCPSocketInterface) : SocketInterface { // Wrapper for TSTCPSocket
-    private val logger = LoggerFactory.getLogger(TUNTCPSocket::class.java)
-    init {  logger.info("TUNTCPSocket created for {}", socket) }
-    override fun toString(): String = "TUNTCPSocket($socket)"
-}
-
-open class AbstractProxySocket(val underlyingSocket: SocketInterface) { // Base for DirectProxySocket
-    private val logger = LoggerFactory.getLogger(AbstractProxySocket::class.java)
-     init { logger.info("AbstractProxySocket created with {}", underlyingSocket) }
-}
-
-class DirectProxySocket(socket: TUNTCPSocket) : AbstractProxySocket(socket) {
-    private val logger = LoggerFactory.getLogger(DirectProxySocket::class.java)
-    init { logger.info("DirectProxySocket created for {}", socket) }
-}
-
-
-// Assuming ProxyServer placeholder.
-// The actual ProxyServer class will have the didAcceptNewSocket method.
-interface ProxyServerInterface {
-    fun didAcceptNewSocket(socket: AbstractProxySocket)
-}
-class PlaceholderProxyServer : ProxyServerInterface { // To make TCPStack compile
-    private val logger = LoggerFactory.getLogger(PlaceholderProxyServer::class.java)
-    override fun didAcceptNewSocket(socket: AbstractProxySocket) {
-        logger.info("Accepted new socket {}. (TODO: Implement actual ProxyServer)", socket)
-    }
-}
-// --- End Other Placeholders ---
+// --- Placeholder for dependent classes if not properly imported/available ---
+// These should ideally be imported from their actual locations.
+// For the purpose of this diff, we assume they can be resolved.
+// If TUNTCPSocket is in a different package, it would need an import.
+// class TUNTCPSocket(val socketId: Int, val stackInterface: LibTun2SocksStackInterface, val observe: Boolean) : LibTun2SocksSocketCallbacks, RawTCPSocketProtocol { /* ... */ }
+// interface ProxyServerInterface { fun didAcceptNewSocket(socket: AbstractProxySocket) }
+// open class AbstractProxySocket(val underlyingSocket: Any)
+// class DirectProxySocket(socket: TUNTCPSocket) : AbstractProxySocket(socket)
+// object QueueFactory { fun getProcessingDispatcher(): CoroutineDispatcher = Dispatchers.Default }
+// object IPPacket { fun peekProtocol(packet: ByteArray): TransportProtocol? = TransportProtocol.TCP }
+// enum class TransportProtocol { TCP, UDP, ICMP, UNKNOWN }
+// object AddressFamily { const val AF_INET = 2 }
+// interface IPStackProtocol { var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)?; fun input(packet: ByteArray, version: Int?): Boolean; fun start(); fun stop() }
+// --- End Placeholders for dependent classes ---
 
 
 /**
- * Kotlin wrapper for the tun2socks TCP/IP stack (TSIPStack).
+ * Kotlin wrapper for the tun2socks TCP/IP stack, now using JnaLibTun2Socks.
  * Implements IPStackProtocol to integrate with a TUN interface.
- *
- * TODO: This class heavily relies on a native `tun2socks` library (TSIPStack, TSTCPSocket).
- * A JNI/JNA binding or a pure Java/Kotlin equivalent IP stack is required for functionality.
  */
-object TCPStack : TSIPStackDelegate, IPStackProtocol {
+object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
     private val logger = LoggerFactory.getLogger(TCPStack::class.java)
-    // The TSIPStack.stack singleton from tun2socks
-    // TODO: Replace PlaceholderTSIPStack with the actual JNI/JNA bound instance.
-    private val tsipStack: TSIPStackInterface = PlaceholderTSIPStack
+    private val tun2socksStack: LibTun2SocksStackInterface = JnaLibTun2Socks()
+    private val activeSockets = mutableMapOf<Int, TUNTCPSocket>()
+    private val activeSocketsMutex = Mutex() // To protect activeSockets map
 
-    // Using WeakReference for proxyServer to avoid potential retain cycles if proxyServer also holds reference to TCPStack.
-    private var _proxyServerRef: WeakReference<ProxyServerInterface?> = WeakReference(null)
+    // Using WeakReference for proxyServer to avoid potential retain cycles.
+    private var _proxyServerRef: WeakReference<ProxyServerInterface?> = WeakReference(null) // ProxyServerInterface needs to be defined/imported
     var proxyServer: ProxyServerInterface?
         get() = _proxyServerRef.get()
         set(value) {
             _proxyServerRef = WeakReference(value)
-            logger.info("ProxyServer was set. {}", value != null)
+            logger.info("ProxyServer was set (is null: {}).", value == null)
         }
 
+    // This is called by TUNInterface when it has IP packets for this stack.
+    override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
 
-    override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)?
-        get() = tsipStack.outputBlock
-        set(value) {
-            tsipStack.outputBlock = value
-        }
 
     init {
-        // Initialization similar to the Swift static block
-        // This setup happens when TCPStack object is first created.
-        tsipStack.delegate = this
-        // Assuming QueueFactory.getQueue() from Swift provided a DispatchQueue,
-        // map to CoroutineDispatcher for tsipStack.processQueue.
-        // TODO: Ensure the dispatcher from QueueFactory is suitable for tun2socks's expectations.
-        tsipStack.processQueue = QueueFactory.getIOScope().coroutineContext[CoroutineDispatcher.Key] ?: Dispatchers.Default
-        logger.info("TCPStack initialized and set as delegate for TSIPStack.")
+        logger.info("TCPStack (JNA-based) initialized.")
+        // Initialization of tun2socksStack (init_stack) is deferred to start()
+        // as it requires passing 'this' as callbacks.
     }
 
     override fun input(packet: ByteArray, version: Int?): Boolean {
-        if (version != null && version != AddressFamily.AF_INET) {
-            // Log or handle IPv6 packets if tun2socks instance doesn't support them or if explicitly filtering.
-            // logger.debug("Ignoring non-IPv4 packet (version: {}).", version)
-            return false
-        }
-
-        // Assuming IPPacket.peekProtocol can correctly identify TCP from raw bytes.
-        // TODO: Ensure IPPacket.peekProtocol is robustly implemented.
+        // Assuming tun2socks handles IPv4/IPv6 internally or inputPacket doesn't need version hint.
+        // The version from TUNInterface is based on a simple peek.
+        // tun2socks will parse the IP header more thoroughly.
         if (IPPacket.peekProtocol(packet) == TransportProtocol.TCP) {
-            // Pass IPv4 TCP packets to the underlying tun2socks stack.
-            tsipStack.received(packet)
+            logger.trace("TCPStack input: Passing TCP packet ({} bytes) to tun2socksStack.", packet.size)
+            tun2socksStack.inputPacket(packet, packet.size)
             return true
         }
+        logger.trace("TCPStack input: Packet ({} bytes) is not TCP, ignoring.", packet.size)
         return false
     }
 
     override fun start() {
-        logger.info("start() called, resuming TSIPStack timer.")
-        tsipStack.resumeTimer()
+        logger.info("TCPStack start() called. Initializing and starting JnaLibTun2Socks...")
+        try {
+            tun2socksStack.init(this as LibTun2SocksStackCallbacks)
+            if (tun2socksStack.start()) {
+                logger.info("JnaLibTun2Socks started successfully.")
+            } else {
+                logger.error("JnaLibTun2Socks failed to start.")
+                // Handle start failure, e.g., by stopping associated components or throwing.
+            }
+        } catch (e: Exception) {
+            logger.error("Exception during TCPStack start: {}", e.message, e)
+            // Handle exceptions during init or start
+        }
     }
 
     override fun stop() {
-        logger.info("stop() called, suspending TSIPStack timer and clearing references.")
-        // tsipStack.delegate = null // Avoid setting delegate to null if TCPStack object is a singleton and might be reused.
-                                 // Or ensure new instance is fetched via a 'getInstance()' if re-init is possible.
-                                 // The Swift code `_stack` suggests a true singleton object.
-        tsipStack.suspendTimer()
-        // proxyServer = null // Cleared via WeakReference automatically if no other strong refs.
-                           // Explicitly setting to null ensures it's cleared if desired during stop.
-        _proxyServerRef = WeakReference(null)
+        logger.info("TCPStack stop() called. Stopping JnaLibTun2Socks and cleaning up active sockets...")
+        tun2socksStack.stop()
+
+        // Close all active TUNTCPSockets managed by this stack
+        // Use runBlocking if these closeTcp calls are suspending and stop() is not.
+        // Or make stop() suspend. For now, assuming closeTcp is non-blocking JNA call.
+        runBlocking { // Or use a dedicated scope for cleanup.
+            activeSocketsMutex.withLock {
+                activeSockets.values.forEach { socket ->
+                    try {
+                        socket.forceDisconnect() // Or a more graceful disconnect if appropriate
+                    } catch (e: Exception) {
+                        logger.warn("Exception closing active TUNTCPSocket (id: {}): {}", (socket as? TUNTCPSocket)?.socketId ?: "N/A", e.message)
+                    }
+                }
+                activeSockets.clear()
+            }
+        }
+        _proxyServerRef = WeakReference(null) // Clear proxy server reference
+        logger.info("TCPStack stopped.")
     }
 
-    // Implementation of TSIPStackDelegate
-    override fun didAcceptTCPSocket(sock: TSTCPSocketInterface) {
-        logger.debug("Accepted a new TSTCPSocket: {} from TSIPStack.", sock)
-        val currentProxyServer = proxyServer
-        if (currentProxyServer == null) {
-            logger.error("No ProxyServer configured to handle accepted TSTCPSocket {}.", sock)
-            // TODO: Handle this case, e.g., by closing the TSTCPSocket.
-            // sock.close()
-            return
+    // --- LibTun2SocksStackCallbacks Implementation ---
+
+    override fun writePacket(protocol: Int, packet: ByteArray, len: Int): Int {
+        logger.trace("tun2socks wants to write packet (proto:{}, len:{}) to TUN.", protocol, len)
+        val actualPacket = if (len < packet.size) packet.copyOfRange(0, len) else packet
+        // Assuming outputFunc expects a List<ByteArray> and List<Int> (versions)
+        // The protocol here might be an IP version or transport protocol.
+        // For TUN output, it's typically IP version (AddressFamily.AF_INET/AF_INET6).
+        // For now, assume 'protocol' can be used as 'version'.
+        outputFunc?.invoke(listOf(actualPacket), listOf(protocol))
+        return actualPacket.size // Return number of bytes "written" (passed to outputFunc)
+    }
+
+    override fun onTcpSocketCreated(socketId: Int, context: Any?): LibTun2SocksSocketCallbacks? {
+        logger.info("tun2socks created new TCP socket with id: {}", socketId)
+        // This coroutine scope should be tied to TCPStack's lifecycle or a global one for socket operations.
+        // Using GlobalScope here is not ideal for production but works for now.
+        // Better: Use a scope that can be cancelled when TCPStack stops.
+        val tunnelScope = CoroutineScope(Dispatchers.Default + SupervisorJob()) // Placeholder scope
+
+        val newTunSocket = TUNTCPSocket(socketId, tun2socksStack, true, tunnelScope)
+
+        runBlocking { // Use runBlocking if activeSocketsMutex.withLock is not suspend and map operations are quick
+            activeSocketsMutex.withLock {
+                activeSockets[socketId] = newTunSocket
+            }
         }
 
-        // Wrapping the TSTCPSocket (from tun2socks) into application-level socket types.
-        val tunSocket = TUNTCPSocket(sock) // Custom wrapper for TSTCPSocket
-        val proxySocket = DirectProxySocket(tunSocket) // Further wrapping for proxy logic
+        proxyServer?.didAcceptNewSocket(DirectProxySocket(newTunSocket)) // Assuming DirectProxySocket wraps TUNTCPSocket
+            ?: logger.warn("No proxyServer delegate set in TCPStack to handle new TCP socketId: {}", socketId)
 
-        currentProxyServer.didAcceptNewSocket(proxySocket)
+        return newTunSocket // TUNTCPSocket implements LibTun2SocksSocketCallbacks
+    }
+
+    override fun onUdpSocketCreated(socketId: Int, context: Any?): LibTun2SocksSocketCallbacks? {
+        logger.warn("onUdpSocketCreated (socketId: {}) - UDP not yet fully supported via JnaLibTun2Socks in TCPStack.", socketId)
+        // TODO: Implement UDP handling if tun2socks supports it and it's needed.
+        // This might involve creating a TUNUDPSocket and similar logic to TCP.
+        return null
     }
 }

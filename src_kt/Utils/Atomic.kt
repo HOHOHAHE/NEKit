@@ -1,12 +1,15 @@
 import java.util.concurrent.Semaphore
 
 /**
- * This is just a wrapper as a work around since there is no way to change a passed-in value in a block.
+ * A generic container class used by `Atomic` to allow modification of the wrapped value
+ * within the `withBox` lambda.
+ * Note: This class is final and primarily for use with `Atomic`.
  */
-open class Box<T>(open var value: T)
+class Box<T>(var value: T) // Made final, `open var value` becomes `var value`
 
 /**
- * Atomic provides thread-safety to access a variable.
+ * Atomic provides thread-safety to access a variable by ensuring that
+ * reads, writes, and modify operations (via `withBox`) are serialized.
  */
 open class Atomic<T>(value: T) {
     private var _value: Box<T> = Box(value)
@@ -40,10 +43,23 @@ open class Atomic<T>(value: T) {
      * }
      * ```
      *
+     * **Warning:** If `Atomic.value` is reassigned by another thread while this `Box` instance
+     * is being used, the `Box` instance within this block will refer to the *old* value container.
+     * Subsequent direct assignments to `Atomic.value` will not affect the `Box` instance passed to this block.
+     * However, modifications made to mutable objects *inside* the `Box` (e.g., adding to a mutable list)
+     * will still be thread-safe due to the lock.
+     *
      * @param block The code to run with the variable wrapped in a `Box`.
      * @return Any value returned by the block.
      */
     open fun <U> withBox(block: (Box<T>) -> U): U {
+        // The current _value (Box instance) is passed to the block.
+        // If another thread calls `set(newValue)`, `this._value` in the Atomic instance
+        // will point to a *new* Box instance. The block here will continue to operate
+        // on the Box instance that was current when withBox was entered.
+        // This is generally fine for modifying the *contents* of the value T if T is mutable,
+        // or for reassigning `box.value` if T is immutable and the user understands this Box
+        // is a snapshot of the container at the time of the call.
         return withLock {
             block(this._value)
         }

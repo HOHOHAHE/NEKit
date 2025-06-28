@@ -131,8 +131,14 @@ class ShadowsocksOTAStreamObfuscaterFactory : ShadowsocksStreamObfuscaterFactory
 
 class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStreamObfuscaterBase(session) {
     private val otaLogger = LoggerFactory.getLogger(ShadowsocksOTAStreamObfuscater::class.java)
-    private var chunkCount: UInt = 0u // Corresponds to `count: UInt32` in Swift
-    private var requestSent = false
+    private var outgoingChunkCount: UInt = 0u // Renamed for clarity
+    private var expectedIncomingChunkCount: UInt = 0u
+    private var otaRequestHeaderSent = false // Renamed for clarity
+
+    // IV used by CryptoStreamProcessor for decrypting incoming data, needed for HMAC verification
+    private var readIVForHmac: ByteArray? = null
+    private val incomingBuffer = ByteArrayOutputStream()
+
 
     companion object {
         // Max payload size in one OTA chunk. 0xFFFF (max UDP) - 12 (OTA overhead: len + hmac)
@@ -179,15 +185,17 @@ class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStrea
 
         // Calculate HMAC for ATYP | ADDR | PORT part
         // Key for HMAC is key + writeIV (from CryptoStreamProcessor)
-        val currentKey = key ?: throw IllegalStateException("OTA Obfuscater: Encryption key not set.")
-        val currentWriteIV = writeIV ?: throw IllegalStateException("OTA Obfuscater: Write IV not set.")
+        val currentKey = key ?: throw IllegalStateException("OTA Obfuscater: Encryption key not set for address HMAC.")
+        val currentWriteIV = writeIV ?: throw IllegalStateException("OTA Obfuscater: Write IV not set for address HMAC.")
 
+        // Standard Shadowsocks HMAC key is KDF(masterKey) + IV. Here, it's for the address header.
+        // Let's use key + IV as the material for HMAC, consistent with common practice.
         val hmacKeyMaterial = ByteArray(currentKey.size + currentWriteIV.size)
-        System.arraycopy(currentWriteIV, 0, hmacKeyMaterial, 0, currentWriteIV.size) // IV first in Swift code for OTA header HMAC key
-        System.arraycopy(currentKey, 0, hmacKeyMaterial, currentWriteIV.size, currentKey.size)
+        System.arraycopy(currentKey, 0, hmacKeyMaterial, 0, currentKey.size)
+        System.arraycopy(currentWriteIV, 0, hmacKeyMaterial, currentKey.size, currentWriteIV.size)
 
-        val hmac = HMAC.final(addrHeaderPayload, HashAlgorithm.SHA1, hmacKeyMaterial) // Assuming HMAC.kt and HashAlgorithm.kt
-        val hmacShort = hmac.copyOfRange(0, 10) // Take first 10 bytes
+        val hmac = HMAC.final(addrHeaderPayload, HashAlgorithm.SHA1, hmacKeyMaterial)
+        val hmacShort = hmac.copyOfRange(0, 10)
 
         return addrHeaderPayload + hmacShort // Original Swift code had 0x13 as first byte, then this.
                                             // The 0x13 was for "OTA enabled, address included".
@@ -208,64 +216,122 @@ class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStrea
 
 
     override fun output(data: ByteArray) { // Data from Local, to be obfuscated then passed to Crypto
-        val outputStream = ByteArrayOutputStream()
+        val outputBuffer = ByteArrayOutputStream()
 
-        if (!requestSent) {
-            requestSent = true
+        if (!otaRequestHeaderSent) {
+            otaRequestHeaderSent = true
             val otaAddrHeader = formatOTAAddressHeader()
-            outputStream.write(otaAddrHeader)
+            outputBuffer.write(otaAddrHeader)
             otaLogger.info("Sent OTA address header ({} bytes) for session {}.", otaAddrHeader.size, session)
         }
 
         var dataOffset = 0
         while (dataOffset < data.size) {
-            val blockLength = minOf(data.size - dataOffset, DATA_BLOCK_SIZE)
+            val currentBlockLength = minOf(data.size - dataOffset, DATA_BLOCK_SIZE)
 
-            // Chunk: [DataLen (2 bytes, BigEndian) | HMAC-SHA1 (10 bytes) of Data | Data]
-            val chunkBuffer = ByteBuffer.allocate(2 + 10 + blockLength)
-            chunkBuffer.order(ByteOrder.BIG_ENDIAN)
-            chunkBuffer.putShort(blockLength.toShort())
+            val chunkHeader = ByteBuffer.allocate(2 + 10) // Length (2) + HMAC (10)
+            chunkHeader.order(ByteOrder.BIG_ENDIAN)
+            chunkHeader.putShort(currentBlockLength.toShort())
 
-            // HMAC for data chunk: uses writeIV + chunkCount (big endian UInt32) as key material for HMAC
-            val currentWriteIV = writeIV ?: throw IllegalStateException("OTA Obfuscater: Write IV not set for chunk HMAC.")
-            val hmacKeyForChunk = ByteBuffer.allocate(currentWriteIV.size + 4)
-            hmacKeyForChunk.order(ByteOrder.BIG_ENDIAN)
-            hmacKeyForChunk.put(currentWriteIV)
-            hmacKeyForChunk.putInt(chunkCount.toInt()) // UInt32 count
+            val currentKey = key ?: throw IllegalStateException("OTA Obfuscater: Encryption key not set for data chunk HMAC.")
+            val currentWriteIV = writeIV ?: throw IllegalStateException("OTA Obfuscater: Write IV not set for data chunk HMAC.")
 
-            val dataChunkToHmac = data.copyOfRange(dataOffset, dataOffset + blockLength)
-            val hmac = HMAC.final(dataChunkToHmac, HashAlgorithm.SHA1, hmacKeyForChunk.array())
-            chunkBuffer.put(hmac, 0, 10) // First 10 bytes of HMAC
+            val hmacKeyMaterial = ByteBuffer.allocate(currentWriteIV.size + 4)
+            hmacKeyMaterial.order(ByteOrder.BIG_ENDIAN) // Ensure consistent order for count
+            hmacKeyMaterial.put(currentWriteIV)
+            hmacKeyMaterial.putInt(outgoingChunkCount.toInt()) // Current chunk count
 
-            chunkBuffer.put(dataChunkToHmac) // Actual data chunk
+            val dataPayloadChunk = data.copyOfRange(dataOffset, dataOffset + currentBlockLength)
+            val hmac = HMAC.final(dataPayloadChunk, HashAlgorithm.SHA1, hmacKeyMaterial.array())
+            chunkHeader.put(hmac, 0, 10) // First 10 bytes of HMAC
 
-            outputStream.write(chunkBuffer.array())
+            outputBuffer.write(chunkHeader.array()) // Write Length + HMAC
+            outputBuffer.write(dataPayloadChunk)   // Write Data Payload
 
-            chunkCount++ // Increment chunk counter
-            dataOffset += blockLength
+            outgoingChunkCount++
+            dataOffset += currentBlockLength
         }
 
-        val finalOutputData = outputStream.toByteArray()
+        val finalOutputData = outputBuffer.toByteArray()
         if (finalOutputData.isNotEmpty()) {
-            otaLogger.info("Outputting {} bytes (includes OTA chunking) for session {}.", finalOutputData.size, session)
-            super.output(finalOutputData) // Pass to CryptoStreamProcessor
+            otaLogger.debug("Outputting {} OTA bytes (includes header/chunking) for session {}.", finalOutputData.size, session)
+            super.output(finalOutputData) // Pass to CryptoStreamProcessor for encryption
+        }
+    }
+
+    fun setDecryptionIV(iv: ByteArray) {
+        if (readIVForHmac == null) {
+            this.readIVForHmac = iv
+            otaLogger.debug("OTA StreamObfuscater for session {} received decryption IV ({} bytes).", session, iv.size)
         }
     }
 
     @Throws(Exception::class)
     override fun input(data: ByteArray) { // Data from Crypto (decrypted), to be de-obfuscated (de-chunked, HMAC verified)
-        // TODO: Implement OTA de-chunking and HMAC verification for input data.
-        // This is complex and involves:
-        // 1. Buffering incoming data.
-        // 2. Reading chunk length (2 bytes).
-        // 3. Reading HMAC (10 bytes).
-        // 4. Reading data chunk.
-        // 5. Verifying HMAC using readIV + expected chunkCount.
-        // 6. If HMAC is valid, pass de-chunked data to inputStreamProcessor.
-        // 7. Increment expected chunkCount.
-        // 8. Handle errors (bad HMAC, incorrect length).
-        otaLogger.warn("input() de-chunking and HMAC verification not implemented for session {}. Passing through {} bytes.", session, data.size)
-        super.input(data) // Placeholder: pass through
+        if (data.isEmpty()) return
+        incomingBuffer.write(data)
+        otaLogger.debug("OTA input: received {} bytes, buffer now {} bytes for session {}", data.size, incomingBuffer.size(), session)
+
+        val outputToApp = ByteArrayOutputStream()
+
+        while (true) {
+            val currentBufferedData = incomingBuffer.toByteArray()
+            if (currentBufferedData.size < 2) { // Not enough for length
+                otaLogger.trace("OTA input: Not enough data for chunk length (need 2, have {}). Buffering.", currentBufferedData.size)
+                break
+            }
+
+            val expectedDataLength = ByteBuffer.wrap(currentBufferedData, 0, 2).order(ByteOrder.BIG_ENDIAN).short.toInt()
+            if (expectedDataLength <= 0 || expectedDataLength > DATA_BLOCK_SIZE) {
+                otaLogger.error("OTA input: Invalid data chunk length {} received for session {}. Discarding buffer and requesting disconnect.", expectedDataLength, session)
+                incomingBuffer.reset() // Clear invalid buffer
+                throw IOException("Invalid OTA chunk length: $expectedDataLength") // Signal error
+            }
+
+            val totalChunkLength = 2 + 10 + expectedDataLength // Len + HMAC + Data
+            if (currentBufferedData.size < totalChunkLength) { // Not enough for full chunk
+                otaLogger.trace("OTA input: Not enough data for full chunk (need {}, have {}). Buffering.", totalChunkLength, currentBufferedData.size)
+                break
+            }
+
+            // We have a full chunk
+            val receivedHmac = currentBufferedData.copyOfRange(2, 2 + 10)
+            val actualDataPayload = currentBufferedData.copyOfRange(2 + 10, totalChunkLength)
+
+            // Verify HMAC
+            val currentKeyForHmac = key ?: throw IllegalStateException("OTA Obfuscater: Master key not set for incoming HMAC verification.")
+            val currentReadIVForHmac = readIVForHmac ?: throw IllegalStateException("OTA Obfuscater: Read IV not set for incoming HMAC verification.")
+
+            val hmacKeyMaterial = ByteBuffer.allocate(currentReadIVForHmac.size + 4)
+            hmacKeyMaterial.order(ByteOrder.BIG_ENDIAN)
+            hmacKeyMaterial.put(currentReadIVForHmac)
+            hmacKeyMaterial.putInt(expectedIncomingChunkCount.toInt())
+
+            val calculatedHmac = HMAC.final(actualDataPayload, HashAlgorithm.SHA1, hmacKeyMaterial.array())
+
+            if (!receivedHmac.contentEquals(calculatedHmac.copyOfRange(0, 10))) {
+                otaLogger.error("OTA input: HMAC mismatch for chunk {} (session {}). Expected {}, calculated {}. Discarding buffer.", expectedIncomingChunkCount, session, receivedHmac.joinToString(), calculatedHmac.copyOfRange(0,10).joinToString())
+                incomingBuffer.reset() // Critical: Discard buffer on HMAC mismatch
+                throw IOException("OTA HMAC mismatch for chunk $expectedIncomingChunkCount, session $session") // Signal error
+            }
+
+            otaLogger.debug("OTA input: Chunk {} HMAC verified for session {}. Data length: {}", expectedIncomingChunkCount, session, actualDataPayload.size)
+            outputToApp.write(actualDataPayload)
+            expectedIncomingChunkCount++
+
+            // Remove processed chunk from buffer
+            val remainingData = currentBufferedData.copyOfRange(totalChunkLength, currentBufferedData.size)
+            incomingBuffer.reset()
+            incomingBuffer.write(remainingData)
+
+            if (remainingData.isEmpty()) break // No more data to process in this cycle
+        }
+
+        val appData = outputToApp.toByteArray()
+        if (appData.isNotEmpty()) {
+            otaLogger.debug("OTA input: Forwarding {} bytes of de-obfuscated data to application for session {}.", appData.size, session)
+            super.inputStreamProcessorRef.get()?.input(appData) // Call base class's (ShadowsocksStreamObfuscaterBase) input
+        }
     }
 }
 

@@ -1,3 +1,5 @@
+package Utils
+
 // Depends on IPAddress.kt, IPInterval.kt, IPMask.kt, UInt128.kt (placeholder)
 
 // Define IPRange specific exceptions

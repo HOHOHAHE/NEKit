@@ -1,4 +1,7 @@
+package Utils
+
 import java.math.BigInteger
+import Utils.UInt128.Companion.ZERO // Import ZERO
 
 // Assuming IPAddress.kt and UInt128.kt (placeholder) are available.
 

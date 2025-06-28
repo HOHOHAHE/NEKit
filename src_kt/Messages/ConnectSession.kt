@@ -1,3 +1,5 @@
+package Messages
+
 import java.net.InetAddress // For Utils.DNS.resolve placeholder
 import java.net.UnknownHostException // For Utils.DNS.resolve placeholder
 

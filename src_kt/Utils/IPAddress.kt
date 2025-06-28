@@ -1,3 +1,5 @@
+package Utils
+
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
 import java.net.Inet4Address
@@ -79,24 +81,30 @@ class IPAddress private constructor(private val inetAddress: InetAddress) : Comp
         return presentation
     }
 
+import Utils.UInt128.Companion.ZERO // Import ZERO
+
     val uint32InNetworkOrder: UInt?
-        get() = if (isIPv4) {
-            ByteBuffer.wrap(addressBytes).order(ByteOrder.BIG_ENDIAN).int.toUInt()
-        } else {
-            null
+        get() {
+            return if (isIPv4) {
+                ByteBuffer.wrap(addressBytes).order(ByteOrder.BIG_ENDIAN).int.toUInt()
+            } else {
+                null
+            }
         }
 
     val uint128InNetworkOrder: UInt128?
-        get() = if (isIPv6) {
-            val bytes = addressBytes
-            if (bytes.size != 16) { // Should not happen for Inet6Address
-                logger.warn("IPv6 addressBytes length is not 16: ${bytes.size}. Cannot convert to UInt128.")
-                return null
+        get() {
+            return if (isIPv6) {
+                val bytes = addressBytes
+                if (bytes.size != 16) { // Should not happen for Inet6Address
+                    logger.warn("IPv6 addressBytes length is not 16: ${bytes.size}. Cannot convert to UInt128.")
+                    return null
+                }
+                val bb = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+                UInt128(bb.long.toULong(), bb.long.toULong())
+            } else {
+                null
             }
-            val bb = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
-            UInt128(bb.long.toULong(), bb.long.toULong())
-        } else {
-            null
         }
 
     fun advanced(by: UInt): IPAddress? {

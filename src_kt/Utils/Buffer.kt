@@ -1,3 +1,5 @@
+package Utils
+
 import java.io.ByteArrayOutputStream
 
 // This is a simple wrapper for a byte buffer.
@@ -82,7 +84,7 @@ class Buffer(initialCapacity: Int = 32) {
         return -1
     }
 
-    fun get(to pattern: ByteArray): ByteArray? {
+    fun get(pattern: ByteArray): ByteArray? {
         val readableBuffer = getReadableBuffer()
         val searchBuffer = if (offset > 0) readableBuffer.copyOfRange(offset, readableBuffer.size) else readableBuffer
 

@@ -1,3 +1,5 @@
+package GeoIP
+
 // TODO: Add dependency for MaxMind GeoIP2 Java API (e.g., com.maxmind.geoip2:geoip2:version)
 import com.maxmind.geoip2.DatabaseReader
 import com.maxmind.geoip2.exception.GeoIp2Exception

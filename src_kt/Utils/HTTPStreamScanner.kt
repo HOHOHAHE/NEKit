@@ -1,8 +1,10 @@
+package Utils
+
 import org.slf4j.LoggerFactory
 // Assuming actual HTTPHeader.kt from Messages and Opt.kt are correctly imported
-import com.example.nekit.Messages.HTTPHeader // Assuming this is the correct package
-import com.example.nekit.Opt // Assuming this is the correct package
-import com.example.nekit.Messages.HTTPHeaderParseException // For catching parsing errors
+import Messages.HTTPHeader // Corrected import
+import Opts.Opt // Corrected import
+import Messages.HTTPHeaderParseException // Corrected import
 
 // Removed placeholder HTTPHeader data class, dummy parsing functions, and placeholder Opt object.
 // The actual HTTPHeader class (from Messages) and Opt object should be used.
@@ -114,7 +116,7 @@ class HTTPStreamScanner {
             nextAction = when {
                 remainContentLength == 0 -> ReadAction.ReadHeader
                 remainContentLength < 0 -> ReadAction.Stop // Error state
-                else -> ReadAction.ReadContent(minOf(remainContentLength, Opt.MAXHTTPContentBlockLength))
+                else -> ReadAction.ReadContent(minOf(remainContentLength, Opt.MAX_HTTP_CONTENT_BLOCK_LENGTH))
             }
         }
         if (previousNextAction != nextAction) {

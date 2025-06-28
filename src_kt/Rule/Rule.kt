@@ -1,3 +1,5 @@
+package Rule
+
 // Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt (placeholder from Config) are available.
 // Placeholders for DNSSession, DNSSessionMatchType, DNSSessionMatchResult will be defined/refined shortly.
 

@@ -1,3 +1,5 @@
+package Utils
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -24,12 +26,6 @@ value class Port(
     val networkOrderValue: UShort
 ) : Comparable<Port> { // Adding Comparable for completeness, though not in original Swift spec directly
 
-    /**
-     * Initializes a new Port instance with the port number in host byte order.
-     *
-     * @param hostOrderPort The port number in host byte order.
-     */
-    constructor(hostOrderPort: UShort) : this(hostOrderPort.toBigEndian())
 
     /**
      * The port number in host byte order.

@@ -1,3 +1,5 @@
+package Rule
+
 // Assuming Rule.kt and all concrete rule implementations are available.
 // Assuming DNSSession.kt, ConnectSession.kt, AdapterFactory.kt, Observer.kt, RuleMatchEvent.kt, ObserverFactory.kt
 // and related enums (DNSSessionMatchType, DNSSessionMatchResult) are available.

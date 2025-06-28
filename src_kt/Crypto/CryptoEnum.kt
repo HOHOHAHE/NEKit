@@ -1,3 +1,5 @@
+package Crypto
+
 import java.security.MessageDigest // For digestLength
 import javax.crypto.Cipher        // For ENCRYPT_MODE, DECRYPT_MODE
 

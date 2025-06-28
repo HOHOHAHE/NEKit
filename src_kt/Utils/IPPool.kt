@@ -1,7 +1,9 @@
+package Utils
+
 import org.slf4j.LoggerFactory
 // Assuming IPAddress.kt is available
 // Assuming actual IPRange.kt will be imported
-import com.example.nekit.Utils.IPRange // Placeholder import, adjust if package is different
+import Utils.IPRange // Corrected import
 
 // Placeholder for IPRange.kt has been removed.
 

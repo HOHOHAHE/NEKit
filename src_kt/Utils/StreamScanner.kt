@@ -1,3 +1,5 @@
+package Utils
+
 import java.io.ByteArrayOutputStream
 
 // Helper function to find a byte pattern in a ByteArray

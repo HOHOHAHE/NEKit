@@ -1,12 +1,18 @@
+package Config
+
 import java.io.File
 import java.io.IOException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.core.JsonProcessingException
-import org.slf4j.LoggerFactory // Already present via RuleParser, but good to ensure for Configuration class itself
+import org.slf4j.LoggerFactory
+import Rule.Rule
+import Rule.RuleManager
+import Config.RuleParser
+import GeoIP.GeoIP // Corrected import for GeoIP
 
-// YamlRootNode and YamlNode typealiases are no longer needed with Jackson.
+// YamlNode typealias is no longer needed with Jackson.
 // typealias YamlRootNode = Map<String, Any>
 // typealias YamlNode = Any // Can be Map, List, String, Int, etc.
 
@@ -32,28 +38,8 @@ sealed class ConfigurationException(message: String) : Exception(message) {
 // interface AdapterFactory
 // class AdapterFactoryManager(val factoryDict: Map<String, AdapterFactory>)
 
-// New Placeholders
-interface Rule // Base for rules
-class RuleManager(val rules: List<Rule>) // Simplified
-
-object RuleParser { // Placeholder for RuleParser.swift
-    private val logger = LoggerFactory.getLogger(RuleParser::class.java)
-    @Throws(ConfigurationException::class)
-    fun parseRuleManager(configSection: JsonNode?, adapterFactoryManager: AdapterFactoryManager): RuleManager {
-        // TODO: Implement actual RuleParser logic
-        logger.info("TODO: RuleParser.parseRuleManager called with configSection (type: JsonNode)")
-        if (configSection == null || configSection.isNull || !configSection.isArray) {
-             // Allow empty rule section
-            if(configSection != null && !configSection.isNull && !configSection.isMissingNode) {
-                 if (!configSection.isArray) throw ConfigurationException.RuleParsingException("Rule section must be an array.")
-            }
-             logger.info("No rules defined or rule section is not an array, creating empty RuleManager.")
-             return RuleManager(emptyList())
-        }
-        // Actual parsing logic will iterate through configSection array.
-        return RuleManager(emptyList()) // Dummy implementation
-    }
-}
+// Removed placeholder Rule and RuleManager, as they are now imported from Rule package.
+// Removed placeholder RuleParser, as it's now imported from Config package.
 
 // YamlNode helper extensions are no longer needed here.
 // JsonNode helpers will be defined in AdapterFactoryParser and RuleParser.
@@ -72,7 +58,7 @@ open class Configuration {
     constructor()
 
     @Throws(ConfigurationException::class, IOException::class)
-    open fun load(fromConfigString: String) {
+    open fun loadConfigFromString(fromConfigString: String) { // Renamed to avoid overload conflict
         val mapper = ObjectMapper(YAMLFactory())
         val configNode: JsonNode
         try {
@@ -110,13 +96,13 @@ open class Configuration {
     }
 
     @Throws(ConfigurationException::class, IOException::class)
-    open fun load(fromConfigFile: String) {
+    open fun load(fromConfigFile: String) { // This load method remains
         val configString = try {
             File(fromConfigFile).readText(Charsets.UTF_8)
         } catch (e: IOException) {
             throw IOException("Failed to read config file: $fromConfigFile", e)
         }
-        load(fromConfigString)
+        loadConfigFromString(configString) // Call the renamed method
     }
 
     private fun loadConfigProperties(config: JsonNode) {

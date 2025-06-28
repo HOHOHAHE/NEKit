@@ -1,5 +1,8 @@
+package Utils
+
 import java.util.Base64
 import java.nio.charset.StandardCharsets
+import org.slf4j.LoggerFactory // Moved import to top of file
 
 /**
  * Helper class for HTTP basic authentication credentials.
@@ -9,26 +12,21 @@ data class HTTPAuthentication(
      * The username of the credential.
      */
     val username: String,
-
     /**
      * The password of the credential.
      */
     val password: String
 ) {
 
+    companion object { // Companion object for the logger
+        private val logger = LoggerFactory.getLogger(HTTPAuthentication::class.java)
+    }
+
     /**
      * Encodes the credential as "username:password" in Base64.
      *
      * @return The Base64 encoded string, or null if encoding to UTF-8 fails (highly unlikely for typical strings).
      */
-import org.slf4j.LoggerFactory // Added import
-
-// ... (rest of the class definition)
-
-    companion object { // Companion object for the logger
-        private val logger = LoggerFactory.getLogger(HTTPAuthentication::class.java)
-    }
-
     fun encode(): String? {
         val authString = "$username:$password"
         return try {

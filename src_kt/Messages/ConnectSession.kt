@@ -1,36 +1,32 @@
 import java.net.InetAddress // For Utils.DNS.resolve placeholder
 import java.net.UnknownHostException // For Utils.DNS.resolve placeholder
 
+import org.slf4j.LoggerFactory
+
 // Assuming IPAddress.kt, Port.kt (from Utils), DNSServer.kt, Rule.kt (placeholders) are available.
 // Assuming GeoIP.kt (from GeoIP) is available.
 
 // --- Placeholders for Utils (should be in proper Utils files) ---
 object Utils {
     object DNS {
+        private val logger = LoggerFactory.getLogger(DNS::class.java)
         fun resolve(hostname: String): String {
             // TODO: Implement actual DNS resolution. Consider asynchronous if called from UI/main threads.
             // This is a blocking call.
-            println("INFO: Utils.DNS.resolve called for $hostname (Placeholder: blocking call)")
+            logger.info("resolve called for {} (Placeholder: blocking call)", hostname)
             return try {
                 InetAddress.getByName(hostname).hostAddress
             } catch (e: UnknownHostException) {
-                System.err.println("ERROR: Utils.DNS.resolve: Failed to resolve $hostname: ${e.message}")
+                logger.error("Failed to resolve {}: {}", hostname, e.message, e)
                 hostname // Return original hostname on failure, as per some behaviors
             }
         }
     }
 
-    object GeoIPLookup {
-        fun lookup(ipAddress: String): String? { // Swift returned String, from MMDBCountry
-            // TODO: Implement actual GeoIP lookup and map result to country code/name string.
-            // Depends on GeoIP.kt and its GeoIPCountry structure.
-            println("INFO: Utils.GeoIPLookup.lookup called for $ipAddress (Placeholder)")
-            val countryInfo = GeoIP.lookUp(ipAddress) // Assuming GeoIP.lookUp returns GeoIPCountry?
-            return countryInfo?.isoCode ?: countryInfo?.name // Example: return ISO code or name
-        }
-    }
+    // Utils.GeoIPLookup placeholder is removed as GeoIP.lookUp will be used directly.
 
     object IP {
+        // No logger needed here if printlns were commented out or just for internal debug
         fun isIPv4(hostString: String): Boolean {
             // TODO: Implement robust IPv4 check.
             // println("INFO: Utils.IP.isIPv4 called for $hostString (Placeholder: using IPAddress.parse)")
@@ -73,6 +69,7 @@ class ConnectSession private constructor(
      * Unless there is a good reason not to, any socket should connect based on this directly.
      */
     var host: String = requestedHost
+    private val logger = LoggerFactory.getLogger(ConnectSession::class.java)
         private set // Can be modified internally by lookupRealIP
 
     var matchedRule: Rule? = null
@@ -86,7 +83,7 @@ class ConnectSession private constructor(
      * The lazy evaluation can perform blocking DNS lookups.
      */
     val ipAddress: String by lazy {
-        println("INFO: ConnectSession: Lazily resolving IP for host '$host', requestedHost '$requestedHost'")
+        logger.info("Lazily resolving IP for host '{}', requestedHost '{}'", host, requestedHost)
         if (isIP(this.host)) { // Check if current `host` is an IP
             this.host
         } else {
@@ -115,9 +112,10 @@ class ConnectSession private constructor(
      * The location of the host, derived from `ipAddress`.
      * The lazy evaluation can perform blocking GeoIP lookups.
      */
-    val country: String by lazy {
-        println("INFO: ConnectSession: Lazily looking up country for IP '$ipAddress'")
-        Utils.GeoIPLookup.lookup(this.ipAddress) ?: ""
+    val country: String? by lazy { // Return type changed to String?
+        logger.info("Lazily looking up country for IP '{}'", ipAddress)
+        GeoIP.lookUp(this.ipAddress) // Directly call the new GeoIP.lookUp
+                                     // It already returns String? (ISO code or null)
     }
 
     init {
@@ -148,7 +146,7 @@ class ConnectSession private constructor(
                 this.errorSource = by
             }
             this.disconnectedBy = by
-            println("INFO: ConnectSession: Disconnected by $by. Error: $becauseOf")
+            logger.info("Disconnected by {}. Error: {}", by, becauseOf)
         }
     }
 
@@ -163,13 +161,13 @@ class ConnectSession private constructor(
         if (!currentDnsServer.isFakeIP(address)) return true // Not a fake IP known to server
 
         val sessionInfo = currentDnsServer.lookupFakeIP(address) ?: run {
-            System.err.println("ERROR: ConnectSession: Fake IP $address lookup failed in DNSServer.")
+            logger.error("Fake IP {} lookup failed in DNSServer.", address)
             return false // Crucial: this was the failure point in Swift init?
         }
 
         // Successfully resolved fake IP: update host, ipAddress, rule, country
         this.host = sessionInfo.requestMessage.queries.firstOrNull()?.name ?: run {
-            System.err.println("ERROR: ConnectSession: No query name in DNSSession from fake IP lookup.")
+            logger.error("No query name in DNSSession from fake IP lookup for requested IP {}.", requestedHost)
             return false // Or some default host?
         }
         // ipAddress lazy property will now use the new `host` or be set if sessionInfo.realIP exists.
@@ -192,7 +190,7 @@ class ConnectSession private constructor(
         // If DNSSession had `countryCode: String?`, then:
         // sessionInfo.countryCode?.let { this.countryCodeFromDNS = it } // And country lazy would use it.
 
-        println("INFO: ConnectSession: Fake IP $requestedHost resolved to host '${this.host}'")
+        logger.info("Fake IP {} resolved to host '{}'", requestedHost, this.host)
         return true
     }
 
@@ -211,6 +209,7 @@ class ConnectSession private constructor(
     }
 
     companion object {
+        private val companionLogger = LoggerFactory.getLogger(ConnectSession::class.java.canonicalName + ".Companion")
         /**
          * Failable initializer pattern from Swift.
          * Creates a ConnectSession, performing fake IP lookup if enabled.
@@ -230,7 +229,7 @@ class ConnectSession private constructor(
                     val addressObj = IPAddress.parse(host)
                     if (addressObj != null && dnsServer.isFakeIP(addressObj)) {
                         if (dnsServer.lookupFakeIP(addressObj) == null) {
-                            System.err.println("ERROR: ConnectSession.create: Detected fake IP $host that cannot be resolved by DNSServer. Failing creation.")
+                            companionLogger.error("Detected fake IP {} that cannot be resolved by DNSServer. Failing creation.", host)
                             return null // Mimics failable init
                         }
                     }

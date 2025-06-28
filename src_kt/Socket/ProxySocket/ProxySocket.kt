@@ -1,5 +1,6 @@
 import java.lang.ref.WeakReference
 import java.io.IOException
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming SocketProtocol.kt, RawTCPSocketProtocol.kt, RawTCPSocketDelegate.kt,
 // ConnectSession.kt (Messages), Observer.kt, ProxySocketEvent.kt (Event), ObserverFactory.kt (Event),
@@ -22,6 +23,7 @@ open class ProxySocket(
     override val rawSocket: RawTCPSocketProtocol,
     observe: Boolean = true
 ) : SocketProtocol, RawTCPSocketDelegate {
+    private val logger = LoggerFactory.getLogger(this::class.java) // Logger for specific subclass instance
 
     /**
      * The [ConnectSession] derived from the client's request.
@@ -43,7 +45,7 @@ open class ProxySocket(
     protected var _status: SocketStatus = SocketStatus.ESTABLISHED
         set(value) {
             if (field != value) {
-                // println("DEBUG: ProxySocket($this): Status changing from $field to $value")
+                // logger.trace("Status changing from {} to {}", field, value) // Example if trace was desired
                 field = value
             }
         }
@@ -64,7 +66,7 @@ open class ProxySocket(
             // Assuming ObserverFactory.kt and ProxySocketEvent.kt are available
             observer = ObserverFactory.currentFactory?.getObserverForProxySocket(this)
         }
-        println("INFO: ProxySocket created with rawSocket: $rawSocket. Initial status: $_status")
+        logger.info("Created with rawSocket: {}. Initial status: {}", rawSocket, _status)
     }
 
     /**
@@ -73,12 +75,12 @@ open class ProxySocket(
      */
     open fun openSocket() {
         if (isCancelled) {
-            println("WARN: ProxySocket: openSocket called on a cancelled socket.")
+            logger.warn("openSocket called on a cancelled socket.")
             return
         }
         // _status is already ESTABLISHED by default from init.
         // This call might just be for signaling.
-        println("INFO: ProxySocket: openSocket() called. Status: $_status. Ready to process client data.")
+        logger.info("openSocket() called. Status: {}. Ready to process client data.", _status)
         observer?.signal(ProxySocketEvent.SocketOpened(this))
         // Typically, a subclass would call this.readData() here to start reading the client's request.
     }
@@ -92,10 +94,10 @@ open class ProxySocket(
      */
     open fun respondTo(adapter: AdapterSocket) {
         if (isCancelled) {
-            println("WARN: ProxySocket: respondTo called on a cancelled socket.")
+            logger.warn("respondTo called on a cancelled socket for session: {}", session)
             return
         }
-        println("INFO: ProxySocket: respondTo called with adapter $adapter. Client should be notified of success.")
+        logger.info("respondTo called with adapter {} for session {}. Client should be notified of success.", adapter, session)
         observer?.signal(ProxySocketEvent.AskedToResponseTo(adapter, this))
         // Subclasses (HTTPProxySocket, SOCKS5ProxySocket) will override this to send
         // protocol-specific success messages (e.g., "HTTP/1.1 200 OK" or SOCKS5 success reply)
@@ -105,17 +107,17 @@ open class ProxySocket(
     // Implementation of SocketProtocol methods, delegating to rawSocket
     override fun readData() {
         if (isCancelled) return
-        println("DEBUG: ProxySocket: readData() called, delegating to rawSocket.")
+        logger.debug("readData() called for session {}, delegating to rawSocket.", session)
         rawSocket.readData()
     }
 
     override fun write(data: ByteArray) { // Could be suspend
         if (isCancelled) {
             // Optionally throw IOException("Socket cancelled, cannot write.")
-            println("WARN: ProxySocket: write() called on a cancelled socket. Data not sent.")
+            logger.warn("write() called on a cancelled socket for session {}. Data not sent.", session)
             return
         }
-        println("DEBUG: ProxySocket: write(${data.size} bytes) called, delegating to rawSocket.")
+        logger.debug("write({} bytes) called for session {}, delegating to rawSocket.", data.size, session)
         // TODO: Consider if this should be suspend fun write(data: ByteArray) and call rawSocket.write in a coroutine
         // For now, direct call, assuming RawTCPSocketProtocol.write handles its own asynchronicity or suspension.
         // If rawSocket.write is suspending:
@@ -126,7 +128,7 @@ open class ProxySocket(
     override fun disconnect(becauseOf: Throwable?) {
         if (_cancelled && _status == SocketStatus.CLOSED) return // Already fully closed and cancelled
 
-        println("INFO: ProxySocket: disconnect called. Error: ${becauseOf?.message}")
+        logger.info("disconnect called for session {}. Error: {}", session, becauseOf?.message)
         _status = SocketStatus.DISCONNECTING
         _cancelled = true
         session?.disconnected(becauseOf = becauseOf, by = EventSource.PROXY)
@@ -137,7 +139,7 @@ open class ProxySocket(
     override fun forceDisconnect(becauseOf: Throwable?) {
         if (_cancelled && _status == SocketStatus.CLOSED) return
 
-        println("INFO: ProxySocket: forceDisconnect called. Error: ${becauseOf?.message}")
+        logger.info("forceDisconnect called for session {}. Error: {}", session, becauseOf?.message)
         _status = SocketStatus.DISCONNECTING
         _cancelled = true
         session?.disconnected(becauseOf = becauseOf, by = EventSource.PROXY)
@@ -158,7 +160,7 @@ open class ProxySocket(
 
     override fun didDisconnect(socket: RawTCPSocketProtocol) { // Renamed from didDisconnectWith
         if (_status == SocketStatus.CLOSED) return // Avoid redundant processing
-        println("INFO: ProxySocket: Underlying raw socket disconnected.")
+        logger.info("Underlying raw socket disconnected for session {}.", session)
         _status = SocketStatus.CLOSED
         _cancelled = true // Ensure cancelled is true
         observer?.signal(ProxySocketEvent.Disconnected(this))
@@ -171,7 +173,7 @@ open class ProxySocket(
         // Base ProxySocket signals an event. Subclasses are responsible for parsing this data
         // (e.g., HTTP request, SOCKS handshake) and then acting upon it, which might involve
         // calling `this.delegate?.didReceive(session, this)` or forwarding data if already in that phase.
-        println("DEBUG: ProxySocket: Raw data read (${data.size} bytes). Subclass should process.")
+        logger.debug("Raw data read ({} bytes) for session {}. Subclass should process.", data.size, session)
         observer?.signal(ProxySocketEvent.ReadData(data, this))
         // Subclass override of this method will parse `data` and then potentially call
         // `this.delegate?.didReceive(parsedSession, this)` or `this.delegate?.didRead(processedData, this)`
@@ -179,7 +181,7 @@ open class ProxySocket(
 
     override fun didWrite(data: ByteArray?, by: RawTCPSocketProtocol) {
         // Base ProxySocket signals an event. Subclasses forward to their delegate if in data forwarding phase.
-        println("DEBUG: ProxySocket: Raw data written (acked). Data size: ${data?.size ?: "N/A"}.")
+        logger.debug("Raw data written (acked) for session {}. Data size: {}.", session, data?.size ?: "N/A")
         observer?.signal(ProxySocketEvent.WroteData(data, this))
         // Subclass override might call `this.delegate?.didWrite(data, this)` if in data forwarding phase.
     }
@@ -188,7 +190,7 @@ open class ProxySocket(
         // This callback should ideally not be called for a ProxySocket's rawSocket,
         // as ProxySocket is created with an already connected client socket.
         // If it were called, it might indicate an unexpected state or a reconnect on the raw socket.
-        println("WARN: ProxySocket: didConnect called by rawSocket. This is unexpected for a ProxySocket.")
+        logger.warn("didConnect called by rawSocket for session {}. This is unexpected for a ProxySocket.", session)
         // The original Swift code had an empty implementation here with a note: "This never happens for ProxySocket".
         // If it does happen, ensure status reflects reality.
         // _status = SocketStatus.ESTABLISHED // Re-affirm if necessary
@@ -198,7 +200,7 @@ open class ProxySocket(
 
     override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
         // Called by underlying rawSocket for errors.
-        println("ERROR: ProxySocket: Raw socket error: ${error.message}")
+        logger.error("Raw socket error for session {}: {}", session, error.message, error)
         observer?.signal(ProxySocketEvent.ErrorOccurred(error, this))
         // Errors on the raw socket usually lead to disconnection.
         forceDisconnect(becauseOf = error)

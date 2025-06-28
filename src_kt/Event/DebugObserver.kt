@@ -12,6 +12,8 @@
 // class AdapterSocket
 // class RuleManager
 // For simplicity in this file, declaring them as top-level classes:
+import org.slf4j.LoggerFactory
+
 class Tunnel { override fun toString() = "TunnelInstance" }
 class ProxyServer { override fun toString() = "ProxyServerInstance" }
 class ProxySocket { override fun toString() = "ProxySocketInstance" }
@@ -21,9 +23,15 @@ class RuleManager { override fun toString() = "RuleManagerInstance" }
 
 // Placeholder for Observer.kt (should be in src_kt/Event/Observer.kt)
 open class Observer<T : Any> {
+    // It's unusual for a base class like this to log directly.
+    // Subclasses should handle logging specific to their context if needed.
+    // If general event signaling needs to be logged, it's better done by the caller
+    // or a specific logging observer decorator.
+    // For now, removing the generic println. If specific observers need it, they have their own.
+    // private static val logger = LoggerFactory.getLogger(Observer::class.java) // Example if logging was kept
     open fun signal(event: T) {
         // Base implementation or abstract
-        println("Observer: Received event: $event")
+        // logger.trace("Observer: Received event: {}", event) // Example if logging was kept
     }
 }
 
@@ -94,88 +102,88 @@ open class DebugObserverFactory : ObserverFactory() {
 }
 
 open class DebugTunnelObserver : Observer<TunnelEvent>() {
+    private val logger = LoggerFactory.getLogger(DebugTunnelObserver::class.java)
     override fun signal(event: TunnelEvent) {
-        // TODO: Integrate proper logging (e.g., SLF4J)
-        val message = "DebugTunnelObserver: $event"
+        val message = event.toString() // logger will handle formatting
         when (event) {
             TunnelEvent.RECEIVED_REQUEST,
             TunnelEvent.CLOSED ->
-                println("INFO: $message") // DDLogInfo
+                logger.info(message)
             TunnelEvent.OPENED,
             TunnelEvent.CONNECTED_TO_REMOTE,
             TunnelEvent.UPDATING_ADAPTER_SOCKET ->
-                println("VERBOSE: $message") // DDLogVerbose
+                logger.debug(message) // VERBOSE -> debug
             else -> // .closeCalled, .forceCloseCalled, .receivedReadySignal, etc.
-                println("DEBUG: $message") // DDLogDebug
+                logger.trace(message) // DEBUG -> trace
         }
     }
 }
 
 open class DebugProxySocketObserver : Observer<ProxySocketEvent>() {
+    private val logger = LoggerFactory.getLogger(DebugProxySocketObserver::class.java)
     override fun signal(event: ProxySocketEvent) {
-        // TODO: Integrate proper logging
-        val message = "DebugProxySocketObserver: $event"
+        val message = event.toString()
         when (event) {
             ProxySocketEvent.ERROR_OCCURED ->
-                System.err.println("ERROR: $message") // DDLogError
+                logger.error(message)
             ProxySocketEvent.DISCONNECTED,
             ProxySocketEvent.RECEIVED_REQUEST ->
-                println("INFO: $message") // DDLogInfo
+                logger.info(message)
             ProxySocketEvent.SOCKET_OPENED,
             ProxySocketEvent.ASKED_TO_RESPONSE_TO,
             ProxySocketEvent.READY_FOR_FORWARD ->
-                println("VERBOSE: $message") // DDLogVerbose
+                logger.debug(message) // VERBOSE -> debug
             else -> // .disconnectCalled, .forceDisconnectCalled, .readData, .wroteData
-                println("DEBUG: $message") // DDLogDebug
+                logger.trace(message) // DEBUG -> trace
         }
     }
 }
 
 open class DebugAdapterSocketObserver : Observer<AdapterSocketEvent>() {
+    private val logger = LoggerFactory.getLogger(DebugAdapterSocketObserver::class.java)
     override fun signal(event: AdapterSocketEvent) {
-        // TODO: Integrate proper logging
-        val message = "DebugAdapterSocketObserver: $event"
+        val message = event.toString()
         when (event) {
             AdapterSocketEvent.ERROR_OCCURED ->
-                System.err.println("ERROR: $message") // DDLogError
+                logger.error(message)
             AdapterSocketEvent.DISCONNECTED,
             AdapterSocketEvent.CONNECTED ->
-                println("INFO: $message") // DDLogInfo
+                logger.info(message)
             AdapterSocketEvent.SOCKET_OPENED,
             AdapterSocketEvent.READY_FOR_FORWARD ->
-                println("VERBOSE: $message") // DDLogVerbose
+                logger.debug(message) // VERBOSE -> debug
             else -> // .disconnectCalled, .forceDisconnectCalled, .readData, .wroteData
-                println("DEBUG: $message") // DDLogDebug
+                logger.trace(message) // DEBUG -> trace
         }
     }
 }
 
 open class DebugProxyServerObserver : Observer<ProxyServerEvent>() {
+    private val logger = LoggerFactory.getLogger(DebugProxyServerObserver::class.java)
     override fun signal(event: ProxyServerEvent) {
-        // TODO: Integrate proper logging
-        val message = "DebugProxyServerObserver: $event"
+        val message = event.toString()
         when (event) {
             ProxyServerEvent.STARTED,
             ProxyServerEvent.STOPPED ->
-                println("INFO: $message") // DDLogInfo
+                logger.info(message)
             ProxyServerEvent.NEW_SOCKET_ACCEPTED,
             ProxyServerEvent.TUNNEL_CLOSED ->
-                println("VERBOSE: $message") // DDLogVerbose
-            // else -> println("DEBUG: $message") // No DDLogDebug cases in original for this observer
+                logger.debug(message) // VERBOSE -> debug
+            // else -> logger.trace(message) // No original DEBUG cases
         }
     }
 }
 
 open class DebugRuleManagerObserver : Observer<RuleMatchEvent>() {
+    private val logger = LoggerFactory.getLogger(DebugRuleManagerObserver::class.java)
     override fun signal(event: RuleMatchEvent) {
-        // TODO: Integrate proper logging
-        val message = "DebugRuleManagerObserver: $event"
+        val message = event.toString()
         when (event) {
             RuleMatchEvent.RULE_DID_NOT_MATCH, RuleMatchEvent.DNS_RULE_MATCHED ->
-                println("VERBOSE: $message") // DDLogVerbose
+                logger.debug(message) // VERBOSE -> debug
             RuleMatchEvent.RULE_MATCHED ->
-                println("INFO: $message") // DDLogInfo
-            // else -> println("DEBUG: $message") // No DDLogDebug cases in original
+                logger.info(message)
+            // else -> logger.trace(message) // No original DEBUG cases
         }
     }
 }

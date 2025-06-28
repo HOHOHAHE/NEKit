@@ -1,18 +1,11 @@
 import java.io.File
 import java.io.IOException
-// Assuming YamlNode, AdapterFactoryManager, ConfigurationException and their helpers are available
-// from previous context or defined/imported.
-// Also assuming placeholder Rule types.
+import com.fasterxml.jackson.databind.JsonNode
+// Assuming AdapterFactoryManager, ConfigurationException are available
+// from Configuration.kt or common files.
+// Also assuming placeholder Rule types and AdapterFactory.
 
-// --- Re-iterate or assume YamlNode and helpers if not in shared context ---
-// typealias YamlNode = Map<String, Any> // Or Any for more flexibility
-// Helper extensions for YamlNode (Map<String, Any> or Any)
-// fun YamlNode?.asString(): String? = this as? String
-// fun YamlNode?.asInt(): Int? = (this as? Number)?.toInt()
-// fun YamlNode?.asBoolean(): Boolean? = this as? Boolean
-// @Suppress("UNCHECKED_CAST")
-// fun YamlNode?.asList(): List<YamlNode>? = this as? List<Any> // More general
-// fun YamlNode?.stringOrIntString(): String? { ... } // As defined before
+// YamlNode and its helpers are no longer needed. JsonNode helpers will be used.
 
 // --- Placeholders for Rule types ---
 interface Rule // Base interface, matches placeholder in Configuration.kt
@@ -48,10 +41,13 @@ data class IPRangeListRule(
 data class DNSFailRule(val adapterFactory: AdapterFactory) : Rule
 
 // Assuming RuleManager from Configuration.kt context is:
-// class RuleManager(val rules: List<Rule>, val appendDirect: Boolean = true)
-// Let's refine based on `fromRules` and `appendDirect` usage here:
-class RuleManager(val rules: List<Rule>, val appendDirect: Boolean) {
-    constructor(fromRules: List<Rule>, appendDirect: Boolean) : this(fromRules, appendDirect)
+// class RuleManager(val rules: List<Rule>)
+// The `appendDirect` property seems to be part of the original NEKit.Rule.RuleManager,
+// let's keep it if it was in the Swift version.
+// From Configuration.kt, the placeholder was: class RuleManager(val rules: List<Rule>)
+// Let's assume the version from this file (RuleParser.swift context) is more accurate for RuleManager.
+class RuleManager(val rules: List<Rule>, val appendDirect: Boolean = true) { // Default appendDirect to true
+    // constructor(fromRules: List<Rule>, appendDirect: Boolean) : this(fromRules, appendDirect) // Redundant
 }
 
 
@@ -66,27 +62,64 @@ fun expandTilde(path: String): String {
     return path
 }
 
+// --- JsonNode Helper Extensions (redefined here for standalone use, or move to common file) ---
+fun JsonNode.getOptString(key: String): String? = this.get(key)?.takeIf { it.isTextual }?.asText()
+fun JsonNode.getOptInt(key: String): Int? = this.get(key)?.takeIf { it.isInt }?.asInt()
+fun JsonNode.getOptBool(key: String): Boolean? = this.get(key)?.takeIf { it.isBoolean }?.asBoolean()
+
+fun JsonNode.getReqString(key: String, ruleType: String? = "UnknownRule"): String =
+    this.get(key)?.takeIf { it.isTextual }?.asText()
+        ?: throw ConfigurationException.RuleParsingException("\"$key\" (string) is required for $ruleType rule.")
+
+fun JsonNode.getReqBool(key: String, ruleType: String? = "UnknownRule"): Boolean =
+    this.get(key)?.takeIf { it.isBoolean }?.asBoolean()
+        ?: throw ConfigurationException.RuleParsingException("\"$key\" (boolean) is required for $ruleType rule.")
+
+fun JsonNode.getStringOrIntString(key: String): String? { // Keep this specific logic
+    val node = this.get(key)
+    return when {
+        node == null || node.isNull -> null
+        node.isTextual -> node.asText()
+        node.isInt || node.isLong || node.isBigInteger -> node.numberValue().toString()
+        else -> null
+    }
+}
+
+fun JsonNode.getReqStringOrIntString(key: String, ruleType: String? = "UnknownRule"): String =
+    this.getStringOrIntString(key)
+        ?: throw ConfigurationException.RuleParsingException("\"$key\" (string or integer) is required for $ruleType rule.")
+// --- End JsonNode Helper Extensions ---
+
 
 object RuleParser {
+    private val logger = LoggerFactory.getLogger(RuleParser::class.java) // Added logger
 
     @Throws(ConfigurationException::class)
-    fun parseRuleManager(configNode: YamlNode?, adapterFactoryManager: AdapterFactoryManager): RuleManager {
-        @Suppress("UNCHECKED_CAST")
-        val ruleConfigs = (configNode as? List<YamlNode>)
-            ?: throw ConfigurationException.NoRuleDefinedException()
+    fun parseRuleManager(configNode: JsonNode?, adapterFactoryManager: AdapterFactoryManager): RuleManager {
+        if (configNode == null || configNode.isNull || configNode.isMissingNode) {
+            logger.info("No rule section found or it's null/missing, creating RuleManager with default direct rule.")
+            // Original Swift code's parseRuleManager in Configuration.swift would create an empty rules list and appendDirect=true
+            // If rule section is missing, this seems to be the behavior.
+            return RuleManager(rules = emptyList(), appendDirect = true)
+        }
+        if (!configNode.isArray) {
+            throw ConfigurationException.RuleParsingException("Rule section must be an array.")
+        }
 
         val rules = mutableListOf<Rule>()
-        for (ruleConfigNode in ruleConfigs) {
-            @Suppress("UNCHECKED_CAST")
-            val ruleConfigMap = ruleConfigNode as? Map<String, Any> // Each rule config is a map
-                ?: throw ConfigurationException.RuleParsingException("Rule configuration entry is not a valid map.")
-            rules.add(parseRule(ruleConfigMap, adapterFactoryManager))
+        for (ruleConfigNode in configNode.elements()) { // Iterate ArrayNode
+            if (!ruleConfigNode.isObject) {
+                logger.warn("Skipping non-object entry in rule configuration list.")
+                continue
+            }
+            rules.add(parseRule(ruleConfigNode, adapterFactoryManager))
         }
-        return RuleManager(fromRules = rules, appendDirect = true)
+        // The `appendDirect` flag from Swift's RuleManager.init(fromRules:appendDirect:) seems to default to true.
+        return RuleManager(rules = rules, appendDirect = true)
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): Rule {
+    private fun parseRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): Rule {
         val type = config.getOptString("type")?.lowercase()
             ?: throw ConfigurationException.RuleTypeMissingException()
 
@@ -101,35 +134,29 @@ object RuleParser {
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseCountryRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): CountryRule {
-        val country = config.getOptString("country")
-            ?: throw ConfigurationException.RuleParsingException("Country code (country) is required for country rule.")
-        val adapterId = config.getStringOrIntString("adapter")
-            ?: throw ConfigurationException.RuleParsingException("An adapter id (adapter) is required for country rule.")
-        val adapter = adapterFactoryManager.factoryDict[adapterId] // factoryDict from AdapterFactoryManager placeholder
+    private fun parseCountryRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): CountryRule {
+        val country = config.getReqString("country", ruleType = "country")
+        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "country")
+        val adapter = adapterFactoryManager[adapterId] // Using AdapterFactoryManager's get operator
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for country rule.")
-        val match = config.getOptBool("match")
-            ?: throw ConfigurationException.RuleParsingException("Match boolean (match) is required for country rule.")
+        val match = config.getReqBool("match", ruleType = "country")
         return CountryRule(country, match, adapter)
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseAllRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): AllRule {
-        val adapterId = config.getStringOrIntString("adapter")
-            ?: throw ConfigurationException.RuleParsingException("An adapter id (adapter) is required for all rule.")
-        val adapter = adapterFactoryManager.factoryDict[adapterId]
+    private fun parseAllRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): AllRule {
+        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "all")
+        val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for all rule.")
         return AllRule(adapter)
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseDomainListRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): DomainListRule {
-        val adapterId = config.getStringOrIntString("adapter")
-            ?: throw ConfigurationException.RuleParsingException("An adapter id (adapter) is required for domain list rule.")
-        val adapter = adapterFactoryManager.factoryDict[adapterId]
+    private fun parseDomainListRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): DomainListRule {
+        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "domainlist")
+        val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for domain list rule.")
-        var filepath = config.getStringOrIntString("file")
-            ?: throw ConfigurationException.RuleParsingException("File path (file) for domain list is required.")
+        var filepath = config.getReqStringOrIntString("file", ruleType = "domainlist")
 
         filepath = expandTilde(filepath)
 
@@ -138,48 +165,42 @@ object RuleParser {
             val lines = content.lines()
             val criteria = mutableListOf<DomainListRule.MatchCriterion>()
             for (line in lines) {
-                if (line.isNotBlank() && !line.startsWith("#")) { // Skip empty lines and comments
-                    // Original Swift code used NSRegularExpression. This uses Kotlin Regex.
-                    // Options like .caseInsensitive are set directly in Regex constructor.
+                if (line.isNotBlank() && !line.startsWith("#")) {
                     criteria.add(DomainListRule.MatchCriterion.RegexCriterion(Regex(line, RegexOption.IGNORE_CASE)))
                 }
             }
             return DomainListRule(adapter, criteria)
         } catch (e: IOException) {
             throw ConfigurationException.RuleParsingException("Error reading domain list file '$filepath': ${e.message}")
-        } catch (e: Exception) { // Catch other errors like RegexPatternSyntaxException
+        } catch (e: Exception) {
             throw ConfigurationException.RuleParsingException("Error parsing domain list file '$filepath': ${e.message}")
         }
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseIPRangeListRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): IPRangeListRule {
-        val adapterId = config.getStringOrIntString("adapter")
-            ?: throw ConfigurationException.RuleParsingException("An adapter id (adapter) is required for IP range list rule.")
-        val adapter = adapterFactoryManager.factoryDict[adapterId]
+    private fun parseIPRangeListRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): IPRangeListRule {
+        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "iplist")
+        val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for IP range list rule.")
-        var filepath = config.getStringOrIntString("file")
-            ?: throw ConfigurationException.RuleParsingException("File path (file) for IP range list is required.")
+        var filepath = config.getReqStringOrIntString("file", ruleType = "iplist")
 
         filepath = expandTilde(filepath)
 
         try {
             val content = File(filepath).readText(Charsets.UTF_8)
-            val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") } // Skip empty and comments
-            // The IPRangeListRule constructor is expected to handle parsing of these strings.
+            val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") }
             return IPRangeListRule(adapter, lines)
         } catch (e: IOException) {
             throw ConfigurationException.RuleParsingException("Error reading IP range list file '$filepath': ${e.message}")
-        } catch (e: Exception) { // Catch other errors from IPRangeListRule constructor if it parses strings
+        } catch (e: Exception) {
             throw ConfigurationException.RuleParsingException("Error processing IP range list file '$filepath': ${e.message}")
         }
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseDNSFailRule(config: Map<String, Any>, adapterFactoryManager: AdapterFactoryManager): DNSFailRule {
-        val adapterId = config.getStringOrIntString("adapter")
-            ?: throw ConfigurationException.RuleParsingException("An adapter id (adapter) is required for DNS fail rule.")
-        val adapter = adapterFactoryManager.factoryDict[adapterId]
+    private fun parseDNSFailRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): DNSFailRule {
+        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "dnsfail")
+        val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for DNS fail rule.")
         return DNSFailRule(adapter)
     }

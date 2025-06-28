@@ -3,6 +3,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.lang.ref.WeakReference
 
+import org.slf4j.LoggerFactory
+
 // Assuming IPStackProtocol.kt and other necessary interfaces/classes are available.
 // Assuming QueueFactory.kt provides CoroutineScope/Dispatchers.
 
@@ -29,6 +31,7 @@ interface NativePacketFlowInterface {
 // Example placeholder implementation for NativePacketFlowInterface
 // TODO: Replace with actual JNI/JNA based TUN/TAP implementation.
 class PlaceholderNativePacketFlow : NativePacketFlowInterface {
+    private val logger = LoggerFactory.getLogger(PlaceholderNativePacketFlow::class.java)
     private var job: Job? = null
     private val readScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -40,19 +43,19 @@ class PlaceholderNativePacketFlow : NativePacketFlowInterface {
         return try {
             withContext(readScope.coroutineContext) { // Ensure it's cancellable
                 delay(1000) // Simulate waiting for packets
-                println("INFO: PlaceholderNativePacketFlow: readPackets returning empty list. (TODO: Implement actual TUN read)")
+                logger.info("readPackets returning empty list. (TODO: Implement actual TUN read)")
                 Pair(emptyList(), emptyList())
             }
         } catch (e: CancellationException) {
-            println("INFO: PlaceholderNativePacketFlow: readPackets cancelled.")
+            logger.info("readPackets cancelled.")
             null
         }
     }
 
     override fun writePackets(packets: List<ByteArray>, protocols: List<Int>): Boolean {
-        println("INFO: PlaceholderNativePacketFlow: Writing ${packets.size} packets. (TODO: Implement actual TUN write)")
+        logger.info("Writing {} packets. (TODO: Implement actual TUN write)", packets.size)
         packets.forEachIndexed { index, bytes ->
-            // println("  Packet ${index + 1}: ${bytes.size} bytes, Proto: ${protocols.getOrNull(index) ?: "N/A"}")
+            // logger.debug("  Packet {}: {} bytes, Proto: {}", index + 1, bytes.size, protocols.getOrNull(index) ?: "N/A")
         }
         return true
     }
@@ -71,6 +74,7 @@ class PlaceholderNativePacketFlow : NativePacketFlowInterface {
 open class TUNInterface(
     private var packetFlow: NativePacketFlowInterface? // Nullable to allow it to be cleared on stop
 ) {
+    private val logger = LoggerFactory.getLogger(TUNInterface::class.java)
     private val stacks: MutableList<IPStackProtocol> = mutableListOf()
     private val stacksMutex = Mutex() // To protect access to the 'stacks' list and 'packetFlow' state
 
@@ -86,19 +90,19 @@ open class TUNInterface(
         interfaceScope.launch {
             stacksMutex.withLock {
                 if (packetFlow == null) {
-                    System.err.println("ERROR: TUNInterface: Packet flow is not set, cannot start.")
+                    logger.error("Packet flow is not set, cannot start.")
                     return@launch
                 }
                 for (stack in stacks) {
                     try {
                         stack.start()
                     } catch (e: Exception) {
-                        System.err.println("ERROR: TUNInterface: Failed to start stack $stack: ${e.message}")
+                        logger.error("Failed to start stack {}: {}", stack, e.message, e)
                         // Decide if we should continue starting other stacks or stop.
                     }
                 }
             }
-            println("INFO: TUNInterface: All stacks started. Starting packet reading loop.")
+            logger.info("All stacks started. Starting packet reading loop.")
             readPacketLoop() // Launch the reading loop
         }
     }
@@ -108,7 +112,7 @@ open class TUNInterface(
      * It stops all registered IP stacks and cancels the packet reading loop.
      */
     open fun stop() {
-        println("INFO: TUNInterface: Stopping...")
+        logger.info("Stopping...")
         interfaceScope.launch { // Ensure operations are within the scope to be cancelled
             stacksMutex.withLock {
                 packetFlow = null // Prevent further reads/writes by clearing the reference
@@ -120,14 +124,14 @@ open class TUNInterface(
                     try {
                         stack.stop()
                     } catch (e: Exception) {
-                        System.err.println("ERROR: TUNInterface: Failed to stop stack $stack: ${e.message}")
+                        logger.error("Failed to stop stack {}: {}", stack, e.message, e)
                     }
                 }
                 stacks.clear()
             }
         }
         interfaceScope.cancel("TUNInterface stopped.") // Cancel all coroutines in this scope
-        println("INFO: TUNInterface: Stopped.")
+        logger.info("Stopped.")
     }
 
     /**
@@ -151,11 +155,11 @@ open class TUNInterface(
                      // For now, direct call:
                     currentPacketFlow.writePackets(packets, versions)
                 } else {
-                    println("WARN: TUNInterface: Output function called but packetFlow is null (interface stopped?). Dropping ${packets.size} packets.")
+                    logger.warn("Output function called but packetFlow is null (interface stopped?). Dropping {} packets.", packets.size)
                 }
             }
             stacks.add(stack)
-            println("INFO: TUNInterface: Registered stack: $stack")
+            logger.info("Registered stack: {}", stack)
         }
     }
 
@@ -164,14 +168,14 @@ open class TUNInterface(
             while (isActive) { // Loop while the scope is active (not cancelled by stop())
                 val currentPacketFlow = packetFlow // Read under no lock, but check for null
                 if (currentPacketFlow == null) {
-                    println("INFO: TUNInterface: Packet flow is null, stopping read loop.")
+                    logger.info("Packet flow is null, stopping read loop.")
                     break
                 }
 
                 try {
                     val result = currentPacketFlow.readPackets() // Suspending call
                     if (result == null) {
-                        println("INFO: TUNInterface: readPackets returned null, indicating flow closed or error. Stopping loop.")
+                        logger.info("readPackets returned null, indicating flow closed or error. Stopping loop.")
                         break // Exit loop if flow is closed or error
                     }
 
@@ -201,15 +205,15 @@ open class TUNInterface(
                         // }
                     }
                 } catch (e: CancellationException) {
-                    println("INFO: TUNInterface: readPacketLoop cancelled.")
+                    logger.info("readPacketLoop cancelled.")
                     break
                 } catch (e: Exception) {
-                    System.err.println("ERROR: TUNInterface: Error in readPacketLoop: ${e.message}")
+                    logger.error("Error in readPacketLoop: {}", e.message, e)
                     // Avoid tight loop on persistent errors from readPackets
                     delay(1000)
                 }
             }
-            println("INFO: TUNInterface: readPacketLoop finished.")
+            logger.info("readPacketLoop finished.")
         }
     }
 }

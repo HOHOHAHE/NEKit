@@ -1,3 +1,5 @@
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming AdapterFactory.kt is available (as base for ServerAdapterFactory).
 // Assuming HTTPAuthentication.kt (from Utils) is available.
 
@@ -8,6 +10,7 @@ open class ServerAdapterFactory(
     open val serverHost: String,
     open val serverPort: Int
 ) : AdapterFactory() { // Extends the base AdapterFactory (from AdapterFactory.kt)
+    private val logger = LoggerFactory.getLogger(ServerAdapterFactory::class.java) // Logger for placeholder
 
     // In Swift, ServerAdapterFactory might have its own getAdapterFor or be intended
     // for subclasses to provide it fully.
@@ -19,7 +22,7 @@ open class ServerAdapterFactory(
         // This should ideally be abstract or implemented by concrete subclasses.
         // For now, let it inherit from AdapterFactory, which returns a DirectAdapter.
         // This will likely be overridden by concrete factories like HTTPAdapterFactory itself.
-        println("WARN: ServerAdapterFactory.getAdapterFor called, returning default DirectAdapter. Subclass should override.")
+        logger.warn("ServerAdapterFactory.getAdapterFor called for session {}, returning default DirectAdapter. Subclass should override.", session)
         return super.getAdapterFor(session)
     }
 }

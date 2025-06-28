@@ -6,7 +6,8 @@ import kotlin.collections.set
 
 // Assuming necessary imports from .DNS.DNSEnums, .DNS.DNSMessage, .DNS.DNSResolver,
 // .Utils.IPAddress, .Utils.Port, .Utils.IPPool, .IPStackProtocol are available.
-// TODO: Replace CocoaLumberjack DDLog with a Kotlin logging solution.
+import org.slf4j.LoggerFactory
+// TODO: Replace CocoaLumberjack DDLog with a Kotlin logging solution. (This is now being done)
 
 // --- Placeholders defined in previous steps or assumed available ---
 // IPAddress, Port, IPPool, DNSType, DNSMessage, DNSQuery, DNSResource,
@@ -88,6 +89,8 @@ open class DNSSession(
     open var expireAt: Long = 0 // Swift Date -> Kotlin Long (epoch millis)
 
     // Secondary constructor from IPPacket
+    private val logger = LoggerFactory.getLogger(DNSSession::class.java) // Logger for DNSSession
+
     constructor(packet: IPPacket) : this(
         requestMessage = DNSMessage(), // Dummy, needs proper parsing from packet's UDP payload
         requestIPPacket = packet
@@ -98,11 +101,11 @@ open class DNSSession(
             try {
                 this.requestMessage = DNSMessage(udpParser.payload!!) // Parse the actual DNS message
             } catch (e: Exception) {
-                System.err.println("Error parsing DNSMessage from UDP payload: ${e.message}")
+                logger.error("Error parsing DNSMessage from UDP payload: {}", e.message, e)
                 throw IllegalArgumentException("Invalid DNS data in UDP payload", e)
             }
         } else {
-            System.err.println("UDP payload missing for DNSSession from IPPacket, or protocol parser not UDP.")
+            logger.error("UDP payload missing for DNSSession from IPPacket, or protocol parser not UDP.")
             // This session might be invalid or represent an error.
             // For now, allow creation but it will likely fail later.
             // Or, throw IllegalArgumentException("UDP payload missing or wrong protocol parser")
@@ -124,9 +127,10 @@ object RuleManager { // Assuming currentManager implies a singleton access
     var currentManager: RuleManagerInstance = RuleManagerInstance() // Static instance
 }
 class RuleManagerInstance { // TODO: This needs full implementation from RuleManager.swift
+    private val logger = LoggerFactory.getLogger(RuleManagerInstance::class.java)
     enum class DNSTypeDomainOrIP { DOMAIN, IP }
     fun matchDNS(session: DNSSession, type: DNSTypeDomainOrIP) {
-        println("INFO: RuleManager.matchDNS called for session (query: ${session.requestMessage.queries.firstOrNull()?.name}), type: $type. (TODO: Implement matching logic)")
+        logger.info("RuleManager.matchDNS called for session (query: {}), type: {}. (TODO: Implement matching logic)", session.requestMessage.queries.firstOrNull()?.name, type)
         // Dummy logic: if type is DOMAIN, set to FAKE if name contains "fake", else REAL.
         // If type is IP, set to REAL.
         if (type == DNSTypeDomainOrIP.DOMAIN) {
@@ -174,6 +178,8 @@ open class DNSServer(
     private val pendingSessions: MutableMap<UShort, DNSSession> = ConcurrentHashMap()
     private val resolvers: MutableList<DNSResolverProtocol> = mutableListOf() // Guard access if modified after start
     private val resolversMutex = Mutex()
+    private val logger = LoggerFactory.getLogger(DNSServer::class.java)
+
 
     // From IPStackProtocol
     override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
@@ -186,7 +192,7 @@ open class DNSServer(
             delay(afterDelaySeconds * 1000L)
             fakeSessions.remove(address)
             pool?.release(address) // Assumes IPPool.release is thread-safe or called from appropriate context
-            println("INFO: Cleaned up fake IP: $address")
+            logger.info("Cleaned up fake IP: {}", address)
         }
     }
 
@@ -196,7 +202,7 @@ open class DNSServer(
             // Only remove if it's still the same session (e.g. not replaced by a late response)
             // This check might be implicit if remove(key, value) is used, but ConcurrentHashMap.remove(key) is fine.
             pendingSessions.remove(session.requestMessage.transactionID)
-            println("INFO: Cleaned up pending session for TXID: ${session.requestMessage.transactionID}")
+            logger.info("Cleaned up pending session for TXID: {}", session.requestMessage.transactionID)
         }
     }
 
@@ -222,7 +228,7 @@ open class DNSServer(
                 lookupRemotely(session)
             }
             else -> { // E.g., PASS, or null
-                System.err.println("ERROR: The rule match result should not be ${session.matchResult} after DOMAIN match.")
+                logger.error("The rule match result should not be {} after DOMAIN match.", session.matchResult)
                 // Optionally, treat as REAL or drop
                  lookupRemotely(session) // Fallback to real lookup
             }
@@ -288,13 +294,13 @@ open class DNSServer(
             }
             parsed
         } catch (e: Exception) {
-            System.err.println("ERROR: Failed to parse IP packet: ${e.message}")
+            logger.error("Failed to parse IP packet: {}", e.message, e)
             return false
         }
 
         // Ensure protocol parser (UDP) is set by IPPacket constructor
         if (ipPacket.protocolParser !is UDPProtocolParser) {
-             System.err.println("ERROR: DNS Server received non-UDP packet or IPPacket parsing failed to set UDP parser.")
+             logger.error("DNS Server received non-UDP packet or IPPacket parsing failed to set UDP parser.")
             return false
         }
 
@@ -302,7 +308,7 @@ open class DNSServer(
         val session: DNSSession = try {
             DNSSession(ipPacket)
         } catch (e: Exception) {
-            System.err.println("ERROR: Failed to create DNSSession from IP packet: ${e.message}")
+            logger.error("Failed to create DNSSession from IP packet: {}", e.message, e)
             return false
         }
 
@@ -317,11 +323,11 @@ open class DNSServer(
         // Since this IPStackProtocol is designed for TUN, "start" might mean
         // signaling readiness or setting currentServer.
         DNSServer.currentServer = this
-        println("INFO: DNSServer started on $serverAddress:$serverPort.")
+        logger.info("DNSServer started on {}:{}", serverAddress, serverPort)
     }
 
     override fun stop() {
-        println("INFO: DNSServer stopping...")
+        logger.info("DNSServer stopping...")
         coroutineScope.launch { // Use the scope for resolver operations
             resolversMutex.withLock {
                 for (resolver in resolvers) {
@@ -336,18 +342,18 @@ open class DNSServer(
         if (DNSServer.currentServer == this) {
             DNSServer.currentServer = null
         }
-        println("INFO: DNSServer stopped.")
+        logger.info("DNSServer stopped.")
     }
 
     private fun outputSession(session: DNSSession) {
         val resultType = session.matchResult ?: run {
-            System.err.println("ERROR: outputSession called with no matchResult.")
+            logger.error("outputSession called with no matchResult for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
             return
         }
 
         val requestUdpParser = session.requestIPPacket?.protocolParser as? UDPProtocolParser
         if (requestUdpParser?.sourcePort == null || session.requestIPPacket?.sourceAddress == null) {
-            System.err.println("ERROR: outputSession: Missing source port/address from request.")
+            logger.error("outputSession: Missing source port/address from request for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
             return
         }
 
@@ -370,13 +376,13 @@ open class DNSServer(
                     responseDnsMessage.additionals = it.additionals
                     responseDnsMessage.returnCode = it.returnCode
                 } ?: run {
-                    System.err.println("ERROR: outputSession: Real match but no real response message.")
+                    logger.error("outputSession: Real match but no real response message for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
                     responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
                 }
             }
             DNSSessionMatchResultType.FAKE -> {
                 val fakeIp = session.fakeIP ?: run {
-                    System.err.println("ERROR: outputSession: Fake match but no fake IP.")
+                    logger.error("outputSession: Fake match but no fake IP for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
                     responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
                     // Fallback or send error
                     return // Cannot proceed with fake response
@@ -388,20 +394,20 @@ open class DNSServer(
                 DNSResource.aRecord(queryName, ttl, fakeIp)?.let {
                     responseDnsMessage.answers.add(it)
                 } ?: run {
-                     System.err.println("ERROR: Failed to create A record for fake IP $fakeIp")
+                     logger.error("Failed to create A record for fake IP {}", fakeIp)
                      responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
                 }
                 // session.expireAt = System.currentTimeMillis() + Opt.DNSFakeIPTTL * 1000L // Already set in setUpFakeIP
             }
             else -> {
-                System.err.println("ERROR: outputSession called with unhandled matchResult: $resultType")
+                logger.error("outputSession called with unhandled matchResult: {} for session query: {}", resultType, session.requestMessage.queries.firstOrNull()?.name)
                 return
             }
         }
 
         val responsePayload = responseDnsMessage.build()
         if (responsePayload == null) {
-            System.err.println("ERROR: Failed to build DNS response payload.")
+            logger.error("Failed to build DNS response payload for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
             return
         }
 
@@ -422,7 +428,7 @@ open class DNSServer(
             val version = if (responseIpPacket.destinationAddress?.isIPv4 == true) AddressFamily.AF_INET else AddressFamily.AF_INET6
             outputFunc?.invoke(listOf(responseIpPacket.packetData), listOf(version))
         } else {
-            System.err.println("ERROR: Built IP packet for DNS response is empty.")
+            logger.error("Built IP packet for DNS response is empty for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
         }
     }
 
@@ -454,7 +460,7 @@ open class DNSServer(
 
     private fun setUpFakeIP(session: DNSSession): Boolean {
         val fakeIP = pool?.fetchIP() ?: run {
-            println("VERBOSE: Failed to get a fake IP from pool.")
+            logger.debug("Failed to get a fake IP from pool for session query: {}", session.requestMessage.queries.firstOrNull()?.name) // VERBOSE -> debug
             return false
         }
         session.fakeIP = fakeIP
@@ -462,7 +468,7 @@ open class DNSServer(
         session.expireAt = System.currentTimeMillis() + Opt.DNSFakeIPTTL * 1000L
         // Schedule cleanup for the fake IP mapping
         scheduleCleanupFakeIP(fakeIP, afterDelaySeconds = Opt.DNSFakeIPTTL * 2)
-        println("INFO: Setup fake IP $fakeIP for session (query: ${session.requestMessage.queries.firstOrNull()?.name})")
+        logger.info("Setup fake IP {} for session (query: {})", fakeIP, session.requestMessage.queries.firstOrNull()?.name)
         return true
     }
 
@@ -471,14 +477,14 @@ open class DNSServer(
         val message: DNSMessage = try {
             DNSMessage(rawResponse)
         } catch (e: Exception) {
-            System.err.println("ERROR: Failed to parse response from remote DNS server: ${e.message}")
+            logger.error("Failed to parse response from remote DNS server: {}", e.message, e)
             return
         }
 
         coroutineScope.launch {
             val session = pendingSessions.remove(message.transactionID)
             if (session == null) {
-                println("VERBOSE: Received DNS response with TXID ${message.transactionID} but no matching pending session found.")
+                logger.debug("Received DNS response with TXID {} but no matching pending session found.", message.transactionID) // VERBOSE -> debug
                 return@launch
             }
 
@@ -495,7 +501,7 @@ open class DNSServer(
                 DNSSessionMatchResultType.FAKE -> {
                     if (!setUpFakeIP(session)) {
                         // Failed to set up fake IP (e.g., pool empty), so fallback to sending real response
-                        println("WARN: Could not set up fake IP for ${session.requestMessage.queries.firstOrNull()?.name}, falling back to REAL response.")
+                        logger.warn("Could not set up fake IP for {}, falling back to REAL response.", session.requestMessage.queries.firstOrNull()?.name)
                         session.matchResult = DNSSessionMatchResultType.REAL
                     }
                     outputSession(session)
@@ -504,7 +510,7 @@ open class DNSServer(
                     outputSession(session)
                 }
                 else -> {
-                    System.err.println("ERROR: The rule match result ${session.matchResult} is not supported after IP match for TXID ${session.requestMessage.transactionID}.")
+                    logger.error("The rule match result {} is not supported after IP match for TXID {}.", session.matchResult, session.requestMessage.transactionID)
                     // Optionally, could default to outputting the REAL response if available
                     // if (session.realResponseMessage != null) outputSession(session)
                 }

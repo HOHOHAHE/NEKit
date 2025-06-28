@@ -1,3 +1,5 @@
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming HTTPAdapter.kt is available in this package or imported.
 // Assuming HTTPAuthentication.kt (Utils) and RawSocketFactory.kt (RawSocket) are available
 // for the superclass constructor's default arguments if used.
@@ -21,11 +23,12 @@ class SecureHTTPAdapter(
     secured = true, // Key difference: connection to proxy is secured
     initialRawSocket = initialRawSocket
 ) {
+    private val secureHttpAdapterLogger = LoggerFactory.getLogger(SecureHTTPAdapter::class.java)
 
     init {
         // Specific initialization for SecureHTTPAdapter, if any, beyond what HTTPAdapter does.
         // For now, primarily relies on the `secured = true` passed to super.
-        println("INFO: SecureHTTPAdapter instance created for secure proxy $serverHost:$serverPort (Auth: ${auth != null}).")
+        secureHttpAdapterLogger.info("Instance created for secure proxy {}:{} (Auth: {}).", serverHost, serverPort, auth != null)
     }
 
     // It inherits openSocketWith and other necessary methods from HTTPAdapter.
@@ -34,11 +37,9 @@ class SecureHTTPAdapter(
 
     override fun toString(): String {
         val sessionStr = if (::_session.isInitialized) session.toString() else "uninitialized"
-        return "<${this::class.simpleName ?: "SecureHTTPAdapter"} proxy:$serverHost:$serverPort auth:${auth != null} secured:$secured session:$sessionStr status:$status internalState: ${ (this as HTTPAdapter).getInternalStateForDebug() }>"
-        // Need to expose internalState for debug if HTTPAdapter keeps it private.
-        // For now, just using public properties. If internalState was protected in HTTPAdapter:
-        // return "<${this::class.simpleName} proxy:$serverHost:$serverPort auth:${auth != null} secured:$secured session:$sessionStr status:$status internalState:$internalState>"
-
+        // Assuming getInternalStateForDebug() exists in HTTPAdapter and is accessible (e.g. internal or protected)
+        val internalStateValue = try { (this as HTTPAdapter).getInternalStateForDebug() } catch (e: Exception) { "N/A" }
+        return "<${this::class.simpleName ?: "SecureHTTPAdapter"} proxy:$serverHost:$serverPort auth:${auth != null} secured:$secured session:$sessionStr status:$status internalState:$internalStateValue>"
     }
 }
 

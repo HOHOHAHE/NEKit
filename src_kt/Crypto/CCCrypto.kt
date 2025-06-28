@@ -2,8 +2,8 @@ import java.security.Security
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
-// BouncyCastle might be needed for some algorithms/modes if not in default JCE
-// import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.slf4j.LoggerFactory // Added import
+import org.bouncycastle.jce.provider.BouncyCastleProvider // Added import for BouncyCastle
 
 // --- Placeholder for CryptoEnum.CryptoOperation ---
 // This should be defined in its own file: CryptoEnum.kt
@@ -36,6 +36,8 @@ class CCCryptoAdapter(
     key: ByteArray
 ) : StreamCrypto {
 
+    private val logger = LoggerFactory.getLogger(CCCryptoAdapter::class.java) // Added logger
+
     enum class Algorithm {
         AES, CAST, RC4; // Original names
 
@@ -43,7 +45,7 @@ class CCCryptoAdapter(
             return when (this) {
                 AES -> "AES"
                 RC4 -> "ARCFOUR" // Or "RC4"
-                CAST -> "CAST5"   // Or "CAST6". TODO: Verify specific CAST version or use BouncyCastle
+                CAST -> "CAST5"   // BouncyCastle provides CAST5. Standard JCE might not.
             }
         }
     }
@@ -81,9 +83,20 @@ class CCCryptoAdapter(
         }
 
         try {
-            cipher = Cipher.getInstance(transformation)
-            // TODO: Check if BouncyCastle is needed for "CAST5/CFB/NoPadding" or other specific transformations.
-            // Provider can be specified: Cipher.getInstance(transformation, "BC")
+            cipher = if (algorithm == Algorithm.CAST) {
+                try {
+                    // Attempt to use BouncyCastle for CAST5
+                    val instance = Cipher.getInstance(transformation, BouncyCastleProvider.PROVIDER_NAME)
+                    logger.info("Using BouncyCastle provider for CAST5 algorithm (transformation: {}).", transformation)
+                    instance
+                } catch (e: Exception) {
+                    logger.warn("Failed to get CAST5 instance from BouncyCastle for transformation '{}': {}. Falling back to default JCE provider.", transformation, e.message)
+                    // Fallback to default JCE provider if BC is not available or fails
+                    Cipher.getInstance(transformation)
+                }
+            } else {
+                Cipher.getInstance(transformation)
+            }
 
             val secretKeySpec = SecretKeySpec(key, jceAlgorithmName)
 

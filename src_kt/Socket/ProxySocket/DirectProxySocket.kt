@@ -1,3 +1,5 @@
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming ProxySocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt (Messages),
 // AdapterSocket.kt, SocketDelegate.kt, ProxySocketEvent.kt (Event) are available.
 // Also IPAddress.kt, Port.kt (Utils).
@@ -11,6 +13,8 @@ class DirectProxySocket(
     clientRawSocket: RawTCPSocketProtocol,
     observe: Boolean = true
 ) : ProxySocket(clientRawSocket, observe) {
+
+    private val directProxyLogger = LoggerFactory.getLogger(DirectProxySocket::class.java)
 
     private enum class Status { // Combined Read/Write status for simplicity in Kotlin
         INVALID,
@@ -55,16 +59,16 @@ class DirectProxySocket(
             // ^ Using ConnectSession.create factory, assuming fakeIPEnabled=false for direct scenario.
 
             if (this.session == null) {
-                System.err.println("ERROR: DirectProxySocket: Failed to create ConnectSession from raw socket destination $destIP:$destPort.")
+                directProxyLogger.error("Failed to create ConnectSession from raw socket destination {}:{}.", destIP, destPort)
                 forceDisconnect(becauseOf = IllegalStateException("Failed to create session for direct proxy."))
                 return
             }
 
-            println("INFO: DirectProxySocket: Socket opened. Derived session: ${this.session}. Notifying delegate.")
+            directProxyLogger.info("Socket opened. Derived session: {}. Notifying delegate.", this.session)
             observer?.signal(ProxySocketEvent.ReceivedRequest(this.session!!, this))
             delegate?.get()?.didReceive(this.session!!, this)
         } else {
-            System.err.println("ERROR: DirectProxySocket: Raw socket missing destination IP/Port. Cannot derive session. Local: ${rawSocket.sourceIPAddress}:${rawSocket.sourcePort}")
+            directProxyLogger.error("Raw socket missing destination IP/Port. Cannot derive session. Local: {}:{}.", rawSocket.sourceIPAddress, rawSocket.sourcePort)
             forceDisconnect(becauseOf = IllegalStateException("Missing destination information on raw socket for direct proxy."))
         }
     }
@@ -80,7 +84,7 @@ class DirectProxySocket(
 
         if (isCancelled) return
 
-        println("INFO: DirectProxySocket: Adapter $adapter is ready. Transitioning to forwarding state.")
+        directProxyLogger.info("Adapter {} for session {} is ready. Transitioning to forwarding state.", adapter, session)
         internalReadStatus = Status.FORWARDING
         internalWriteStatus = Status.FORWARDING
 
@@ -102,7 +106,7 @@ class DirectProxySocket(
         if (internalReadStatus == Status.FORWARDING) {
             delegate?.get()?.didRead(data, this) // Forward to Tunnel
         } else {
-            println("WARN: DirectProxySocket: Data read in non-forwarding state: $internalReadStatus. Data size: ${data.size}")
+            directProxyLogger.warn("Data read for session {} in non-forwarding state: {}. Data size: {}.", session, internalReadStatus, data.size)
             // Potentially buffer or drop, or error. For now, just logs.
         }
     }

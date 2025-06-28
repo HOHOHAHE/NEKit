@@ -1,11 +1,13 @@
-// TODO: Replace Yaml parsing with a Kotlin YAML library (e.g., Jackson-YAML, SnakeYAML).
-// For now, 'YamlNode' is used as a placeholder type, assumed to be Map<String, Any>.
-typealias YamlNode = Map<String, Any>
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ArrayNode
+// No need for ObjectNode explicitly if using JsonNode as parameter type and then checking nodeType or using `get`
+
+// YamlNode typealias is no longer needed.
 
 // --- Placeholder for ConfigurationParserError ---
 // Should be defined in its own file or a common error file.
 sealed class ConfigurationParserError(message: String) : Exception(message) {
-    object NoAdapterDefined : ConfigurationParserError("No adapter defined in configuration.")
+    // object NoAdapterDefined : ConfigurationParserError("No adapter defined in configuration.") // Defined in Configuration.kt
     object AdapterIDMissing : ConfigurationParserError("Adapter ID is missing.")
     object AdapterTypeMissing : ConfigurationParserError("Adapter type is missing.")
     object AdapterTypeUnknown : ConfigurationParserError("Unknown adapter type encountered.")
@@ -104,44 +106,62 @@ class SpeedAdapterFactory : AdapterFactory {
 // data class HTTPAuthentication(val username: String, val password: String) // From Utils
 // enum class CryptoAlgorithm { /* ... */ } // From Crypto
 
+// --- Helper extensions for parsing JsonNode ---
+fun JsonNode.getOptString(key: String): String? = this.get(key)?.takeIf { it.isTextual }?.asText()
+fun JsonNode.getOptInt(key: String): Int? = this.get(key)?.takeIf { it.isInt }?.asInt()
+fun JsonNode.getOptBool(key: String): Boolean? = this.get(key)?.takeIf { it.isBoolean }?.asBoolean()
 
-// Helper extensions for parsing YamlNode (Map<String, Any>)
-// TODO: Replace these with actual YAML library access methods.
-@Suppress("UNCHECKED_CAST")
-fun YamlNode.getOptList(key: String): List<YamlNode>? = this[key] as? List<YamlNode>
+fun JsonNode.getReqString(key: String, adapterId: String? = "Unknown"): String =
+    this.get(key)?.takeIf { it.isTextual }?.asText()
+        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (string) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
-fun YamlNode.getOptString(key: String): String? = this[key] as? String
+fun JsonNode.getReqInt(key: String, adapterId: String? = "Unknown"): Int =
+    this.get(key)?.takeIf { it.isInt }?.asInt()
+        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
-fun YamlNode.getOptInt(key: String): Int? = (this[key] as? Number)?.toInt()
-
-fun YamlNode.getOptBool(key: String): Boolean? = this[key] as? Boolean
-
-fun YamlNode.getStringOrIntString(key: String): String? {
-    return when (val value = this[key]) {
-        is String -> value
-        is Int -> value.toString()
-        is Long -> value.toString()
-        // Add other numeric types if necessary
+// Keep getStringOrIntString as its logic is specific for mixed type fields
+fun JsonNode.getStringOrIntString(key: String): String? {
+    val node = this.get(key)
+    return when {
+        node == null || node.isNull -> null
+        node.isTextual -> node.asText()
+        node.isInt || node.isLong || node.isBigInteger -> node.numberValue().toString()
         else -> null
     }
 }
 
+fun JsonNode.getReqStringOrIntString(key: String, adapterId: String? = "Unknown"): String =
+    this.getStringOrIntString(key)
+        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (string or integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
+
+
+fun JsonNode.getOptStringArray(key: String): List<String>? =
+    this.get(key)?.takeIf { it.isArray }?.mapNotNull { it.takeIf {el -> el.isTextual}?.asText() }
+
 
 object AdapterFactoryParser {
+    private val logger = LoggerFactory.getLogger(AdapterFactoryParser::class.java)
 
-    // Swift: static func parseAdapterFactoryManager(_ config: Yaml) throws -> AdapterFactoryManager
-    // Yaml here is the root array of adapter configs, not the entire Yaml doc.
     @Throws(ConfigurationParserError::class)
-    fun parseAdapterFactoryManager(adapterConfigsList: List<YamlNode>): AdapterFactoryManager {
+    fun parseAdapterFactoryManager(adapterConfigsNode: JsonNode): AdapterFactoryManager {
+        if (!adapterConfigsNode.isArray) {
+            throw ConfigurationParserError.AdapterParsingError("Top-level adapter configuration must be an array.")
+        }
         val factoryDict: MutableMap<String, AdapterFactory> = mutableMapOf()
         factoryDict["direct"] = DirectAdapterFactory() // Default direct adapter
 
-        for (adapterConfig in adapterConfigsList) {
-            val id = adapterConfig.getStringOrIntString("id")
+        for (adapterConfig in adapterConfigsNode.elements()) { // Iterate over ArrayNode
+            if (!adapterConfig.isObject) {
+                logger.warn("Skipping non-object entry in adapter configuration list.")
+                continue
+            }
+            val id = adapterConfig.getStringOrIntString("id") // Use new helper
                 ?: throw ConfigurationParserError.AdapterIDMissing
 
-            val type = adapterConfig.getOptString("type")?.lowercase()
+            val type = adapterConfig.getOptString("type")?.lowercase() // Use new helper
                 ?: throw ConfigurationParserError.AdapterTypeMissing
+
+            logger.debug("Parsing adapter id: {}, type: {}", id, type)
 
             factoryDict[id] = when (type) {
                 "speed" -> parseSpeedAdapterFactory(adapterConfig, factoryDict)
@@ -150,7 +170,7 @@ object AdapterFactoryParser {
                 "ss" -> parseShadowsocksAdapterFactory(adapterConfig)
                 "socks5" -> parseSOCKS5AdapterFactory(adapterConfig)
                 "reject" -> parseRejectAdapterFactory(adapterConfig)
-                else -> throw ConfigurationParserError.AdapterTypeUnknown
+                else -> throw ConfigurationParserError.AdapterTypeUnknown //("Unknown adapter type: $type for id: $id")
             }
         }
         return AdapterFactoryManager(factoryDict.toMap())
@@ -158,51 +178,43 @@ object AdapterFactoryParser {
 
     @Throws(ConfigurationParserError::class)
     private fun parseServerAdapterFactory(
-        config: YamlNode,
-        type: HTTPAuthenticationAdapterFactoryType // Using the interface to pass factory type
+        config: JsonNode, // Changed to JsonNode
+        type: HTTPAuthenticationAdapterFactoryType
     ): ServerAdapterFactory {
-        val host = config.getOptString("host")
-            ?: throw ConfigurationParserError.AdapterParsingError("Host (host) is required for ${config.getOptString("id")}.")
-        val port = config.getOptInt("port")
-            ?: throw ConfigurationParserError.AdapterParsingError("Port (port) is required for ${config.getOptString("id")}.")
+        val id = config.getOptString("id") // For error messages
+        val host = config.getReqString("host", adapterId = id)
+        val port = config.getReqInt("port", adapterId = id)
 
         var authentication: HTTPAuthentication? = null
         if (config.getOptBool("auth") == true) {
-            val username = config.getStringOrIntString("username")
-                ?: throw ConfigurationParserError.AdapterParsingError("Username (username) is required when auth is true for ${config.getOptString("id")}.")
-            val password = config.getStringOrIntString("password")
-                ?: throw ConfigurationParserError.AdapterParsingError("Password (password) is required when auth is true for ${config.getOptString("id")}.")
-            authentication = HTTPAuthentication(username, password) // Assumes HTTPAuthentication is available
+            val username = config.getReqStringOrIntString("username", adapterId = id)
+            val password = config.getReqStringOrIntString("password", adapterId = id)
+            authentication = HTTPAuthentication(username, password)
         }
         return type.create(host, port, authentication)
     }
 
     @Throws(ConfigurationParserError::class)
-    private fun parseSOCKS5AdapterFactory(config: YamlNode): SOCKS5AdapterFactory {
-        val host = config.getOptString("host")
-            ?: throw ConfigurationParserError.AdapterParsingError("Host (host) is required for SOCKS5 adapter ${config.getOptString("id")}.")
-        val port = config.getOptInt("port")
-            ?: throw ConfigurationParserError.AdapterParsingError("Port (port) is required for SOCKS5 adapter ${config.getOptString("id")}.")
+    private fun parseSOCKS5AdapterFactory(config: JsonNode): SOCKS5AdapterFactory {
+        val id = config.getOptString("id")
+        val host = config.getReqString("host", adapterId = id)
+        val port = config.getReqInt("port", adapterId = id)
         return SOCKS5AdapterFactory(host, port)
     }
 
     @Throws(ConfigurationParserError::class)
-    private fun parseShadowsocksAdapterFactory(config: YamlNode): ShadowsocksAdapterFactory {
-        val id = config.getStringOrIntString("id") ?: "Unknown ID"
-        val host = config.getOptString("host")
-            ?: throw ConfigurationParserError.AdapterParsingError("Host (host) is required for Shadowsocks adapter $id.")
-        val port = config.getOptInt("port")
-            ?: throw ConfigurationParserError.AdapterParsingError("Port (port) is required for Shadowsocks adapter $id.")
-        val encryptMethod = config.getOptString("method")
-            ?: throw ConfigurationParserError.AdapterParsingError("Encryption method (method) is required for Shadowsocks adapter $id.")
+    private fun parseShadowsocksAdapterFactory(config: JsonNode): ShadowsocksAdapterFactory {
+        val id = config.getReqStringOrIntString("id")
+        val host = config.getReqString("host", adapterId = id)
+        val port = config.getReqInt("port", adapterId = id)
+        val encryptMethod = config.getReqString("method", adapterId = id)
 
         val algorithm = CryptoAlgorithm.values().find { it.rawValue.equals(encryptMethod, ignoreCase = true) }
             ?: throw ConfigurationParserError.AdapterParsingError("Encryption method $encryptMethod is not supported for Shadowsocks adapter $id.")
 
-        val password = config.getStringOrIntString("password")
-            ?: throw ConfigurationParserError.AdapterParsingError("Password (password) is required for Shadowsocks adapter $id.")
+        val password = config.getReqStringOrIntString("password", adapterId = id)
 
-        if (config.getOptString("ota") != null) { // Swift code had `if let _ = ...`
+        if (config.getOptString("ota") != null) {
             throw ConfigurationParserError.AdapterParsingError("Do not use \"ota: true\" for $id, use \"protocol: verify_sha1\" instead.")
         }
 
@@ -214,14 +226,14 @@ object AdapterFactoryParser {
             "http_simple" -> {
                 var headerHosts = listOf(host)
                 var customHeader: String? = null
-                val headerMethod = "GET" // Default in Swift
+                val headerMethod = "GET" // Default
 
                 config.getOptString("obfs_param")?.let { param ->
                     val params = param.split('#', limit = 2)
                     if (params.isNotEmpty()) {
                         headerHosts = params[0].split(',').map { it.trim() }.filter { it.isNotEmpty() }
                         if (params.size > 1) {
-                            customHeader = params[1].replace("\\n", "\r\n") // Original Swift also replaced literal \n
+                            customHeader = params[1].replace("\\n", "\r\n")
                         }
                     }
                 }
@@ -249,18 +261,20 @@ object AdapterFactoryParser {
     }
 
     @Throws(ConfigurationParserError::class)
-    private fun parseSpeedAdapterFactory(config: YamlNode, factoryDict: Map<String, AdapterFactory>): SpeedAdapterFactory {
+    private fun parseSpeedAdapterFactory(config: JsonNode, factoryDict: Map<String, AdapterFactory>): SpeedAdapterFactory {
         val factories = mutableListOf<Pair<AdapterFactory, Int>>()
-        val adaptersNode = config.getOptList("adapters")
-            ?: throw ConfigurationParserError.AdapterParsingError("Speed Adapter ${config.getStringOrIntString("id")} should specify a set of adapters (adapters).")
+        val adaptersNode = config.get("adapters")?.takeIf { it.isArray }
+            ?: throw ConfigurationParserError.AdapterParsingError("Speed Adapter ${config.getStringOrIntString("id")} should specify a list of adapters (adapters).")
 
-        for (adapterNode in adaptersNode) {
-            val id = adapterNode.getOptString("id")
-                ?: throw ConfigurationParserError.AdapterParsingError("An adapter id (id) is required within Speed Adapter.")
+        for (adapterNode in adaptersNode.elements()) {
+             if (!adapterNode.isObject) {
+                logger.warn("Skipping non-object entry in speed adapter's adapter list for id: {}", config.getOptString("id"))
+                continue
+            }
+            val id = adapterNode.getReqString("id", adapterId = config.getOptString("id") + " (speed child)")
             val factory = factoryDict[id]
                 ?: throw ConfigurationParserError.AdapterParsingError("Unknown adapter id \"$id\" in Speed Adapter.")
-            val delay = adapterNode.getOptInt("delay")
-                ?: throw ConfigurationParserError.AdapterParsingError("Each adapter in Speed Adapter must specify a delay in milliseconds.")
+            val delay = adapterNode.getReqInt("delay", adapterId = id)
 
             factories.add(Pair(factory, delay))
         }
@@ -270,9 +284,9 @@ object AdapterFactoryParser {
     }
 
     @Throws(ConfigurationParserError::class)
-    private fun parseRejectAdapterFactory(config: YamlNode): RejectAdapterFactory {
-        val delay = config.getOptInt("delay")
-            ?: throw ConfigurationParserError.AdapterParsingError("Reject adapter ${config.getStringOrIntString("id")} must specify a delay in millisecond.")
+    private fun parseRejectAdapterFactory(config: JsonNode): RejectAdapterFactory {
+        val id = config.getOptString("id")
+        val delay = config.getReqInt("delay", adapterId = id)
         return RejectAdapterFactory(delay)
     }
 }

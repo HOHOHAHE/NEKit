@@ -3,6 +3,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap // Alternative to Mutex for map
 
+import org.slf4j.LoggerFactory
+
 // Assuming IPStackProtocol.kt, IPPacket.kt, UDPProtocolParser.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinUDPSocket.kt, KotlinUDPSocketDelegate.kt (from DNSResolver context) are available.
 // Assuming ConnectSession.kt (placeholder) is available.
@@ -43,6 +45,7 @@ data class ConnectInfo(
  */
 class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
 
+    private val logger = LoggerFactory.getLogger(UDPDirectStack::class.java)
     private val activeSockets: MutableMap<ConnectInfo, KotlinUDPSocket> = ConcurrentHashMap()
     override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
 
@@ -79,17 +82,17 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         val ipPacket: IPPacket = try {
             IPPacket(packetData) // Parses IP and UDP headers
         } catch (e: Exception) {
-            System.err.println("ERROR: UDPDirectStack: Failed to parse IPPacket: ${e.message}")
+            logger.error("Failed to parse IPPacket: {}", e.message, e)
             return
         }
 
         val udpParser = ipPacket.protocolParser as? UDPProtocolParser ?: run {
-            System.err.println("ERROR: UDPDirectStack: Not a UDP packet or UDP parsing failed.")
+            logger.error("Not a UDP packet or UDP parsing failed for packet from {}.", ipPacket.sourceAddress)
             return
         }
 
         val payload = udpParser.payloadData ?: run {
-            System.err.println("ERROR: UDPDirectStack: UDP packet has no payload.")
+            logger.error("UDP packet from {} has no payload.", ipPacket.sourceAddress)
             return
         }
 
@@ -113,7 +116,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         // ConcurrentHashMap.get is thread-safe.
         // For complex logic (check-then-put), use computeIfAbsent for atomicity.
         return activeSockets.computeIfAbsent(connectInfo) { keyInfo ->
-            println("INFO: UDPDirectStack: Creating new UDP socket for $keyInfo")
+            logger.info("Creating new UDP socket for {}", keyInfo)
             // The Swift code uses ConnectSession to derive host/port for NWUDPSocket.
             // If destinationAddress is always an IP, ConnectSession just wraps it.
             val sessionForSocket = ConnectSession(keyInfo.destinationAddress, keyInfo.destinationPort)
@@ -137,7 +140,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         // This requires iterating if `from` is the only info.
         val entry = activeSockets.entries.find { it.value === from } // Find by socket instance
         if (entry == null) {
-            System.err.println("ERROR: UDPDirectStack: Received data on unknown or closed socket.")
+            logger.error("Received data on unknown or closed socket: {}", from)
             return
         }
         val connectInfo = entry.key
@@ -158,14 +161,14 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         try {
             replyIpPacket.buildPacket() // Builds UDP segment and then IP packet
         } catch (e: Exception) {
-            System.err.println("ERROR: UDPDirectStack: Failed to build reply IP packet: ${e.message}")
+            logger.error("Failed to build reply IP packet for {}: {}", connectInfo, e.message, e)
             return
         }
 
         replyIpPacket.packetData?.let { builtPacketData ->
             val version = if (replyIpPacket.version == IPVersion.IPv4) AddressFamily.AF_INET else AddressFamily.AF_INET6
             outputFunc?.invoke(listOf(builtPacketData), listOf(version))
-        } ?: System.err.println("ERROR: UDPDirectStack: Built reply packet data is null.")
+        } ?: logger.error("Built reply packet data is null for {}.", connectInfo)
     }
 
     override fun didCancel(socket: KotlinUDPSocket) {
@@ -173,20 +176,20 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         val entry = activeSockets.entries.find { it.value === socket }
         if (entry != null) {
             activeSockets.remove(entry.key)
-            println("INFO: UDPDirectStack: Removed active socket for ${entry.key} due to cancellation/closure.")
+            logger.info("Removed active socket for {} due to cancellation/closure.", entry.key)
         } else {
-            // println("INFO: UDPDirectStack: didCancel called for an already removed or unknown socket.")
+            // logger.info("didCancel called for an already removed or unknown socket: {}", socket)
         }
     }
 
     override fun start() {
-        println("INFO: UDPDirectStack started.")
+        logger.info("UDPDirectStack started.")
         // No specific startup actions like binding a listening server socket,
         // as sockets are created on-demand for outgoing connections.
     }
 
     override fun stop() {
-        println("INFO: UDPDirectStack stopping...")
+        logger.info("UDPDirectStack stopping...")
         val currentSockets = ArrayList(activeSockets.values) // Avoid ConcurrentModificationException
         activeSockets.clear()
 
@@ -196,6 +199,6 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
             }
         }
         stackScope.cancel("UDPDirectStack stopped") // Cancel any ongoing tasks in this scope
-        println("INFO: UDPDirectStack stopped. All active sockets signaled to disconnect.")
+        logger.info("UDPDirectStack stopped. All active sockets signaled to disconnect.")
     }
 }

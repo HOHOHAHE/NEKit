@@ -1,22 +1,30 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
+import kotlinx.coroutines.delay // Added missing import
+
+
 // Assuming AdapterFactory.kt, ConnectSession.kt (Messages), AdapterSocket.kt, RawSocketFactory.kt are available.
 // Placeholder for SpeedAdapter.kt needs to be defined or available.
 
 // --- Placeholder for SpeedAdapter ---
 // TODO: Move to its own file: src_kt/Socket/AdapterSocket/SpeedAdapter.kt
 open class SpeedAdapter : AdapterSocket(null /* SpeedAdapter manages underlying sockets, might not have its own primary rawSocket initially */) {
+    private val logger = LoggerFactory.getLogger(SpeedAdapter::class.java) // Logger for placeholder
     var adapters: List<Pair<AdapterSocket, Int>> = emptyList()
         // Custom setter if needed, e.g., to trigger actions when adapters are set.
         // For now, simple property.
 
     init {
-        println("INFO: SpeedAdapter instance created.")
+        logger.info("Instance created.")
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session) // Sets this.session, observer
 
         if (adapters.isEmpty()) {
-            System.err.println("ERROR: SpeedAdapter: No adapters configured to choose from.")
+            logger.error("No adapters configured to choose from for session: {}.", session)
             _status = SocketStatus.CLOSED
             // Ensure delegate is called on the correct dispatcher if this method can be called from various contexts.
             // For now, direct call.
@@ -26,8 +34,8 @@ open class SpeedAdapter : AdapterSocket(null /* SpeedAdapter manages underlying 
         }
 
         _status = SocketStatus.CONNECTING
-        println("INFO: SpeedAdapter: Opening for session $session. Will manage ${adapters.size} underlying adapters.")
-        println("TODO: Implement actual speed testing, adapter selection, and connection logic for SpeedAdapter.")
+        logger.info("Opening for session {}. Will manage {} underlying adapters.", session, adapters.size)
+        println("TODO: Implement actual speed testing, adapter selection, and connection logic for SpeedAdapter.") // Developer TODO left as is
 
         // Placeholder: For now, "connects" successfully but doesn't actually choose or use an adapter.
         // In a real implementation, this method would initiate the process of testing/connecting
@@ -47,7 +55,7 @@ open class SpeedAdapter : AdapterSocket(null /* SpeedAdapter manages underlying 
             // For this placeholder, let's assume it just "adopts" the chosenAdapter's socket conceptually.
             // this.rawSocket = chosenAdapter.rawSocket // This assumes chosenAdapter already has its socket.
 
-            println("INFO: SpeedAdapter: Placeholder - 'choosing' first adapter: $chosenAdapter. Further interaction would go via this adapter.")
+            logger.info("Placeholder - 'choosing' first adapter: {} for session {}. Further interaction would go via this adapter.", chosenAdapter, session)
             // Simulate that SpeedAdapter itself is now connected because one of its sub-adapters is ready.
             // This would typically happen after the chosen sub-adapter calls its didConnect.
             val tempScope = CoroutineScope(Dispatchers.Default) // TODO: Use proper scope
@@ -66,25 +74,25 @@ open class SpeedAdapter : AdapterSocket(null /* SpeedAdapter manages underlying 
         // TODO: Delegate to the currently active chosen adapter's rawSocket.
         // val activeUnderlyingSocket = ... get active socket ...
         // activeUnderlyingSocket?.readData()
-        println("INFO: SpeedAdapter: readData() called. (TODO: Delegate to chosen active adapter)")
+        logger.info("readData() called for session {}. (TODO: Delegate to chosen active adapter)", if(::_session.isInitialized) session else "uninitialized")
     }
 
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) { // Changed to non-suspend
         // TODO: Delegate to the currently active chosen adapter's rawSocket.
         // val activeUnderlyingSocket = ... get active socket ...
         // activeUnderlyingSocket?.write(data)
-         println("INFO: SpeedAdapter: write(${data.size} bytes) called. (TODO: Delegate to chosen active adapter)")
+         logger.info("write({} bytes) called for session {}. (TODO: Delegate to chosen active adapter)", data.size, if(::_session.isInitialized) session else "uninitialized")
     }
 
     override fun disconnect(becauseOf: Throwable?) {
         // TODO: Disconnect the active underlying adapter and/or all managed adapters.
-        println("INFO: SpeedAdapter: disconnect(error: $becauseOf) called. (TODO: Disconnect underlying adapters)")
+        logger.info("disconnect(error: {}) called for session {}. (TODO: Disconnect underlying adapters)", becauseOf, if(::_session.isInitialized) session else "uninitialized")
         super.disconnect(becauseOf) // Call base to update status and notify delegate
     }
 
     override fun forceDisconnect(becauseOf: Throwable?) {
         // TODO: Force disconnect the active underlying adapter and/or all managed adapters.
-        println("INFO: SpeedAdapter: forceDisconnect(error: $becauseOf) called. (TODO: Force disconnect underlying adapters)")
+        logger.info("forceDisconnect(error: {}) called for session {}. (TODO: Force disconnect underlying adapters)", becauseOf, if(::_session.isInitialized) session else "uninitialized")
         super.forceDisconnect(becauseOf) // Call base
     }
      override fun toString(): String {

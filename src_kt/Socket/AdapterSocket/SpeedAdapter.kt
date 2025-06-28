@@ -2,6 +2,7 @@ import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterSocket.kt, SocketDelegate.kt, RawTCPSocketProtocol.kt, ConnectSession.kt,
 // QueueFactory.kt (placeholders), IPAddress.kt, Port.kt, SocketStatus.kt, AdapterSocketEvent.kt are available.
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orchestrates, doesn't use its own rawSocket directly for I/O */), SocketDelegate {
 
+    private val speedAdapterLogger = LoggerFactory.getLogger(SpeedAdapter::class.java)
     var subAdaptersConfig: List<Pair<AdapterSocket, Int>> = emptyList() // List of (adapter, delayInMs)
         set(value) {
             // Clear previous state if adapters are reset
@@ -42,13 +44,13 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         super.openSocketWith(session)
 
         if (isCancelled) { // isCancelled is from AdapterSocket base (_cancelled)
-            println("INFO: SpeedAdapter: openSocketWith called on a cancelled adapter for session: $session")
+            speedAdapterLogger.info("openSocketWith called on a cancelled adapter for session: {}", session)
             return
         }
 
         // Workaround for IPv6 from Swift code
         if (session.isIPv6()) {
-            println("WARN: SpeedAdapter: IPv6 not supported by this SpeedAdapter setup (as per original Swift workaround). Disconnecting.")
+            speedAdapterLogger.warn("IPv6 not supported by this SpeedAdapter setup for session {}. Disconnecting.", session)
             // AdapterSocket.disconnect will set _cancelled = true, update session, signal observer, call rawSocket.disconnect
             // Since rawSocket is null for SpeedAdapter, the rawSocket.disconnect part is a no-op.
             // It will then call this.didDisconnectWith (as delegate of itself if rawSocket was self, which is not the case)
@@ -62,7 +64,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         }
 
         if (subAdaptersConfig.isEmpty()) {
-            System.err.println("ERROR: SpeedAdapter: No sub-adapters configured. Disconnecting.")
+            speedAdapterLogger.error("No sub-adapters configured for session {}. Disconnecting.", session)
             _status = SocketStatus.CLOSED
             _cancelled = true
             this.delegate?.get()?.didErrorOccur(IllegalStateException("No sub-adapters configured for SpeedAdapter"), this)
@@ -90,7 +92,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
                         // Each sub-adapter will manage its own raw socket and connection process.
                         adapter.openSocketWith(session)
                     } catch (e: Exception) {
-                        System.err.println("ERROR: SpeedAdapter: Exception calling openSocketWith on sub-adapter $adapter: ${e.message}")
+                        speedAdapterLogger.error("Exception calling openSocketWith on sub-adapter {}: {}", adapter, e.message, e)
                         // Treat as if this sub-adapter failed to connect
                         didDisconnect(adapter) // Signal failure for this specific sub-adapter
                     }
@@ -99,7 +101,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
                     // If shouldConnect became false, it means another adapter succeeded or SpeedAdapter was stopped.
                     // Check if this was the last pending one and if no one is connecting.
                     if (pendingToConnectCount.get() == 0 && connectingCount.get() == 0 && _status != SocketStatus.ESTABLISHED) {
-                         println("INFO: SpeedAdapter: All sub-adapter attempts aborted or completed, none established overall connection.")
+                         speedAdapterLogger.info("All sub-adapter attempts aborted or completed for session {}, none established overall connection.", session)
                          // This might happen if disconnect() was called rapidly after openSocketWith().
                          // Ensure final state is set if no adapter succeeded.
                          if (shouldConnect.get() == false && _status != SocketStatus.ESTABLISHED) { // check shouldConnect again for race
@@ -114,7 +116,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
 
     override fun disconnect(becauseOf: Throwable?) {
         if (_cancelled && _status == SocketStatus.CLOSED) return
-        println("INFO: SpeedAdapter: disconnect called. Error: ${becauseOf?.message}")
+        speedAdapterLogger.info("disconnect called for session {}. Error: {}", session, becauseOf?.message)
         super.disconnect(becauseOf) // Sets _cancelled, _status=DISCONNECTING, notifies session, observer
 
         shouldConnect.set(false) // Stop any pending or new connection attempts from sub-adapters
@@ -142,7 +144,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
 
     override fun forceDisconnect(becauseOf: Throwable?) {
         if (_cancelled && _status == SocketStatus.CLOSED) return
-        println("INFO: SpeedAdapter: forceDisconnect called. Error: ${becauseOf?.message}")
+        speedAdapterLogger.info("forceDisconnect called for session {}. Error: {}", session, becauseOf?.message)
         super.forceDisconnect(becauseOf) // Sets _cancelled, _status=DISCONNECTING, notifies session, observer
 
         shouldConnect.set(false)
@@ -168,7 +170,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         // It does not mean the sub-adapter is ready for forwarding yet (e.g. HTTP/SOCKS handshake).
         // The SpeedAdapter waits for `didBecomeReadyToForwardWith`.
         // No specific action here, just log.
-        println("INFO: SpeedAdapter: Sub-adapter $adapterSocket reported raw connection (didConnect). Waiting for readyToForward.")
+        speedAdapterLogger.info("Sub-adapter {} reported raw connection (didConnect). Waiting for readyToForward.", adapterSocket)
     }
 
     override fun didBecomeReadyToForward(socket: SocketProtocol) {
@@ -177,13 +179,13 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         if (!shouldConnect.getAndSet(false)) {
             // Another adapter already succeeded and was chosen, or SpeedAdapter was stopped.
             // Disconnect this late-coming adapter.
-            println("INFO: SpeedAdapter: Another sub-adapter already chosen or process stopped. Disconnecting late $successfulAdapter.")
+            speedAdapterLogger.info("Another sub-adapter already chosen or process stopped. Disconnecting late {}.", successfulAdapter)
             successfulAdapter.delegate = null // Avoid further callbacks
             successfulAdapter.forceDisconnect()
             return
         }
 
-        println("INFO: SpeedAdapter: Sub-adapter $successfulAdapter is ready to forward. Choosing this one.")
+        speedAdapterLogger.info("Sub-adapter {} is ready to forward for session {}. Choosing this one.", successfulAdapter, session)
         _status = SocketStatus.ESTABLISHED // SpeedAdapter itself is now considered established.
         connectingCount.decrementAndGet() // This one is no longer "connecting" but "connected"
         pendingToConnectCount.set(0) // Stop any other pending connection initiations
@@ -194,7 +196,7 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
             if (adapter !== successfulAdapter) {
                 adapter.delegate = null // Remove delegate to prevent further callbacks
                 if (adapter.status != SocketStatus.INVALID && adapter.status != SocketStatus.CLOSED) {
-                    println("INFO: SpeedAdapter: Disconnecting other sub-adapter $adapter.")
+                    speedAdapterLogger.info("Disconnecting other sub-adapter {}.", adapter)
                     adapter.forceDisconnect()
                 }
             }
@@ -227,12 +229,12 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         this.delegate?.get()?.didBecomeReadyToForward(successfulAdapter)
 
         this.delegate = null // SpeedAdapter is done.
-        println("INFO: SpeedAdapter: Handed off to $successfulAdapter. SpeedAdapter is now inactive for this session.")
+        speedAdapterLogger.info("Handed off to {} for session {}. SpeedAdapter is now inactive.", successfulAdapter, session)
     }
 
     override fun didDisconnect(socket: SocketProtocol) {
         val adapterSocket = socket as? AdapterSocket ?: return
-        println("INFO: SpeedAdapter: Sub-adapter $adapterSocket disconnected.")
+        speedAdapterLogger.info("Sub-adapter {} disconnected for session {}.", adapterSocket, session)
         adapterSocket.delegate = null // Stop listening to this adapter
 
         val stillConnecting = connectingCount.decrementAndGet()
@@ -241,18 +243,18 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
         if (shouldConnect.get()) { // If we haven't chosen an adapter yet
             if (stillConnecting == 0 && stillPending == 0) {
                 // All attempts finished, and none succeeded in calling didBecomeReadyToForward first.
-                println("ERROR: SpeedAdapter: All sub-adapters failed to connect or become ready.")
+                speedAdapterLogger.error("All sub-adapters failed to connect or become ready for session {}.", session)
                 _status = SocketStatus.CLOSED
                 _cancelled = true // Mark self as cancelled as all options exhausted
                 val mainDelegate = delegate?.get()
                 delegate = null // Clear delegate
-                mainDelegate?.didErrorOccur(IOException("All sub-adapters failed for SpeedAdapter"), this)
+                mainDelegate?.didErrorOccur(IOException("All sub-adapters failed for SpeedAdapter for session $session"), this)
                 mainDelegate?.didDisconnect(this)
             }
         } else {
             // A successful adapter was already chosen and `shouldConnect` is false, or SpeedAdapter was stopped.
             // This is just cleanup for other adapters that were racing.
-            println("INFO: SpeedAdapter: Disconnect from sub-adapter $adapterSocket after one was already chosen or stopped.")
+            speedAdapterLogger.info("Disconnect from sub-adapter {} after one was already chosen or stopped for session {}.", adapterSocket, session)
         }
     }
 
@@ -267,12 +269,12 @@ class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orche
     override fun didRead(data: ByteArray, from: SocketProtocol) {
         // This would be called by a sub-adapter. If hand-off already happened, SpeedAdapter's delegate is null.
         // If hand-off didn't happen (e.g., error during hand-off), this data might be lost or need handling.
-        println("INFO: SpeedAdapter: didRead called from sub-adapter $from. Data size: ${data.size}. (This should ideally not happen after hand-off).")
+        speedAdapterLogger.info("didRead called from sub-adapter {} for session {}. Data size: {}. (This should ideally not happen after hand-off).", from, session, data.size)
         delegate?.get()?.didRead(data, this) // Forwarding as SpeedAdapter if still active
     }
 
     override fun didWrite(data: ByteArray?, by: SocketProtocol) {
-        println("INFO: SpeedAdapter: didWrite called from sub-adapter $by. (This should ideally not happen after hand-off).")
+        speedAdapterLogger.info("didWrite called from sub-adapter {} for session {}. (This should ideally not happen after hand-off).", by, session)
         delegate?.get()?.didWrite(data, this) // Forwarding as SpeedAdapter if still active
     }
 

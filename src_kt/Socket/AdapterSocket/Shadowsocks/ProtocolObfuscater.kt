@@ -8,6 +8,8 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import kotlin.random.Random
 
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming CryptoStreamProcessor.kt, ShadowsocksAdapter.kt (as interfaces/placeholders),
 // Buffer.kt (Utils), HTTPConstants.kt (Utils, for DOUBLE_CRLF), RandomUtils.kt (Utils, for fill),
 // HMAC.kt (Crypto), HashAlgorithm.kt (Crypto) are available.
@@ -220,6 +222,7 @@ class ShadowsocksTLSProtocolObfuscaterFactory(
 class ShadowsocksTLSProtocolObfuscater(
     private val hosts: List<String>
 ) : ShadowsocksProtocolObfuscaterBase() {
+    private val logger = LoggerFactory.getLogger(ShadowsocksTLSProtocolObfuscater::class.java)
     // TODO: This is a highly complex protocol emulation. Translation requires careful byte-level construction
     //       and state management. The following is a structural placeholder.
     //       Many magic numbers and byte sequences from Swift need to be verified and correctly represented.
@@ -230,7 +233,7 @@ class ShadowsocksTLSProtocolObfuscater(
     private val buffer: Buffer = Buffer(capacity = 2048) // From Utils
 
     override fun start() {
-        println("INFO: TLSProtocolObfuscater: start() called. Sending ClientHello (simulated).")
+        logger.info("start() called. Sending ClientHello (simulated).")
         // TODO: Actual ClientHello construction and sending via outputStreamProcessor.output()
         // sendClientHello()
         currentStatus = Status.CLIENT_HELLO_SENT
@@ -246,7 +249,7 @@ class ShadowsocksTLSProtocolObfuscater(
 
     @Throws(Exception::class)
     override fun input(data: ByteArray) { // Data from remote server (after decryption by CryptoStreamProcessor)
-        println("INFO: TLSProtocolObfuscater: input(${data.size} bytes) in state $currentStatus.")
+        logger.info("input({} bytes) in state {}.", data.size, currentStatus)
         // TODO: Implement state machine for parsing server's TLS handshake messages (simulated).
         // This involves parsing record layer, handshake protocol messages.
         // The Swift code had `handleInput(data)` for status 8 and `becomeReadyToForward` for status 1.
@@ -257,7 +260,7 @@ class ShadowsocksTLSProtocolObfuscater(
             Status.CLIENT_HELLO_SENT -> {
                 // Assuming this data is ServerHello, ChangeCipherSpec, EncryptedHandshakeMessage
                 // We need to "consume" it.
-                println("INFO: TLSProtocolObfuscater: Received server handshake data (simulated consumption).")
+                logger.info("Received server handshake data (simulated consumption).")
                 // In real TLS, we'd verify this. Here, we just transition.
                 currentStatus = Status.FORWARDING // Simplified: Assume handshake done after first server data.
                 // Pass any remaining/actual application data after handshake to crypto processor
@@ -277,7 +280,7 @@ class ShadowsocksTLSProtocolObfuscater(
                     // recordHeader[1,2] is version (e.g., 0x0303 for TLS 1.2)
                     // recordHeader[3,4] is length of app data
                     if (recordHeader[0] != 0x17.toByte()) { // Application Data type
-                        System.err.println("ERROR: TLSProtocolObfuscater: Expected AppData record, got type ${recordHeader[0]}. Skipping.")
+                        logger.error("Expected AppData record, got type {}. Skipping.", recordHeader[0])
                         // Malformed or unexpected record, break or try to find next. This is complex.
                         // For placeholder, stop processing this buffer chunk.
                         buffer.setBack(5) // Put header back if we can't process it. Or clear buffer.
@@ -299,7 +302,7 @@ class ShadowsocksTLSProtocolObfuscater(
                 }
             }
             else -> {
-                println("WARN: TLSProtocolObfuscater: Received data in unexpected state $currentStatus.")
+                logger.warn("Received data in unexpected state {}.", currentStatus)
                 // Buffer or drop? For now, buffer.
                 buffer.append(data)
             }
@@ -307,7 +310,7 @@ class ShadowsocksTLSProtocolObfuscater(
     }
 
     override fun output(data: ByteArray) { // Data from local (to be sent to CryptoStreamProcessor for encryption)
-        println("INFO: TLSProtocolObfuscater: output(${data.size} bytes) in state $currentStatus.")
+        logger.info("output({} bytes) in state {}.", data.size, currentStatus)
         // TODO: Implement state machine for packaging data into TLS application data records.
         // The Swift code had `handleStatus0`, `handleStatus1`, `handleStatus8` which built complex handshake/data packets.
         // This placeholder will just pass data through or do minimal TLS record wrapping.
@@ -333,7 +336,7 @@ class ShadowsocksTLSProtocolObfuscater(
                 outputStreamProcessor?.output(packDataAsTLSApplicationData(data))
             }
             else -> {
-                System.err.println("ERROR: TLSProtocolObfuscater: Output called in unexpected state $currentStatus. Dropping data.")
+                logger.error("Output called in unexpected state {}. Dropping data.", currentStatus)
             }
         }
     }

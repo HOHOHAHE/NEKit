@@ -1,5 +1,6 @@
 import kotlinx.coroutines.*
 import java.io.IOException // For creating an error object if needed
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterSocket.kt, ConnectSession.kt (Messages), QueueFactory.kt (placeholder),
 // SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt are available.
@@ -14,6 +15,7 @@ class RejectAdapter(
     val delayMs: Int
 ) : AdapterSocket(initialRawSocket = null, observe = true) { // Pass null for rawSocket as it's not used
 
+    private val rejectAdapterLogger = LoggerFactory.getLogger(RejectAdapter::class.java)
     private var rejectionJob: Job? = null
     // Dedicated scope for this adapter's operations, like the delayed rejection.
     // TODO: This scope should be managed (e.g., cancelled in a cleanup method if RejectAdapter had one).
@@ -23,7 +25,7 @@ class RejectAdapter(
     init {
         // Initial status is INVALID. It will transition briefly during openSocketWith.
         _status = SocketStatus.INVALID
-        println("INFO: RejectAdapter created with delay: ${delayMs}ms.")
+        rejectAdapterLogger.info("Created with delay: {}ms.", delayMs)
     }
 
     override fun openSocketWith(session: ConnectSession) {
@@ -40,21 +42,21 @@ class RejectAdapter(
         _status = SocketStatus.CONNECTING // Simulate attempting to connect
         observer?.signal(AdapterSocketEvent.SocketOpened(this, session)) // Signal opening attempt
 
-        println("INFO: RejectAdapter: Simulating connection rejection for session $session after ${delayMs}ms delay.")
+        rejectAdapterLogger.info("Simulating connection rejection for session {} after {}ms delay.", session, delayMs)
 
         rejectionJob = adapterScope.launch {
             delay(delayMs.toLong())
 
             // Ensure the socket wasn't cancelled while delaying
             if (isActive && !isCancelled) { // isActive checks coroutine scope, isCancelled is our flag
-                println("INFO: RejectAdapter: Delay elapsed, now rejecting session $session.")
+                rejectAdapterLogger.info("Delay elapsed, now rejecting session {}.", session)
                 // Simulate a rejection error
                 val rejectionError = IOException("Connection rejected by policy: ${session.host}:${session.port}")
                 // Use the disconnect method which handles state and delegate notification.
                 // Passing the error to disconnect.
                 disconnect(becauseOf = rejectionError)
             } else if (isCancelled) {
-                 println("INFO: RejectAdapter: Rejection for session $session was cancelled during delay.")
+                 rejectAdapterLogger.info("Rejection for session {} was cancelled during delay.", session)
                  // If it was cancelled by forceDisconnect, the delegate notification might have already happened.
                  // If only `_cancelled` is true but status not CLOSED, ensure proper cleanup.
                  if (_status != SocketStatus.CLOSED) {
@@ -93,7 +95,7 @@ class RejectAdapter(
         val currentDelegate = delegate?.get()
         delegate = null // Clear delegate
         currentDelegate?.didDisconnect(this) // Notify delegate
-        println("INFO: RejectAdapter: Session $session disconnected/rejected. Error: ${becauseOf?.message}")
+        rejectAdapterLogger.info("Session {} disconnected/rejected. Error: {}", session, becauseOf?.message)
     }
 
     /**
@@ -119,11 +121,11 @@ class RejectAdapter(
         val currentDelegate = delegate?.get()
         delegate = null
         currentDelegate?.didDisconnect(this)
-        println("INFO: RejectAdapter: Session $session force disconnected/rejected. Error: ${becauseOf?.message}")
+        rejectAdapterLogger.info("Session {} force disconnected/rejected. Error: {}", session, becauseOf?.message)
     }
 
     // Override write and read to be no-ops or throw, as a RejectAdapter does not transfer data.
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) { // Changed to non-suspend to match SocketProtocol
         if (!isCancelled) { // Only throw if not already "closed" by rejection
             throw IOException("Cannot write to RejectAdapter; connection is rejected.")
         }
@@ -134,7 +136,7 @@ class RejectAdapter(
             // No data will ever be read. Could signal error or disconnect immediately if called.
             // For robustness, ensure it leads to a disconnected state if not already.
             // forceDisconnect(becauseOf = IOException("Read attempt on a rejecting socket."))
-             println("WARN: RejectAdapter: readData() called, but this adapter rejects connections.")
+             rejectAdapterLogger.warn("readData() called, but this adapter rejects connections.")
         }
     }
 

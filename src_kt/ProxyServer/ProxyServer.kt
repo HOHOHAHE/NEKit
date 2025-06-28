@@ -5,6 +5,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers // For a default dispatcher if QueueFactory not fully implemented
 
+import org.slf4j.LoggerFactory
+
 // Assuming Port.kt, IPAddress.kt (Utils), Observer.kt, ProxyServerEvent.kt, ObserverFactory.kt (Event)
 // GlobalInitializer.kt are available.
 
@@ -19,9 +21,10 @@ interface TunnelDelegate {
 // If Tunnel has complex state/identity, default reference equality might be okay if list removal relies on that.
 // Swift's `indexOf` on array of class instances uses reference equality (`===`).
 open class Tunnel(val proxySocket: ProxySocketInterface) { // Assuming ProxySocketInterface
+    private val logger = LoggerFactory.getLogger(Tunnel::class.java)
     var delegate: TunnelDelegate? = null
-    open fun forceClose() { println("INFO: Tunnel: forceClose() called on $this (TODO: Implement)") }
-    open fun openTunnel() { println("INFO: Tunnel: openTunnel() called on $this (TODO: Implement)") }
+    open fun forceClose() { logger.info("forceClose() called on {} (TODO: Implement)", this) }
+    open fun openTunnel() { logger.info("openTunnel() called on {} (TODO: Implement)", this) }
 
     // For tunnels.indexOf(tunnel) to work like Swift's reference check for classes
     override fun equals(other: Any?): Boolean {
@@ -63,6 +66,7 @@ open class ProxyServer(
     val port: Port
 ) : TunnelDelegate {
 
+    private val logger = LoggerFactory.getLogger(this::class.java) // Logger for the specific subclass instance
     // The type of the proxy server, dynamically set to the simple class name.
     val type: String = this::class.simpleName ?: "ProxyServer"
 
@@ -95,7 +99,7 @@ open class ProxyServer(
         tunnelsMutex.withLock { // Mimics executeOnQueueSynchronizedly for state consistency
             GlobalInitializer.initialize() // Ensure global components are up
             observer?.signal(ProxyServerEvent.Started(this))
-            println("INFO: ProxyServer ($type): Started on $address:$port")
+            logger.info("Started on {}:{}", address, port)
         }
     }
 
@@ -104,7 +108,7 @@ open class ProxyServer(
      * Closes all active tunnels and signals 'stopped' event.
      */
     open suspend fun stop() { // Made suspend fun for mutex and potential async cleanup
-        println("INFO: ProxyServer ($type): Stopping...")
+        logger.info("Stopping...")
         val tunnelsToClose: List<Tunnel>
         tunnelsMutex.withLock {
             tunnelsToClose = ArrayList(tunnels) // Copy to avoid CME if forceClose modifies list via delegate
@@ -116,7 +120,7 @@ open class ProxyServer(
             try {
                 tunnel.forceClose()
             } catch (e: Exception) {
-                System.err.println("ERROR: ProxyServer ($type): Error force closing tunnel $tunnel: ${e.message}")
+                logger.error("Error force closing tunnel {}: {}", tunnel, e.message, e)
             }
         }
 
@@ -126,7 +130,7 @@ open class ProxyServer(
         tunnelsMutex.withLock {
             observer?.signal(ProxyServerEvent.Stopped(this))
         }
-        println("INFO: ProxyServer ($type): Stopped.")
+        logger.info("Stopped.")
     }
 
     /**
@@ -136,7 +140,7 @@ open class ProxyServer(
      * @param socket The accepted proxy socket.
      */
     protected open suspend fun didAcceptNewSocket(socket: ProxySocketInterface) { // Made suspend for mutex
-        println("INFO: ProxyServer ($type): Accepted new socket: $socket")
+        logger.info("Accepted new socket: {}", socket)
         observer?.signal(ProxyServerEvent.NewSocketAccepted(socket, this)) // Assuming ProxySocketEvent takes ProxySocketInterface
 
         val tunnel = Tunnel(socket) // Create new Tunnel
@@ -149,7 +153,7 @@ open class ProxyServer(
         try {
             tunnel.openTunnel() // This might be a suspending call or launch its own async work
         } catch (e: Exception) {
-            System.err.println("ERROR: ProxyServer ($type): Error opening tunnel for $socket: ${e.message}")
+            logger.error("Error opening tunnel for {}: {}", socket, e.message, e)
             // If openTunnel fails, remove it from the list and clean up
             tunnelsMutex.withLock {
                 tunnels.remove(tunnel)
@@ -167,7 +171,7 @@ open class ProxyServer(
      * @param tunnel The tunnel that closed.
      */
     override fun tunnelDidClose(tunnel: Tunnel) {
-        println("INFO: ProxyServer ($type): Tunnel closed: $tunnel")
+        logger.info("Tunnel closed: {}", tunnel)
         observer?.signal(ProxyServerEvent.TunnelClosed(tunnel, this))
 
         // Launch removal in a coroutine to use Mutex
@@ -179,7 +183,7 @@ open class ProxyServer(
                 // The placeholder Tunnel overrides equals for reference equality.
                 val removed = tunnels.remove(tunnel)
                 if (!removed) {
-                    System.err.println("WARN: ProxyServer ($type): Attempted to remove unknown tunnel: $tunnel")
+                    logger.warn("Attempted to remove unknown tunnel: {}", tunnel)
                 }
             }
         }

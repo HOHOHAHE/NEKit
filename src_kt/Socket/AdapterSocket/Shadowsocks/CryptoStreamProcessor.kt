@@ -1,6 +1,8 @@
 import java.lang.ref.WeakReference
 // Assuming necessary imports from Crypto module (CryptoAlgorithm, CryptoOperation, StreamCryptoProtocol,
 // CCCryptoAdapter, SodiumStreamCryptoAdapter, MD5Hash, CryptoHelper)
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming Buffer.kt from Utils module.
 // Assuming placeholders for obfuscators are available.
 
@@ -31,6 +33,7 @@ class ShadowsocksCryptoProcessorFactory(
     password: String,
     private val algorithm: CryptoAlgorithm
 ) {
+    private val logger = LoggerFactory.getLogger(ShadowsocksCryptoProcessorFactory::class.java)
     private val key: ByteArray = CryptoHelper.deriveKey(password, algorithm) // Use deriveKey from CryptoHelper
 
     fun build(): ShadowsocksCryptoProcessor {
@@ -46,6 +49,7 @@ class ShadowsocksCryptoProcessor(
     private val key: ByteArray,
     private val algorithm: CryptoAlgorithm
 ) {
+    private val logger = LoggerFactory.getLogger(ShadowsocksCryptoProcessor::class.java)
     // Weak references to other processors in the chain (if any)
     var inputStreamProcessor: WeakReference<ShadowsocksAdapterComps.StreamObfuscaterBase?> = WeakReference(null)
     var outputStreamProcessor: WeakReference<ShadowsocksAdapterComps.ProtocolObfuscaterBase?> = WeakReference(null)
@@ -90,13 +94,13 @@ class ShadowsocksCryptoProcessor(
                 // The Swift code `try inputStreamProcessor!.input(data: Data())` seems to imply
                 // that if IV is not complete, it might still call the next processor with empty data.
                 // This is unusual. For now, just buffer and wait for more data.
-                println("INFO: ShadowsocksCryptoProcessor: Buffering data, waiting for full IV ($ivLength bytes). Have ${processingBuffer.count} bytes.")
+                logger.info("Buffering data, waiting for full IV ({} bytes). Have {} bytes.", ivLength, processingBuffer.count)
                 return // Wait for more data
             }
             // IV successfully read
             currentData = processingBuffer.getAll() ?: ByteArray(0) // Get remaining data after IV
             processingBuffer.release() // Clear buffer
-            println("INFO: ShadowsocksCryptoProcessor: Read IV (${readIV!!.size} bytes). Remaining data: ${currentData.size} bytes.")
+            logger.info("Read IV ({} bytes). Remaining data: {} bytes.", readIV!!.size, currentData.size)
             // Initialize decryptor now that readIV is available
             _decryptorInstance = getCrypto(CryptoOperation.DECRYPT)
         }
@@ -110,7 +114,7 @@ class ShadowsocksCryptoProcessor(
 
         // Pass decrypted data to the next processor in the chain (e.g., input stream obfuscater)
         inputStreamProcessor.get()?.input(decryptedData)
-            ?: println("WARN: ShadowsocksCryptoProcessor: inputStreamProcessor is null, decrypted data not forwarded.")
+            ?: logger.warn("inputStreamProcessor is null, decrypted data not forwarded.")
     }
 
     /**
@@ -129,14 +133,14 @@ class ShadowsocksCryptoProcessor(
             dataToSend = ByteArray(writeIV.size + encryptedData.size)
             System.arraycopy(writeIV, 0, dataToSend, 0, writeIV.size)
             System.arraycopy(encryptedData, 0, dataToSend, writeIV.size, encryptedData.size)
-            println("INFO: ShadowsocksCryptoProcessor: Sending IV (${writeIV.size} bytes) + encrypted data (${encryptedData.size} bytes).")
+            logger.info("Sending IV ({} bytes) + encrypted data ({} bytes).", writeIV.size, encryptedData.size)
         } else {
             dataToSend = encryptedData
         }
 
         // Pass encrypted data (with IV if it was the first packet) to the next processor (e.g., output protocol obfuscater)
         outputStreamProcessor.get()?.output(dataToSend)
-            ?: println("WARN: ShadowsocksCryptoProcessor: outputStreamProcessor is null, encrypted data not sent.")
+            ?: logger.warn("outputStreamProcessor is null, encrypted data not sent.")
     }
 
 
@@ -155,19 +159,13 @@ class ShadowsocksCryptoProcessor(
                 // Assuming CCCryptoAdapter.Algorithm.AES matches the intent for CryptoAlgorithm.AESxxxCFB
                 CCCryptoAdapter(operation, CCCryptoAdapter.Mode.CFB, CCCryptoAdapter.Algorithm.AES, iv, key)
             }
-            CryptoAlgorithm.CHACHA20 -> {
+            CryptoAlgorithm.CHACHA20, CryptoAlgorithm.SALSA20 -> {
                 val iv = if (operation == CryptoOperation.DECRYPT) currentReadIV else currentWriteIV
-                 if (iv == null && operation == CryptoOperation.DECRYPT && readIV == null) {
-                    throw IllegalStateException("ChaCha20 decryptor cannot be created without readIV.")
+                if (iv == null && operation == CryptoOperation.DECRYPT && readIV == null) {
+                    throw IllegalStateException("${algorithm.rawValue} decryptor cannot be created without readIV.")
                 }
-                SodiumStreamCryptoAdapter(key, iv!!, SodiumStreamCryptoAdapter.Algorithm.CHACHA20, operation)
-            }
-            CryptoAlgorithm.SALSA20 -> {
-                val iv = if (operation == CryptoOperation.DECRYPT) currentReadIV else currentWriteIV
-                 if (iv == null && operation == CryptoOperation.DECRYPT && readIV == null) {
-                    throw IllegalStateException("Salsa20 decryptor cannot be created without readIV.")
-                }
-                SodiumStreamCryptoAdapter(key, iv!!, SodiumStreamCryptoAdapter.Algorithm.SALSA20, operation)
+                // Use JceStreamCipherAdapter for ChaCha20 and Salsa20
+                JceStreamCipherAdapter(operation, algorithm, key, iv!!)
             }
             CryptoAlgorithm.RC4_MD5 -> {
                 // Custom key derivation for RC4-MD5: K = MD5(key + IV)
@@ -187,22 +185,4 @@ class ShadowsocksCryptoProcessor(
     }
 }
 
-// Placeholder for SodiumStreamCryptoAdapter, assuming it's similar to CCCryptoAdapter but for Libsodium stream ciphers
-// TODO: This needs to be properly translated from SodiumStreamCrypto.swift
-private class SodiumStreamCryptoAdapter(
-    key: ByteArray,
-    iv: ByteArray,
-    algorithm: Algorithm,
-    operation: CryptoOperation // Added operation to distinguish encrypt/decrypt setup if needed by underlying
-) : StreamCrypto {
-    enum class Algorithm { CHACHA20, SALSA20 }
-    init {
-        println("INFO: SodiumStreamCryptoAdapter (Placeholder) created for ${algorithm.name}, op: $operation. KeyLen: ${key.size}, IVLen: ${iv.size}")
-        // TODO: Actual LibSodium/JNI/JCE setup here
-    }
-    override fun update(data: ByteArray): ByteArray {
-        println("INFO: SodiumStreamCryptoAdapter (Placeholder) update called for ${data.size} bytes. Op: $operation")
-        // TODO: Actual crypto op
-        return data.copyOf() // Placeholder: passthrough
-    }
-}
+// SodiumStreamCryptoAdapter placeholder is removed. JceStreamCipherAdapter is used instead.

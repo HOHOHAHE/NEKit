@@ -2,8 +2,10 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import java.lang.ref.WeakReference
 
+import org.slf4j.LoggerFactory
+
 // Assuming IPStackProtocol.kt, IPPacket.kt, QueueFactory.kt (placeholders) are available.
-// TODO: Replace CocoaLumberjack with a Kotlin logging solution.
+// TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
 
 // --- Placeholders for tun2socks library components ---
 // TODO: These interfaces require a JNI/JNA binding to a functional tun2socks native library,
@@ -39,16 +41,17 @@ interface TSIPStackInterface {
 // Placeholder implementation of the tun2socks stack object.
 // In a real scenario, this object would be provided by the JNI/JNA binding.
 object PlaceholderTSIPStack : TSIPStackInterface {
+    private val logger = LoggerFactory.getLogger(PlaceholderTSIPStack::class.java)
     override var delegate: TSIPStackDelegate? = null
     override var processQueue: CoroutineDispatcher = Dispatchers.Default // Default dispatcher
     override var outputBlock: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
 
     init {
-        println("WARN: Using PlaceholderTSIPStack. Real tun2socks integration needed.")
+        logger.warn("Using PlaceholderTSIPStack. Real tun2socks integration needed.")
     }
 
     override fun received(packet: ByteArray) {
-        println("INFO: PlaceholderTSIPStack: received ${packet.size} bytes. (TODO: Implement native call)")
+        logger.info("received {} bytes. (TODO: Implement native call)", packet.size)
         // Simulate accepting a socket for testing structure
         // delegate?.didAcceptTCPSocket(object : TSTCPSocketInterface {
         //     override fun toString(): String = "DummyTSTCPSocket"
@@ -56,11 +59,11 @@ object PlaceholderTSIPStack : TSIPStackInterface {
     }
 
     override fun resumeTimer() {
-        println("INFO: PlaceholderTSIPStack: resumeTimer called. (TODO: Implement native call)")
+        logger.info("resumeTimer called. (TODO: Implement native call)")
     }
 
     override fun suspendTimer() {
-        println("INFO: PlaceholderTSIPStack: suspendTimer called. (TODO: Implement native call)")
+        logger.info("suspendTimer called. (TODO: Implement native call)")
     }
 }
 // --- End tun2socks Placeholders ---
@@ -77,16 +80,19 @@ object PlaceholderTSIPStack : TSIPStackInterface {
 // Assuming ProxyServer, TUNTCPSocket, DirectProxySocket placeholders
 interface SocketInterface // Base for TUNTCPSocket if needed
 class TUNTCPSocket(socket: TSTCPSocketInterface) : SocketInterface { // Wrapper for TSTCPSocket
-    init {  println("INFO: TUNTCPSocket created for $socket") }
+    private val logger = LoggerFactory.getLogger(TUNTCPSocket::class.java)
+    init {  logger.info("TUNTCPSocket created for {}", socket) }
     override fun toString(): String = "TUNTCPSocket($socket)"
 }
 
 open class AbstractProxySocket(val underlyingSocket: SocketInterface) { // Base for DirectProxySocket
-     init { println("INFO: AbstractProxySocket created with $underlyingSocket") }
+    private val logger = LoggerFactory.getLogger(AbstractProxySocket::class.java)
+     init { logger.info("AbstractProxySocket created with {}", underlyingSocket) }
 }
 
 class DirectProxySocket(socket: TUNTCPSocket) : AbstractProxySocket(socket) {
-    init { println("INFO: DirectProxySocket created for $socket") }
+    private val logger = LoggerFactory.getLogger(DirectProxySocket::class.java)
+    init { logger.info("DirectProxySocket created for {}", socket) }
 }
 
 
@@ -96,8 +102,9 @@ interface ProxyServerInterface {
     fun didAcceptNewSocket(socket: AbstractProxySocket)
 }
 class PlaceholderProxyServer : ProxyServerInterface { // To make TCPStack compile
+    private val logger = LoggerFactory.getLogger(PlaceholderProxyServer::class.java)
     override fun didAcceptNewSocket(socket: AbstractProxySocket) {
-        println("INFO: PlaceholderProxyServer: Accepted new socket $socket. (TODO: Implement actual ProxyServer)")
+        logger.info("Accepted new socket {}. (TODO: Implement actual ProxyServer)", socket)
     }
 }
 // --- End Other Placeholders ---
@@ -111,6 +118,7 @@ class PlaceholderProxyServer : ProxyServerInterface { // To make TCPStack compil
  * A JNI/JNA binding or a pure Java/Kotlin equivalent IP stack is required for functionality.
  */
 object TCPStack : TSIPStackDelegate, IPStackProtocol {
+    private val logger = LoggerFactory.getLogger(TCPStack::class.java)
     // The TSIPStack.stack singleton from tun2socks
     // TODO: Replace PlaceholderTSIPStack with the actual JNI/JNA bound instance.
     private val tsipStack: TSIPStackInterface = PlaceholderTSIPStack
@@ -121,7 +129,7 @@ object TCPStack : TSIPStackDelegate, IPStackProtocol {
         get() = _proxyServerRef.get()
         set(value) {
             _proxyServerRef = WeakReference(value)
-            println("INFO: TCPStack: ProxyServer was set. ${value != null}")
+            logger.info("ProxyServer was set. {}", value != null)
         }
 
 
@@ -139,13 +147,13 @@ object TCPStack : TSIPStackDelegate, IPStackProtocol {
         // map to CoroutineDispatcher for tsipStack.processQueue.
         // TODO: Ensure the dispatcher from QueueFactory is suitable for tun2socks's expectations.
         tsipStack.processQueue = QueueFactory.getIOScope().coroutineContext[CoroutineDispatcher.Key] ?: Dispatchers.Default
-        println("INFO: TCPStack initialized and set as delegate for TSIPStack.")
+        logger.info("TCPStack initialized and set as delegate for TSIPStack.")
     }
 
     override fun input(packet: ByteArray, version: Int?): Boolean {
         if (version != null && version != AddressFamily.AF_INET) {
             // Log or handle IPv6 packets if tun2socks instance doesn't support them or if explicitly filtering.
-            // println("VERBOSE: TCPStack: Ignoring non-IPv4 packet (version: $version).")
+            // logger.debug("Ignoring non-IPv4 packet (version: {}).", version)
             return false
         }
 
@@ -160,12 +168,12 @@ object TCPStack : TSIPStackDelegate, IPStackProtocol {
     }
 
     override fun start() {
-        println("INFO: TCPStack: start() called, resuming TSIPStack timer.")
+        logger.info("start() called, resuming TSIPStack timer.")
         tsipStack.resumeTimer()
     }
 
     override fun stop() {
-        println("INFO: TCPStack: stop() called, suspending TSIPStack timer and clearing references.")
+        logger.info("stop() called, suspending TSIPStack timer and clearing references.")
         // tsipStack.delegate = null // Avoid setting delegate to null if TCPStack object is a singleton and might be reused.
                                  // Or ensure new instance is fetched via a 'getInstance()' if re-init is possible.
                                  // The Swift code `_stack` suggests a true singleton object.
@@ -177,10 +185,10 @@ object TCPStack : TSIPStackDelegate, IPStackProtocol {
 
     // Implementation of TSIPStackDelegate
     override fun didAcceptTCPSocket(sock: TSTCPSocketInterface) {
-        println("DEBUG: TCPStack: Accepted a new TSTCPSocket: $sock from TSIPStack.")
+        logger.debug("Accepted a new TSTCPSocket: {} from TSIPStack.", sock)
         val currentProxyServer = proxyServer
         if (currentProxyServer == null) {
-            System.err.println("ERROR: TCPStack: No ProxyServer configured to handle accepted TSTCPSocket.")
+            logger.error("No ProxyServer configured to handle accepted TSTCPSocket {}.", sock)
             // TODO: Handle this case, e.g., by closing the TSTCPSocket.
             // sock.close()
             return

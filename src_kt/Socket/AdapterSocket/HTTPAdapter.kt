@@ -3,6 +3,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.nio.charset.StandardCharsets
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterSocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, HTTPAuthentication.kt (Utils),
 // RawSocketFactory.kt, SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt,
@@ -43,6 +44,8 @@ open class HTTPAdapter(
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket()
 ) : AdapterSocket(initialRawSocket, observe = true) {
 
+    private val httpAdapterLogger = LoggerFactory.getLogger(this::class.java) // Specific logger
+
     private enum class State {
         IDLE,
         CONNECTING_TO_PROXY, // Raw socket connecting to proxy
@@ -55,14 +58,14 @@ open class HTTPAdapter(
     private var internalState: State = State.IDLE
 
     init {
-        println("INFO: HTTPAdapter created for proxy $serverHost:$serverPort (Auth: ${auth != null}, Secured: $secured)")
+        httpAdapterLogger.info("Created for proxy {}:{} (Auth: {}, Secured: {})", serverHost, serverPort, auth != null, secured)
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session) // Sets this.session, observer, rawSocket.delegate
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: HTTPAdapter: Raw socket is null in openSocketWith.")
+            httpAdapterLogger.error("Raw socket is null in openSocketWith for session: {}.", session)
             _status = SocketStatus.CLOSED // Mark as closed/failed by AdapterSocket's standard
             this.delegate?.get()?.didErrorOccur(IllegalStateException("Raw socket not available for HTTPAdapter"), this)
             this.delegate?.get()?.didDisconnect(this)
@@ -70,7 +73,7 @@ open class HTTPAdapter(
         }
 
         if (isCancelled) {
-            println("INFO: HTTPAdapter: openSocketWith called on a cancelled socket for session: $session")
+            httpAdapterLogger.info("openSocketWith called on a cancelled socket for session: {}", session)
             return
         }
 
@@ -78,7 +81,7 @@ open class HTTPAdapter(
         _status = SocketStatus.CONNECTING // Overall status
         observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
 
-        println("INFO: HTTPAdapter: Connecting to proxy $serverHost:$serverPort (TLS: $secured) for session: $session")
+        httpAdapterLogger.info("Connecting to proxy {}:{} (TLS: {}) for session: {}", serverHost, serverPort, secured, session)
 
         val connectionScope = CoroutineScope(Dispatchers.Default) // TODO: Use a managed scope from AdapterSocket
         connectionScope.launch {
@@ -91,7 +94,7 @@ open class HTTPAdapter(
                 )
                 // If connectTo succeeds, RawTCPSocketDelegate.didConnect (implemented below) will be called.
             } catch (e: Exception) {
-                System.err.println("ERROR: HTTPAdapter: Failed to connect to proxy $serverHost:$serverPort: ${e.message}")
+                httpAdapterLogger.error("Failed to connect to proxy {}:{}: {}", serverHost, serverPort, e.message, e)
                 handleConnectionFailure(e)
             }
         }
@@ -103,7 +106,7 @@ open class HTTPAdapter(
         // This is too early for HTTPAdapter, as we still need to send CONNECT and get proxy's OK.
         // So, we don't call super.didConnect() here. Instead, manage status and call delegate upon successful CONNECT response.
 
-        println("INFO: HTTPAdapter: Raw socket connected to proxy $serverHost:$serverPort. Current internal state: $internalState")
+        httpAdapterLogger.info("Raw socket connected to proxy {}:{}. Current internal state: {}", serverHost, serverPort, internalState)
 
         if (internalState == State.CONNECTING_TO_PROXY) {
             // Now send the HTTP CONNECT request
@@ -128,7 +131,7 @@ open class HTTPAdapter(
             val requestData = connectRequestString.toByteArray(StandardCharsets.US_ASCII)
 
             internalState = State.SENDING_CONNECT_REQUEST
-            println("INFO: HTTPAdapter: Sending CONNECT request:\n$connectRequestString")
+            httpAdapterLogger.debug("Sending CONNECT request:\n{}", connectRequestString) // DEBUG for potentially large header
 
             val writeScope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
             writeScope.launch {
@@ -137,12 +140,12 @@ open class HTTPAdapter(
                     this@HTTPAdapter.write(requestData) // Use our own write which calls rawSocket.write
                     // After write completes, didWrite will be called. Then we need to read response.
                 } catch (e: Exception) {
-                    System.err.println("ERROR: HTTPAdapter: Failed to write CONNECT request: ${e.message}")
+                    httpAdapterLogger.error("Failed to write CONNECT request: {}", e.message, e)
                     handleConnectionFailure(e)
                 }
             }
         } else {
-            System.err.println("WARN: HTTPAdapter: didConnect called in unexpected state: $internalState")
+            httpAdapterLogger.warn("didConnect called in unexpected state: {}", internalState)
         }
     }
 
@@ -152,7 +155,7 @@ open class HTTPAdapter(
 
         if (internalState == State.SENDING_CONNECT_REQUEST) {
             internalState = State.READING_CONNECT_RESPONSE
-            println("INFO: HTTPAdapter: CONNECT request sent. Reading proxy response.")
+            httpAdapterLogger.info("CONNECT request sent. Reading proxy response.")
             // Read until double CRLF (end of HTTP headers)
             // AdapterSocket.readDataTo(delimiter) calls rawSocket.readDataTo(delimiter)
             this.rawSocket?.readDataTo(HTTPConstants.DOUBLE_CRLF, Opt.MAX_NWTCPSCAN_LENGTH)
@@ -168,7 +171,7 @@ open class HTTPAdapter(
 
         if (internalState == State.READING_CONNECT_RESPONSE) {
             val responseString = String(data, StandardCharsets.US_ASCII) // Or ISO_8859_1
-            println("INFO: HTTPAdapter: Received proxy response for CONNECT:\n$responseString")
+            httpAdapterLogger.debug("Received proxy response for CONNECT:\n{}", responseString) // DEBUG for potentially large header
             // Basic check for "HTTP/1.x 2xx" status line.
             // A more robust parser would be needed for full HTTP compliance.
             val lines = responseString.lines()
@@ -177,7 +180,7 @@ open class HTTPAdapter(
                 if (statusLine.startsWith("HTTP/1.0 2", ignoreCase = true) ||
                     statusLine.startsWith("HTTP/1.1 2", ignoreCase = true)) { // Check for 2xx success
 
-                    println("INFO: HTTPAdapter: CONNECT request successful. Tunnel established.")
+                    httpAdapterLogger.info("CONNECT request successful. Tunnel established.")
                     internalState = State.FORWARDING
                     _status = SocketStatus.ESTABLISHED // Overall status update
 
@@ -187,13 +190,13 @@ open class HTTPAdapter(
                     // it should be passed on. This simple parser assumes `data` is only the header block.
                     // A proper HTTP parser would handle this.
                 } else {
-                    System.err.println("ERROR: HTTPAdapter: Proxy CONNECT request failed: $statusLine")
+                    httpAdapterLogger.error("Proxy CONNECT request failed: {}", statusLine)
                     val error = HTTPAdapterException.ProxyConnectResponseInvalid("Proxy CONNECT failed: $statusLine")
                     observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this))
                     handleConnectionFailure(error)
                 }
             } else {
-                System.err.println("ERROR: HTTPAdapter: Empty response from proxy for CONNECT.")
+                httpAdapterLogger.error("Empty response from proxy for CONNECT.")
                 val error = HTTPAdapterException.ProxyConnectResponseInvalid("Empty response from proxy for CONNECT.")
                 observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this))
                 handleConnectionFailure(error)
@@ -202,14 +205,14 @@ open class HTTPAdapter(
             // Data received from target server, through the proxy. Forward to our delegate.
             delegate?.get()?.didRead(data, this)
         } else {
-            System.err.println("WARN: HTTPAdapter: didRead called in unexpected state: $internalState")
+            httpAdapterLogger.warn("didRead called in unexpected state: {}", internalState)
         }
     }
 
     override fun didDisconnect(socket: RawTCPSocketProtocol) {
         // This is called from RawTCPSocketDelegate when the underlying raw socket disconnects.
         // AdapterSocket's base implementation already updates status, signals event, and calls delegate.
-        println("INFO: HTTPAdapter: Underlying raw socket disconnected. Current internal state: $internalState")
+        httpAdapterLogger.info("Underlying raw socket disconnected. Current internal state: {}", internalState)
         val wasForwarding = (internalState == State.FORWARDING)
         internalState = State.STOPPED
         super.didDisconnect(socket) // Let AdapterSocket base handle common disconnect logic
@@ -223,7 +226,7 @@ open class HTTPAdapter(
     override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
         // This is called from RawTCPSocketDelegate for errors on the raw socket.
         // AdapterSocket's base implementation signals event and calls forceDisconnect.
-        println("ERROR: HTTPAdapter: Raw socket error. Current internal state: $internalState. Error: ${error.message}")
+        httpAdapterLogger.error("Raw socket error. Current internal state: {}. Error: {}", internalState, error.message, error)
         internalState = State.STOPPED
         super.didErrorOccur(error, on) // Let AdapterSocket base handle common error logic (signals event, force disconnects)
     }

@@ -2,6 +2,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.IOException
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterSocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, RawSocketFactory.kt are available.
 // Assuming SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt are available.
@@ -14,6 +15,8 @@ open class DirectAdapter(
     // If null is passed (e.g. for testing or if socket is set later), openSocketWith must handle it.
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket() // Default to getting one
 ) : AdapterSocket(initialRawSocket = initialRawSocket, observe = true) {
+    // Logger specific to DirectAdapter, inherits logger from AdapterSocket if that's preferred for generic logs
+    private val directAdapterLogger = LoggerFactory.getLogger(DirectAdapter::class.java)
 
     /**
      * If set to `true`, the adapter might attempt to resolve `session.host` again,
@@ -36,12 +39,12 @@ open class DirectAdapter(
         super.openSocketWith(session)
 
         if (isCancelled) {
-            println("INFO: DirectAdapter: openSocketWith called on a cancelled socket for session: $session")
+            directAdapterLogger.info("openSocketWith called on a cancelled socket for session: {}", session)
             return
         }
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: DirectAdapter: Raw socket is unexpectedly null in openSocketWith for session: $session.")
+            directAdapterLogger.error("Raw socket is unexpectedly null in openSocketWith for session: {}.", session)
             _status = SocketStatus.CLOSED // Mark as closed/failed
             // Notify delegate about the failure to connect.
             val error = IllegalStateException("Raw socket not available for DirectAdapter.")
@@ -56,7 +59,7 @@ open class DirectAdapter(
         _status = SocketStatus.CONNECTING
         observer?.signal(AdapterSocketEvent.SocketOpened(this, session)) // Moved from base to here, after session is set.
 
-        println("INFO: DirectAdapter: Attempting direct connection to ${session.host}:${session.port}")
+        directAdapterLogger.info("Attempting direct connection to {}:{}", session.host, session.port)
 
         // RawTCPSocketProtocol.connectTo is a suspend function.
         // AdapterSocket.openSocketWith is not currently suspend.
@@ -76,7 +79,7 @@ open class DirectAdapter(
                 // If connectTo completes without exception, the didConnect callback (from RawTCPSocketDelegate)
                 // will be triggered, which then calls super.didConnectWith and updates status.
             } catch (e: Exception) {
-                System.err.println("ERROR: DirectAdapter: Connection to ${session.host}:${session.port} failed: ${e.message}")
+                directAdapterLogger.error("Connection to {}:{} failed: {}", session.host, session.port, e.message, e)
                 // Ensure delegate is notified of error and disconnection.
                 // The RawTCPSocketDelegate methods (didErrorOccur, didDisconnect) should handle this.
                 // If connectTo throws before those are called, handle it here.
@@ -102,7 +105,7 @@ open class DirectAdapter(
         // Additional signal for direct adapters: ready to forward.
         observer?.signal(AdapterSocketEvent.ReadyForForward(this))
         delegate?.get()?.didBecomeReadyToForward(this)
-        println("INFO: DirectAdapter: Connected and ready to forward for session: $session")
+        directAdapterLogger.info("Connected and ready to forward for session: {}", session)
     }
 
     /**

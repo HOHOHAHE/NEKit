@@ -4,6 +4,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicBoolean
 import java.net.InetAddress // For Resolver placeholder
 import java.net.UnknownHostException // For Resolver placeholder
+import java.io.IOException // Added missing import
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming SocketProtocol.kt, SocketDelegate.kt, ProxySocket.kt, AdapterSocket.kt,
 // ConnectSession.kt (Messages), RuleManager.kt (Rule), AdapterFactory.kt (Factory),
@@ -13,6 +15,7 @@ import java.net.UnknownHostException // For Resolver placeholder
 // --- Placeholder for Resolver ---
 // TODO: Replace with actual DNS resolution mechanism (e.g., from IPStack.DNS or a robust library)
 object Resolver {
+    private val logger = LoggerFactory.getLogger(Resolver::class.java) // Logger for placeholder
     // Simplified ResolverResult to match Swift's usage: resolver?.ipv4Result.first
     data class ResolverResult(val ipv4Result: List<String>?) {
         constructor(singleIPv4: String?) : this(singleIPv4?.let { listOf(it) })
@@ -36,10 +39,10 @@ object Resolver {
                 callback(ResolverResult(ipv4), null)
                 // }
             } catch (e: UnknownHostException) {
-                System.err.println("ERROR: Resolver: Unknown host $hostname: ${e.message}")
+                logger.error("Unknown host {}: {}", hostname, e.message, e)
                 callback(null, e)
             } catch (e: Exception) {
-                System.err.println("ERROR: Resolver: Failed to resolve $hostname: ${e.message}")
+                logger.error("Failed to resolve {}: {}", hostname, e.message, e)
                 callback(null, e)
             }
         }
@@ -89,6 +92,8 @@ class Tunnel(
     // Dedicated CoroutineScope for this Tunnel instance, using the processing dispatcher from QueueFactory
     // This ensures all operations on this tunnel's state are serialized if dispatcher is single-threaded.
     private val tunnelScope = CoroutineScope(SupervisorJob() + QueueFactory.getProcessingDispatcher())
+    private val logger = LoggerFactory.getLogger(Tunnel::class.java)
+
 
     override fun toString(): String {
         return "<Tunnel proxySocket:$proxySocket adapterSocket:$adapterSocket status:$status>"
@@ -97,15 +102,15 @@ class Tunnel(
     init {
         this.proxySocket.delegate = WeakReference(this as SocketDelegate)
         this.observer = ObserverFactory.currentFactory?.getObserverForTunnel(this)
-        println("INFO: Tunnel created for proxySocket: $proxySocket")
+        logger.info("Created for proxySocket: {}", proxySocket)
     }
 
     fun open() { // Renamed from openTunnel for Kotlin style
         if (isCancelled) {
-            println("WARN: Tunnel: open() called on a cancelled tunnel.")
+            logger.warn("open() called on a cancelled tunnel: {}", this)
             return
         }
-        println("INFO: Tunnel: Opening for $proxySocket.")
+        logger.info("Opening for {}", proxySocket)
         // Launch on tunnel's scope to ensure state changes are synchronized if dispatcher is single-threaded
         tunnelScope.launch {
             proxySocket.openSocket() // This will trigger client request reading
@@ -118,7 +123,7 @@ class Tunnel(
         if (_cancelled.getAndSet(true)) { // Ensure close logic runs once
             return
         }
-        println("INFO: Tunnel: Closing. Error: ${error?.message}")
+        logger.info("Closing tunnel {} due to error: {}", this, error?.message)
         tunnelScope.launch {
             _status = Status.CLOSING
             observer?.signal(TunnelEvent.CloseCalled(this@Tunnel))
@@ -134,7 +139,7 @@ class Tunnel(
         if (_cancelled.getAndSet(true)) {
             return
         }
-        println("INFO: Tunnel: Force closing. Error: ${error?.message}")
+        logger.info("Force closing tunnel {} due to error: {}", this, error?.message)
         tunnelScope.launch {
             _status = Status.CLOSING
             _stopForwarding.set(true) // Immediately stop any forwarding attempts
@@ -155,18 +160,18 @@ class Tunnel(
 
     override fun didReceive(session: ConnectSession, from: ProxySocket) {
         if (isCancelled) return
-        println("INFO: Tunnel: Received ConnectSession: $session from $from")
+        logger.info("Received ConnectSession: {} from {} for tunnel {}", session, from, this)
         tunnelScope.launch {
             _status = Status.WAITING_TO_BE_READY
             observer?.signal(TunnelEvent.ReceivedRequest(session, from, this@Tunnel))
 
             if (!session.isIP(session.host)) { // If host is not an IP, resolve it
-                println("INFO: Tunnel: Host ${session.host} is not IP, resolving DNS...")
+                logger.info("Host {} is not IP for tunnel {}, resolving DNS...", session.host, this)
                 Resolver.resolve(session.host, Opt.DNS_TIMEOUT) { result, err ->
                     // Ensure callback is on tunnel's dispatcher for state safety
                     tunnelScope.launch {
                         if (err != null || result?.ipv4Result.isNullOrEmpty()) {
-                            System.err.println("ERROR: Tunnel: DNS resolution failed for ${session.host}: ${err?.message}")
+                            logger.error("DNS resolution failed for host {} in tunnel {}: {}", session.host, this@Tunnel, err?.message, err)
                             // session.ipAddress = "" // ConnectSession's ipAddress lazy property will handle this
                             // Or, if ConnectSession needs explicit update:
                             // session.updateResolvedIp("") // Assuming a method to set resolved IP
@@ -194,19 +199,19 @@ class Tunnel(
 
     private fun openAdapter(forSession: ConnectSession) { // Must run on tunnelScope
         if (isCancelled) return
-        println("INFO: Tunnel: Opening adapter for session: $forSession")
+        logger.info("Opening adapter for session: {} in tunnel {}", forSession, this)
 
         val manager = RuleManager.currentManager // Assuming RuleManager.kt
         val factory = manager.match(forSession) // This can return null
 
         if (factory == null) {
-            System.err.println("ERROR: Tunnel: No matching rule/factory for session $forSession. Closing tunnel.")
-            close(IOException("No rule matched session."))
+            logger.error("No matching rule/factory for session {} in tunnel {}. Closing tunnel.", forSession, this)
+            close(IOException("No rule matched session $forSession for tunnel $this"))
             return
         }
 
         val newAdapter = factory.getAdapterFor(forSession)
-        println("INFO: Tunnel: Using adapter ${newAdapter.typeName} for session $forSession (via factory ${factory::class.simpleName})")
+        logger.info("Using adapter {} for session {} (via factory {}) in tunnel {}", newAdapter.typeName, forSession, factory::class.simpleName, this)
         this.adapterSocket = newAdapter
         newAdapter.delegate = WeakReference(this as SocketDelegate)
         // AdapterSocket.openSocketWith can be suspending or launch its own coroutines.
@@ -217,7 +222,7 @@ class Tunnel(
 
     override fun didBecomeReadyToForward(socket: SocketProtocol) {
         if (isCancelled) return
-        println("INFO: Tunnel: Socket $socket became ready to forward.")
+        logger.info("Socket {} became ready to forward in tunnel {}", socket, this)
         tunnelScope.launch {
             val currentReadyCount = readySignal.incrementAndGet()
             observer?.signal(TunnelEvent.ReceivedReadySignal(socket, currentReadyCount, this@Tunnel))
@@ -228,7 +233,7 @@ class Tunnel(
 
             if (currentReadyCount == 2) { // Both proxy and adapter are ready
                 _status = Status.FORWARDING
-                println("INFO: Tunnel: Both sockets ready. Tunnel FORWARDING for session: ${proxySocket.session}.")
+                logger.info("Both sockets ready. Tunnel FORWARDING for session: {} in tunnel {}", proxySocket.session, this@Tunnel)
                 // Start reading from both ends if not already implicitly started by their openSocket/respondTo
                 proxySocket.readData()
                 adapterSocket?.readData()
@@ -239,11 +244,11 @@ class Tunnel(
     override fun didDisconnect(socket: SocketProtocol) {
         if (isCancelled && _status == Status.CLOSED) return // Already handled by close/forceClose
 
-        println("INFO: Tunnel: Socket $socket disconnected. isCancelled: $isCancelled, status: $_status")
+        logger.info("Socket {} disconnected in tunnel {}. isCancelled: {}, status: {}", socket, this, isCancelled, _status)
         tunnelScope.launch {
             if (!isCancelled) { // If not initiated by tunnel.close() itself
                 _stopForwarding.set(true) // Stop forwarding attempts
-                close(IOException("Socket ${socket.typeName} disconnected unexpectedly.")) // Close the other leg
+                close(IOException("Socket ${socket.typeName} disconnected unexpectedly in tunnel $this")) // Close the other leg
             }
             // Check overall status after a socket disconnects
             checkAndFinalizeClose()
@@ -263,7 +268,7 @@ class Tunnel(
                     proxySocket.write(data)
                 }
             } catch (e: Exception) {
-                System.err.println("ERROR: Tunnel: Error during data forwarding (read from ${from.typeName}): ${e.message}")
+                logger.error("Error during data forwarding (read from {}) in tunnel {}: {}", from.typeName, this, e.message, e)
                 close(e)
             }
         }
@@ -287,7 +292,7 @@ class Tunnel(
                     if (isActive && !_stopForwarding.get()) proxySocket.readData()
                 }
             } catch (e: Exception) {
-                System.err.println("ERROR: Tunnel: Error scheduling next read after write by ${by.typeName}: ${e.message}")
+                logger.error("Error scheduling next read after write by {} in tunnel {}: {}", by.typeName, this, e.message, e)
                 close(e)
             }
         }
@@ -295,7 +300,7 @@ class Tunnel(
 
     override fun didConnect(adapterSocket: AdapterSocket) { // Called by AdapterSocket (self)
         if (isCancelled) return
-        println("INFO: Tunnel: Adapter socket $adapterSocket connected to remote.")
+        logger.info("Adapter socket {} connected to remote for tunnel {}.", adapterSocket, this)
         tunnelScope.launch {
             observer?.signal(TunnelEvent.ConnectedToRemote(adapterSocket, this@Tunnel))
             // Note: didBecomeReadyToForward from AdapterSocket is what triggers proxySocket.respondTo
@@ -305,7 +310,7 @@ class Tunnel(
 
     override fun didErrorOccur(error: Throwable, on: SocketProtocol) {
         // New callback from RawTCPSocketDelegate/SocketProtocol for explicit errors
-        System.err.println("ERROR: Tunnel: Error on socket ${on.typeName}: ${error.message}")
+        logger.error("Error on socket {} in tunnel {}: {}", on.typeName, this, error.message, error)
         tunnelScope.launch {
             if (!isCancelled) {
                 close(error) // Trigger tunnel closure due to socket error
@@ -316,7 +321,7 @@ class Tunnel(
 
     override fun updateAdapter(newAdapter: AdapterSocket) {
         if (isCancelled) return
-        println("INFO: Tunnel: Updating adapter socket. Old: $adapterSocket, New: $newAdapter")
+        logger.info("Updating adapter socket in tunnel {}. Old: {}, New: {}", this, adapterSocket, newAdapter)
         tunnelScope.launch {
             observer?.signal(TunnelEvent.UpdatingAdapterSocket(adapterSocket, newAdapter, this@Tunnel))
 
@@ -352,7 +357,7 @@ class Tunnel(
                 _status = Status.CLOSED
                 _cancelled.set(true) // Ensure fully cancelled
                 _stopForwarding.set(true)
-                println("INFO: Tunnel: Both sockets closed. Tunnel is now fully CLOSED.")
+                logger.info("Both sockets closed. Tunnel {} is now fully CLOSED.", this)
                 observer?.signal(TunnelEvent.Closed(this@Tunnel))
                 delegate?.get()?.tunnelDidClose(this@Tunnel)
                 delegate = null // Break cycle

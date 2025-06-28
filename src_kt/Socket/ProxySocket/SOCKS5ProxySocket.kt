@@ -6,6 +6,9 @@ import java.net.UnknownHostException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream // Added missing import
+import java.io.IOException // Added missing import
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming ProxySocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt (Messages),
 // AdapterSocket.kt, SocketDelegate.kt, ProxySocketEvent.kt (Event) are available.
@@ -31,6 +34,8 @@ class SOCKS5ProxySocket(
     clientRawSocket: RawTCPSocketProtocol,
     observe: Boolean = true
 ) : ProxySocket(clientRawSocket, observe) {
+
+    private val socks5Logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
 
     private enum class ReadState(val descriptionVal: String) {
         INVALID("invalid"),
@@ -71,21 +76,21 @@ class SOCKS5ProxySocket(
     val writeStatusDescription: String get() = internalWriteStatus.toString()
 
     init {
-        println("INFO: SOCKS5ProxySocket created with rawSocket: $rawSocket")
+        socks5Logger.info("Created with rawSocket: {}", rawSocket)
     }
 
     override fun openSocket() {
         super.openSocket()
         if (isCancelled) return
 
-        println("INFO: SOCKS5ProxySocket: openSocket() called. Reading SOCKS5 version/nmethods (2 bytes).")
+        socks5Logger.info("openSocket() called for session {}. Reading SOCKS5 version/nmethods (2 bytes).", session)
         internalReadStatus = ReadState.READING_VERSION_NMETHODS
         rawSocket.readDataTo(length = 2)
     }
 
     // Helper to send SOCKS5 error reply and disconnect
     private fun sendErrorReplyAndDisconnect(replyCode: Byte, errorMessage: String) {
-        System.err.println("ERROR: SOCKS5ProxySocket: $errorMessage. Sending reply code $replyCode and disconnecting.")
+        socks5Logger.error("Session {}: {}. Sending reply code {} and disconnecting.", session, errorMessage, replyCode)
         val response = ByteBuffer.allocate(10) // Standard size for error reply with dummy address/port
         response.order(ByteOrder.BIG_ENDIAN)
         response.put(SOCKS_VERSION_5)
@@ -102,9 +107,9 @@ class SOCKS5ProxySocket(
                 // After write, didWrite might trigger further state changes or just log.
                 // Then force disconnect.
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5ProxySocket: Exception while sending error reply: ${e.message}")
+                socks5Logger.error("Session {}: Exception while sending error reply: {}", session, e.message, e)
             } finally {
-                forceDisconnect(becauseOf = IOException(errorMessage))
+                forceDisconnect(becauseOf = IOException("$errorMessage for session $session"))
             }
         }
     }
@@ -224,7 +229,7 @@ class SOCKS5ProxySocket(
                     handshakeBuffer.reset()
                     destinationPort = ByteBuffer.wrap(bufferBytes).order(ByteOrder.BIG_ENDIAN).short.toUShort().toInt()
 
-                    println("INFO: SOCKS5ProxySocket: Parsed request for $destinationHost:$destinationPort.")
+                    socks5Logger.info("Parsed SOCKS5 request for {}:{} for session {}.", destinationHost, destinationPort, session)
                     // Do not change to FORWARDING yet. Wait for respondTo from Tunnel.
                     // internalReadStatus = ReadState.FORWARDING; // Premature
 
@@ -242,7 +247,7 @@ class SOCKS5ProxySocket(
                 else -> { /* Should not happen if states are managed correctly */ }
             }
         } catch (e: Exception) {
-            System.err.println("ERROR: SOCKS5ProxySocket: Error during SOCKS5 handshake processing (state $internalReadStatus): ${e.message}")
+            socks5Logger.error("Error during SOCKS5 handshake processing (state {}) for session {}: {}", internalReadStatus, session, e.message, e)
             sendErrorReplyAndDisconnect(0x01.toByte(), "General SOCKS5 server error during handshake.")
         }
     }
@@ -260,7 +265,7 @@ class SOCKS5ProxySocket(
                 // Connect reply sent to client. If it was success, transition to forwarding.
                 // Check if reply was success (this logic should be in respondTo or here based on reply data)
                 // For now, assume if SENDING_CONNECT_REPLY was set, it was a success reply.
-                println("INFO: SOCKS5ProxySocket: Connect reply sent. Transitioning to forwarding.")
+                socks5Logger.info("Connect reply sent for session {}. Transitioning to forwarding.", session)
                 internalWriteStatus = WriteState.FORWARDING
                 internalReadStatus = ReadState.FORWARDING // Also ready to read and forward from client
                 _status = SocketStatus.ESTABLISHED // Overall socket status
@@ -273,7 +278,7 @@ class SOCKS5ProxySocket(
                 delegate?.get()?.didWrite(data, this)
             }
             else -> {
-                println("WARN: SOCKS5ProxySocket: Data written in unexpected write state: $internalWriteStatus")
+                socks5Logger.warn("Data written in unexpected write state: {} for session {}", internalWriteStatus, session)
             }
         }
     }
@@ -282,7 +287,7 @@ class SOCKS5ProxySocket(
         super.respondTo(adapter) // Signals observer
         if (isCancelled) return
 
-        println("INFO: SOCKS5ProxySocket: Adapter ready for $destinationHost:$destinationPort. Sending SOCKS5 success reply.")
+        socks5Logger.info("Adapter ready for {}:{}. Sending SOCKS5 success reply for session {}.", destinationHost, destinationPort, session)
         // Construct SOCKS5 success reply: VER, REP=0x00, RSV, ATYP, BND.ADDR, BND.PORT
         // BND.ADDR and BND.PORT should be the address/port the proxy *bound* for the client on the server side,
         // or the address/port of the proxy itself that the client is connected to.
@@ -304,7 +309,7 @@ class SOCKS5ProxySocket(
                 write(response.array())
                 // didWrite callback will handle transition to FORWARDING state.
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5ProxySocket: Failed to write SOCKS5 success reply: ${e.message}")
+                socks5Logger.error("Failed to write SOCKS5 success reply for session {}: {}", session, e.message, e)
                 forceDisconnect(becauseOf = e)
             }
         }

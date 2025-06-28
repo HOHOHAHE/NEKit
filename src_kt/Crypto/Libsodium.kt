@@ -1,7 +1,11 @@
 // Represents the need to initialize the Libsodium library.
 // Actual Libsodium functions would be called via JNI/JNA or a JVM binding library.
 
+import org.slf4j.LoggerFactory
+
 object Libsodium {
+
+    private val logger = LoggerFactory.getLogger(Libsodium::class.java)
 
     /**
      * Flag indicating whether Libsodium has been initialized.
@@ -38,7 +42,7 @@ object Libsodium {
         //     false
         // }
 
-        System.out.println("Libsodium: Conceptual initialization triggered. " +
+        logger.info("Libsodium: Conceptual initialization triggered. " +
                            "Ensure a real Libsodium binding/JNI setup calls sodium_init().")
         // For the purpose of this translation, we'll assume it "succeeded" conceptually.
         // In a real app, this boolean should reflect the actual outcome.
@@ -54,7 +58,7 @@ object Libsodium {
             // This message will likely not print if 'initialized' threw an error and returned false,
             // but it's a way to explicitly trigger the lazy block.
             // If 'initialized' becomes true, this won't re-trigger the core init logic.
-            System.err.println("Libsodium initialization failed or was not completed successfully.")
+            logger.error("Libsodium initialization failed or was not completed successfully.")
         }
     }
 }

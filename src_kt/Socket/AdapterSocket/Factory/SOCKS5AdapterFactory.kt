@@ -1,3 +1,7 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
 // Assuming ServerAdapterFactory.kt (placeholder or actual), ConnectSession.kt (Messages),
 // AdapterSocket.kt, RawSocketFactory.kt (RawSocket) are available.
 // Placeholder for SOCKS5Adapter.kt needs to be defined or available.
@@ -25,23 +29,24 @@ open class SOCKS5Adapter(
     val serverPort: Int,
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket() // Gets a new raw socket by default
 ) : AdapterSocket(initialRawSocket) { // Pass rawSocket to AdapterSocket constructor
+    private val logger = LoggerFactory.getLogger(SOCKS5Adapter::class.java) // Logger for placeholder
 
     init {
-        println("INFO: SOCKS5Adapter instance created for SOCKS5 proxy $serverHost:$serverPort.")
+        logger.info("Instance created for SOCKS5 proxy {}:{}.", serverHost, serverPort)
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session) // Basic setup: sets this.session, observer, rawSocket.delegate
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: SOCKS5Adapter: Raw socket is null in openSocketWith. Cannot connect.")
+            logger.error("Raw socket is null in openSocketWith for session: {}. Cannot connect.", session)
             _status = SocketStatus.CLOSED
             this.delegate?.get()?.didDisconnect(this)
             return
         }
         _status = SocketStatus.CONNECTING
-        println("INFO: SOCKS5Adapter: Opening socket for session $session to SOCKS5 proxy $serverHost:$serverPort.")
-        println("TODO: Implement SOCKS5 handshake and connection logic using rawSocket.")
+        logger.info("Opening socket for session {} to SOCKS5 proxy {}:{}.", session, serverHost, serverPort)
+        println("TODO: Implement SOCKS5 handshake and connection logic using rawSocket.") // Developer TODO left as println
 
         // Example of how connection and SOCKS5 handshake might be initiated:
         // This scope should be managed within AdapterSocket or by a passed-in scope.
@@ -75,7 +80,7 @@ open class SOCKS5Adapter(
                 // this@SOCKS5Adapter.delegate?.get()?.didConnect(this@SOCKS5Adapter)
 
             } catch (e: Exception) {
-                System.err.println("ERROR: SOCKS5Adapter: Failed to connect or handshake with SOCKS5 proxy $serverHost:$serverPort: ${e.message}")
+                logger.error("Failed to connect or handshake with SOCKS5 proxy {}:{}: {}", serverHost, serverPort, e.message, e)
                 this@SOCKS5Adapter._status = SocketStatus.CLOSED
                 this@SOCKS5Adapter.delegate?.get()?.didErrorOccur(e, this@SOCKS5Adapter)
                 this@SOCKS5Adapter.delegate?.get()?.didDisconnect(this@SOCKS5Adapter)

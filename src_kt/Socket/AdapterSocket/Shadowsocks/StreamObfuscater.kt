@@ -3,6 +3,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import kotlin.random.Random // For HTTP Obfuscater random selection
+import java.io.ByteArrayOutputStream // Added missing import
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming ConnectSession.kt (Messages), IPAddress.kt (Utils), Port.kt (Utils),
 // ShadowsocksCryptoProcessor.kt (placeholder), ShadowsocksAdapter.kt (placeholder for interface),
@@ -128,6 +130,7 @@ class ShadowsocksOTAStreamObfuscaterFactory : ShadowsocksStreamObfuscaterFactory
 }
 
 class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStreamObfuscaterBase(session) {
+    private val otaLogger = LoggerFactory.getLogger(ShadowsocksOTAStreamObfuscater::class.java)
     private var chunkCount: UInt = 0u // Corresponds to `count: UInt32` in Swift
     private var requestSent = false
 
@@ -211,7 +214,7 @@ class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStrea
             requestSent = true
             val otaAddrHeader = formatOTAAddressHeader()
             outputStream.write(otaAddrHeader)
-            println("INFO: OTAStreamObfuscater: Sent OTA address header (${otaAddrHeader.size} bytes).")
+            otaLogger.info("Sent OTA address header ({} bytes) for session {}.", otaAddrHeader.size, session)
         }
 
         var dataOffset = 0
@@ -244,7 +247,7 @@ class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStrea
 
         val finalOutputData = outputStream.toByteArray()
         if (finalOutputData.isNotEmpty()) {
-            println("INFO: OTAStreamObfuscater: Outputting ${finalOutputData.size} bytes (includes OTA chunking).")
+            otaLogger.info("Outputting {} bytes (includes OTA chunking) for session {}.", finalOutputData.size, session)
             super.output(finalOutputData) // Pass to CryptoStreamProcessor
         }
     }
@@ -261,7 +264,7 @@ class ShadowsocksOTAStreamObfuscater(session: ConnectSession) : ShadowsocksStrea
         // 6. If HMAC is valid, pass de-chunked data to inputStreamProcessor.
         // 7. Increment expected chunkCount.
         // 8. Handle errors (bad HMAC, incorrect length).
-        println("WARN: OTAStreamObfuscater: input() de-chunking and HMAC verification not implemented. Passing through ${data.size} bytes.")
+        otaLogger.warn("input() de-chunking and HMAC verification not implemented for session {}. Passing through {} bytes.", session, data.size)
         super.input(data) // Placeholder: pass through
     }
 }

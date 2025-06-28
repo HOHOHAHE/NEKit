@@ -3,6 +3,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+import org.slf4j.LoggerFactory // Added import
+
 // Assuming ProxySocket.kt, RawTCPSocketProtocol.kt, HTTPHeader.kt (Messages), HTTPStreamScanner.kt (Utils),
 // ConnectSession.kt (Messages), AdapterSocket.kt, SocketDelegate.kt, ProxySocketEvent.kt (Event) are available.
 
@@ -23,6 +25,8 @@ class HTTPProxySocket(
     clientRawSocket: RawTCPSocketProtocol,
     observe: Boolean = true
 ) : ProxySocket(clientRawSocket, observe) {
+
+    private val httpProxyLogger = LoggerFactory.getLogger(HTTPProxySocket::class.java)
 
     private enum class ReadState(val descriptionVal: String) {
         INVALID("invalid"),
@@ -61,14 +65,14 @@ class HTTPProxySocket(
     val writeStatusDescription: String get() = internalWriteStatus.toString()
 
     init {
-        println("INFO: HTTPProxySocket created with rawSocket: $rawSocket")
+        httpProxyLogger.info("Created with rawSocket: {}", rawSocket)
     }
 
     override fun openSocket() {
         super.openSocket() // Signals event, base class is ready
         if (isCancelled) return
 
-        println("INFO: HTTPProxySocket: openSocket() called. Reading initial HTTP header.")
+        httpProxyLogger.info("openSocket() called for session {}. Reading initial HTTP header.", session)
         internalReadStatus = ReadState.READING_FIRST_HEADER
         // Read up to the end of the first HTTP header block
         rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSCAN_LENGTH)
@@ -87,15 +91,15 @@ class HTTPProxySocket(
             // was held back. Now, the Tunnel is asking for it.
             val headerData = currentHttpHeader?.toByteArray() // Uses HTTPHeader.toString().toByteArray()
             if (headerData != null) {
-                println("INFO: HTTPProxySocket: Forwarding pending first header (${headerData.size} bytes).")
+                httpProxyLogger.info("Forwarding pending first header ({} bytes) for session {}.", headerData.size, session)
                 // This data goes to the Tunnel's delegate (which is usually the AdapterSocket via Tunnel)
                 delegate?.get()?.didRead(headerData, this)
                 internalReadStatus = ReadState.READING_CONTENT // Expect body or next request
                 // After sending header, check HTTPStreamScanner for what to read next (content or new header)
                 processNextScannerAction()
             } else {
-                System.err.println("ERROR: HTTPProxySocket: Pending first header is null. Cannot forward.")
-                forceDisconnect(becauseOf = IllegalStateException("Pending header was null"))
+                httpProxyLogger.error("Pending first header is null for session {}. Cannot forward.", session)
+                forceDisconnect(becauseOf = IllegalStateException("Pending header was null for session $session"))
             }
             return
         }
@@ -110,22 +114,22 @@ class HTTPProxySocket(
             is ReadAction.ReadContent -> {
                 internalReadStatus = ReadState.READING_CONTENT
                 if (action.length > 0) {
-                    println("DEBUG: HTTPProxySocket: Reading content of length: ${action.length}")
+                    httpProxyLogger.debug("Reading content of length: {} for session {}", action.length, session)
                     rawSocket.readDataTo(length = action.length)
                 } else { // Length 0 or -1 means read anything available (e.g. for chunked or EOF)
-                    println("DEBUG: HTTPProxySocket: Reading any available content.")
+                    httpProxyLogger.debug("Reading any available content for session {}", session)
                     rawSocket.readData()
                 }
             }
             is ReadAction.ReadHeader -> {
                 internalReadStatus = ReadState.READING_HEADER
-                println("DEBUG: HTTPProxySocket: Reading next HTTP header.")
+                httpProxyLogger.debug("Reading next HTTP header for session {}", session)
                 rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSCAN_LENGTH)
             }
             is ReadAction.Stop -> {
                 internalReadStatus = ReadState.STOPPED
-                println("INFO: HTTPProxySocket: HTTPStreamScanner indicated stop. Disconnecting.")
-                disconnect(becauseOf = IOException("HTTP stream scanner indicated end or error."))
+                httpProxyLogger.info("HTTPStreamScanner indicated stop for session {}. Disconnecting.", session)
+                disconnect(becauseOf = IOException("HTTP stream scanner indicated end or error for session $session."))
             }
         }
     }
@@ -141,7 +145,7 @@ class HTTPProxySocket(
             // httpScanner is from Utils, its input method returns ProcessedData (Header or Content)
             processedDataResult = httpScanner.input(data)
         } catch (e: Exception) {
-            System.err.println("ERROR: HTTPProxySocket: HTTPStreamScanner error: ${e.message}")
+            httpProxyLogger.error("HTTPStreamScanner error for session {}: {}", session, e.message, e)
             forceDisconnect(becauseOf = e)
             return
         }
@@ -160,7 +164,7 @@ class HTTPProxySocket(
                     isConnectCommand = header.isConnect
 
                     if (destinationHost.isEmpty()) {
-                        System.err.println("ERROR: HTTPProxySocket: Failed to parse host from HTTP header.")
+                        httpProxyLogger.error("Failed to parse host from HTTP header for session (raw data processing).")
                         forceDisconnect(becauseOf = HTTPHeaderParseException.MissingHostField)
                         return
                     }
@@ -170,12 +174,12 @@ class HTTPProxySocket(
                     this.session = ConnectSession.create(destinationHost, destinationPort, fakeIPEnabled = false) // Fake IP not relevant for proxy target
 
                     if (this.session == null) {
-                        System.err.println("ERROR: HTTPProxySocket: Failed to create ConnectSession for $destinationHost:$destinationPort")
-                        forceDisconnect(becauseOf = IllegalStateException("ConnectSession creation failed for HTTP proxy"))
+                        httpProxyLogger.error("Failed to create ConnectSession for {}:{} (raw data processing).", destinationHost, destinationPort)
+                        forceDisconnect(becauseOf = IllegalStateException("ConnectSession creation failed for HTTP proxy for $destinationHost:$destinationPort"))
                         return
                     }
 
-                    println("INFO: HTTPProxySocket: Parsed first header. Host: $destinationHost, Port: $destinationPort, CONNECT: $isConnectCommand")
+                    httpProxyLogger.info("Parsed first header for session {}. Host: {}, Port: {}, CONNECT: {}", this.session, destinationHost, destinationPort, isConnectCommand)
                     observer?.signal(ProxySocketEvent.ReceivedRequest(this.session!!, this))
                     delegate?.get()?.didReceive(this.session!!, this) // Notify Tunnel to create AdapterSocket
 
@@ -192,7 +196,7 @@ class HTTPProxySocket(
                     }
 
                 } else { // Expected header but got content or error
-                    System.err.println("ERROR: HTTPProxySocket: Expected HTTP header, but StreamScanner result was not Header.")
+                    httpProxyLogger.error("Expected HTTP header for session {}, but StreamScanner result was not Header.", session)
                     forceDisconnect(becauseOf = HTTPHeaderParseException.MalformedHeader)
                 }
             }
@@ -201,29 +205,29 @@ class HTTPProxySocket(
                     val header = processedDataResult.httpHeader
                     currentHttpHeader = header
                     // TODO: header.removeProxyHeaders(); header.rewriteToRelativePath()
-                    println("INFO: HTTPProxySocket: Parsed subsequent header. Forwarding to delegate.")
+                    httpProxyLogger.info("Parsed subsequent header for session {}. Forwarding to delegate.", session)
                     delegate?.get()?.didRead(header.toByteArray(), this) // Forward header data
                     // After forwarding header, decide what to read next based on scanner
                     processNextScannerAction()
                 } else {
-                    System.err.println("ERROR: HTTPProxySocket: Expected subsequent HTTP header, but StreamScanner result was not Header.")
+                    httpProxyLogger.error("Expected subsequent HTTP header for session {}, but StreamScanner result was not Header.", session)
                     forceDisconnect(becauseOf = HTTPHeaderParseException.MalformedHeader)
                 }
             }
             ReadState.READING_CONTENT -> { // HTTP body content
                 if (processedDataResult is ProcessedData.Content) {
                     val content = processedDataResult.data
-                    println("DEBUG: HTTPProxySocket: Received content (${content.size} bytes). Forwarding to delegate.")
+                    httpProxyLogger.debug("Received content ({} bytes) for session {}. Forwarding to delegate.", content.size, session)
                     delegate?.get()?.didRead(content, this)
                     // After forwarding content, decide what to read next
                     processNextScannerAction()
                 } else {
-                     System.err.println("ERROR: HTTPProxySocket: Expected HTTP content, but StreamScanner result was not Content.")
+                     httpProxyLogger.error("Expected HTTP content for session {}, but StreamScanner result was not Content.", session)
                     forceDisconnect(becauseOf = HTTPHeaderParseException.MalformedHeader)
                 }
             }
             else -> {
-                println("WARN: HTTPProxySocket: Data read in unexpected read state: $internalReadStatus")
+                httpProxyLogger.warn("Data read in unexpected read state: {} for session {}", internalReadStatus, session)
             }
         }
     }
@@ -233,7 +237,7 @@ class HTTPProxySocket(
 
         when (internalWriteStatus) {
             WriteState.SENDING_CONNECT_RESPONSE -> {
-                println("INFO: HTTPProxySocket: Successfully sent CONNECT response. Transitioning to forwarding.")
+                httpProxyLogger.info("Successfully sent CONNECT response for session {}. Transitioning to forwarding.", session)
                 internalWriteStatus = WriteState.FORWARDING
                 internalReadStatus = ReadState.FORWARDING // Also ready to forward reads from client
                 _status = SocketStatus.ESTABLISHED // Overall socket status
@@ -246,7 +250,7 @@ class HTTPProxySocket(
                 delegate?.get()?.didWrite(data, this)
             }
             else -> {
-                println("WARN: HTTPProxySocket: Data written in unexpected write state: $internalWriteStatus")
+                httpProxyLogger.warn("Data written in unexpected write state: {} for session {}", internalWriteStatus, session)
             }
         }
     }
@@ -256,7 +260,7 @@ class HTTPProxySocket(
         if (isCancelled) return
 
         if (isConnectCommand) {
-            println("INFO: HTTPProxySocket: Adapter ready for CONNECT. Sending 200 OK to client.")
+            httpProxyLogger.info("Adapter ready for CONNECT for session {}. Sending 200 OK to client.", session)
             internalWriteStatus = WriteState.SENDING_CONNECT_RESPONSE
             // write() is suspend in RawTCPSocketProtocol, ProxySocket.write calls it.
             // Launch in a scope or make respondTo suspend.
@@ -266,14 +270,14 @@ class HTTPProxySocket(
                     write(HTTPDataConstants.CONNECT_SUCCESS_RESPONSE)
                     // didWrite callback will handle transition to FORWARDING state.
                 } catch (e: Exception) {
-                    System.err.println("ERROR: HTTPProxySocket: Failed to write CONNECT success response: ${e.message}")
+                    httpProxyLogger.error("Failed to write CONNECT success response for session {}: {}", session, e.message, e)
                     forceDisconnect(becauseOf = e)
                 }
             }
         } else {
             // For non-CONNECT, adapter is ready, means we can start forwarding data from client.
             // The first request's header might be pending.
-            println("INFO: HTTPProxySocket: Adapter ready for non-CONNECT. Transitioning to forwarding.")
+            httpProxyLogger.info("Adapter ready for non-CONNECT for session {}. Transitioning to forwarding.", session)
             internalWriteStatus = WriteState.FORWARDING
             // If header was pending, Tunnel will call readData() which will send it.
             // If no header pending (e.g. client sent body before this), then just ready.

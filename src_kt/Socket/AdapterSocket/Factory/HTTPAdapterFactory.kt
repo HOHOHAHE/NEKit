@@ -1,3 +1,10 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
+import kotlinx.coroutines.delay // Added missing import
+
+
 // Assuming HTTPAuthenticationAdapterFactory.kt, ConnectSession.kt (Messages),
 // AdapterSocket.kt, RawSocketFactory.kt (RawSocket), HTTPAuthentication.kt (Utils) are available.
 // Placeholder for HTTPAdapter.kt needs to be defined or available.
@@ -14,22 +21,23 @@ open class HTTPAdapter(
     // For consistency with DirectAdapter pattern:
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket() // Default to getting a new one
 ) : AdapterSocket(initialRawSocket, observe = true /* or pass from factory */) {
+    private val logger = LoggerFactory.getLogger(HTTPAdapter::class.java) // Logger for placeholder HTTPAdapter
 
     init {
-        println("INFO: HTTPAdapter instance created for proxy $serverHost:$serverPort (Auth: ${auth != null})")
+        logger.info("Instance created for proxy {}:{} (Auth: {})", serverHost, serverPort, auth != null)
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session) // Sets up this.session, observer, rawSocket.delegate
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: HTTPAdapter: Raw socket is null in openSocketWith. Cannot connect.")
+            logger.error("Raw socket is null in openSocketWith for session: {}. Cannot connect.", session)
             _status = SocketStatus.CLOSED
             this.delegate?.get()?.didDisconnect(this)
             return
         }
         _status = SocketStatus.CONNECTING
-        println("INFO: HTTPAdapter: Opening socket for session $session to proxy $serverHost:$serverPort (TODO: Implement HTTP CONNECT logic using rawSocket)")
+        logger.info("Opening socket for session {} to proxy {}:{} (TODO: Implement HTTP CONNECT logic using rawSocket)", session, serverHost, serverPort)
 
         // Actual HTTP CONNECT logic would be here:
         // 1. Construct CONNECT request string/ByteArray.
@@ -54,11 +62,11 @@ open class HTTPAdapter(
                 // 2. In this.didConnect (from RawTCPSocketDelegate): send CONNECT request
                 // 3. In this.didRead (from RawTCPSocketDelegate): parse response, if 200 OK -> this.delegate.didConnect(this)
                 // Simplified placeholder:
-                println("INFO: HTTPAdapter: Simulating successful CONNECT to $serverHost:$serverPort")
+                logger.info("Simulating successful CONNECT to {}:{} for session {}", serverHost, serverPort, session)
                 this@HTTPAdapter._status = SocketStatus.ESTABLISHED
                 this@HTTPAdapter.delegate?.get()?.didConnect(this@HTTPAdapter)
             } catch (e: Exception) {
-                System.err.println("ERROR: HTTPAdapter: Placeholder connection/CONNECT failed: ${e.message}")
+                logger.error("Placeholder connection/CONNECT failed for session {}: {}", session, e.message, e)
                 this@HTTPAdapter._status = SocketStatus.CLOSED
                 this@HTTPAdapter.delegate?.get()?.didErrorOccur(e, this@HTTPAdapter)
                 this@HTTPAdapter.delegate?.get()?.didDisconnect(this@HTTPAdapter)

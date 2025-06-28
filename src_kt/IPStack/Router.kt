@@ -1,9 +1,11 @@
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap // For thread-safe NAT table
 
+import org.slf4j.LoggerFactory
+
 // Assuming IPAddress.kt, Port.kt, IPMutablePacket.kt, TCPMutablePacket.kt,
 // IPVersion.kt, TransportProtocol.kt are available.
-// TODO: Replace CocoaLumberjack with a Kotlin logging solution.
+// TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
 
 // --- Placeholder for NetworkInterface.TunnelProvider.packetFlow ---
 // This represents the TUN/TAP interface interaction.
@@ -24,17 +26,18 @@ interface KotlinTunnelFlow {
 // TODO: Replace with actual JNI/JNA based TUN/TAP implementation.
 object NetworkInterface { // Mimicking Swift structure
     object TunnelProvider { // Mimicking Swift structure
+        private val flowLogger = LoggerFactory.getLogger("KotlinTunnelFlow.Placeholder") // Specific logger for the placeholder flow
         val packetFlow: KotlinTunnelFlow = object : KotlinTunnelFlow {
             private var isReading = false
             override fun readPackets(completion: (packets: List<ByteArray>, protocols: List<Int>) -> Unit) {
                 if (isReading) { // Basic guard against concurrent reads if not supported by underlying impl
-                    println("WARN: PlaceholderPacketFlow: readPackets called while already reading.")
+                    flowLogger.warn("readPackets called while already reading.")
                     // To avoid tight loop in Router's readAndProcessPackets, schedule a delayed empty completion
                     GlobalScope.launch { delay(100); completion(emptyList(), emptyList()) }
                     return
                 }
                 isReading = true
-                println("INFO: PlaceholderPacketFlow: readPackets called. (TODO: Implement actual TUN read)")
+                flowLogger.info("readPackets called. (TODO: Implement actual TUN read)")
                 // Simulate asynchronous read with a delay and dummy packet for testing structure
                 GlobalScope.launch {
                     delay(1000) // Simulate network delay
@@ -58,9 +61,9 @@ object NetworkInterface { // Mimicking Swift structure
             }
 
             override fun writePackets(packets: List<ByteArray>, protocols: List<Int>) {
-                println("INFO: PlaceholderPacketFlow: Writing ${packets.size} packets. (TODO: Implement actual TUN write)")
+                flowLogger.info("Writing {} packets. (TODO: Implement actual TUN write)", packets.size)
                 packets.forEachIndexed { index, bytes ->
-                    println("  Packet ${index + 1}: ${bytes.size} bytes, Proto: ${protocols.getOrNull(index) ?: "N/A"}")
+                    flowLogger.debug("  Packet {}: {} bytes, Proto: {}", index + 1, bytes.size, protocols.getOrNull(index) ?: "N/A")
                 }
             }
         }
@@ -83,6 +86,8 @@ class Router(
     private val proxyServerIP: IPAddress = IPAddress.parse(proxyServerIpString)
         ?: throw IllegalArgumentException("Invalid proxy server IP: $proxyServerIpString")
     private val proxyServerPort: Port = Port(proxyServerPortValue)
+    private val logger = LoggerFactory.getLogger(Router::class.java)
+
 
     // Coroutine scope for managing the packet processing loop
     private val routerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO) // IO dispatcher for network operations
@@ -103,14 +108,14 @@ class Router(
                 val (originalDestAddress, originalDestPort) = ipv4NatRoutes.remove(packet.destinationPort) ?: run {
                     // If destinationPort is not found in NAT table, it means this is not a return packet we know.
                     // This could be an unsolicited packet from proxyServerPort to an unknown internal client port.
-                    System.err.println("ERROR: Router: No NAT entry for return packet on proxy port ${packet.destinationPort}. Dropping. Packet: ${packet.sourceAddress}:${packet.sourcePort} -> ${packet.destinationAddress}:${packet.destinationPort}")
+                    logger.error("No NAT entry for return packet on proxy port {}. Dropping. Packet: {}:{} -> {}:{}", packet.destinationPort, packet.sourceAddress, packet.sourcePort, packet.destinationAddress, packet.destinationPort)
                     return null
                 }
                 // Restore original destination as source, and interfaceIP as destination
                 packet.sourcePort = originalDestPort
                 packet.sourceAddress = originalDestAddress
                 packet.destinationAddress = interfaceIP // Send back to original requester via interface IP
-                println("INFO: Router: Rewriting proxy response: ${packet.sourceAddress}:${packet.sourcePort} -> ${packet.destinationAddress}:${packet.destinationPort} (orig NAT key: ${packet.destinationPort})")
+                logger.info("Rewriting proxy response: {}:{} -> {}:{} (orig NAT key: {})", packet.sourceAddress, packet.sourcePort, packet.destinationAddress, packet.destinationPort, packet.destinationPort)
 
             } else { // Packet from an internal client, going to an external destination (needs NAT)
                 // Store original (source IP, source port) using its source port as key for return traffic.
@@ -143,16 +148,16 @@ class Router(
                 // Key for NAT table: client's original source port.
                 // Value in NAT table: original external destination (IP, Port).
                 ipv4NatRoutes[packet.sourcePort] = Pair(packet.destinationAddress, packet.destinationPort)
-                println("INFO: Router: Storing NAT entry for ${packet.sourcePort} -> (${packet.destinationAddress}, ${packet.destinationPort})")
+                logger.info("Storing NAT entry for {} -> ({}, {})", packet.sourcePort, packet.destinationAddress, packet.destinationPort)
 
                 // Rewrite packet to go through proxy
                 packet.sourceAddress = fakeSourceIP // Masquerade client IP
                 packet.destinationAddress = proxyServerIP
                 packet.destinationPort = proxyServerPort
-                 println("INFO: Router: Rewriting client packet: ${packet.sourceAddress}:${packet.sourcePort} -> ${packet.destinationAddress}:${packet.destinationPort}")
+                 logger.info("Rewriting client packet: {}:{} -> {}:{}", packet.sourceAddress, packet.sourcePort, packet.destinationAddress, packet.destinationPort)
             }
         } else { // Packet not from interfaceIP, unexpected scenario based on Swift logic.
-            System.err.println("ERROR: Router: Packet source ${packet.sourceAddress} is not interface IP ${interfaceIP}. Dropping.")
+            logger.error("Packet source {} is not interface IP {}. Dropping.", packet.sourceAddress, interfaceIP)
             return null
         }
         // Recalculate checksums after modifications
@@ -170,10 +175,10 @@ class Router(
      */
     fun startProcessingPackets() {
         if (!routerScope.isActive) {
-            System.err.println("ERROR: Router scope is not active. Cannot start packet processing.")
+            logger.error("Router scope is not active. Cannot start packet processing.")
             return
         }
-        println("INFO: Router: Starting packet processing loop.")
+        logger.info("Starting packet processing loop.")
         routerScope.launch {
             while (isActive) { // Loop while the scope is active
                 // Using a CompletableDeferred to bridge callback to suspending function style for read
@@ -187,7 +192,7 @@ class Router(
                     if (packetsData.isEmpty() && protocols.isEmpty()) {
                         // Potentially a signal to yield or a short delay if no packets,
                         // or the placeholder flow just completed without data.
-                        // println("DEBUG: Router: No packets read, or placeholder flow completed.")
+                        // logger.trace("No packets read, or placeholder flow completed.") // trace is finer than debug
                         delay(10) // Avoid tight loop if readPackets completes immediately with no data
                         continue
                     }
@@ -202,33 +207,33 @@ class Router(
                             if (ipMutablePacket.version == IPVersion.IPv4 && ipMutablePacket.protocol == TransportProtocol.TCP) {
                                 val tcpPacket = TCPMutablePacket(ipMutablePacket.getPacketData()) // Pass the same ByteArray
 
-                                println("VERBOSE: Router: Received TCPv4 packet: ${tcpPacket.sourceAddress}:${tcpPacket.sourcePort} -> ${tcpPacket.destinationAddress}:${tcpPacket.destinationPort}")
+                                logger.debug("Received TCPv4 packet: {}:{} -> {}:{}", tcpPacket.sourceAddress, tcpPacket.sourcePort, tcpPacket.destinationAddress, tcpPacket.destinationPort)
                                 rewritePacket(tcpPacket)?.let { rewrittenPacket ->
                                     outputPacketsData.add(rewrittenPacket.getPacketData())
                                     outputProtocols.add(AddressFamily.AF_INET) // Assuming AF_INET from context
-                                } ?: println("VERBOSE: Router: Packet dropped or not rewritten: ${tcpPacket.sourceAddress}:${tcpPacket.sourcePort}")
+                                } ?: logger.debug("Packet dropped or not rewritten: {}:{}", tcpPacket.sourceAddress, tcpPacket.sourcePort)
                             } else {
-                                println("VERBOSE: Router: Skipping non-TCP/IPv4 packet. Version: ${ipMutablePacket.version}, Proto: ${ipMutablePacket.protocol}")
+                                logger.debug("Skipping non-TCP/IPv4 packet. Version: {}, Proto: {}", ipMutablePacket.version, ipMutablePacket.protocol)
                             }
                         } catch (e: Exception) {
-                            System.err.println("ERROR: Router: Error processing packet at index $index: ${e.message}")
+                            logger.error("Error processing packet at index {}: {}", index, e.message, e)
                             // Optionally, log packet details if possible (e.g., first few bytes)
                         }
                     }
 
                     if (outputPacketsData.isNotEmpty()) {
-                        println("INFO: Router: Writing out ${outputPacketsData.size} packets.")
+                        logger.info("Writing out {} packets.", outputPacketsData.size)
                         NetworkInterface.TunnelProvider.packetFlow.writePackets(outputPacketsData, outputProtocols)
                     }
                 } catch (e: CancellationException) {
-                    println("INFO: Router: Packet processing loop cancelled.")
+                    logger.info("Packet processing loop cancelled.")
                     break // Exit loop
                 } catch (e: Exception) {
-                    System.err.println("ERROR: Router: Error in packet processing loop: ${e.message}")
+                    logger.error("Error in packet processing loop: {}", e.message, e)
                     delay(100) // Avoid tight loop on persistent errors
                 }
             }
-            println("INFO: Router: Packet processing loop finished.")
+            logger.info("Packet processing loop finished.")
         }
     }
 
@@ -236,7 +241,7 @@ class Router(
      * Stops the packet processing loop.
      */
     fun stop() {
-        println("INFO: Router: Stopping packet processing...")
+        logger.info("Stopping packet processing...")
         routerScope.cancel("Router stopped")
         // Clear NAT table if desired, though it's instance-specific
         // ipv4NatRoutes.clear()

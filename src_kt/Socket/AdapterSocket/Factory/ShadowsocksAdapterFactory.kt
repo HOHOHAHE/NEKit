@@ -1,3 +1,9 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
+
+
 // Assuming ServerAdapterFactory.kt, ConnectSession.kt (Messages), AdapterSocket.kt,
 // RawSocketFactory.kt (RawSocket), CryptoAlgorithm.kt (Crypto) are available.
 // Placeholders for ShadowsocksAdapter and its components will be defined/refined.
@@ -48,10 +54,12 @@ object ShadowsocksAdapterNested { // Renamed from just ShadowsocksAdapter to avo
         private val passwordStr: String, // Keep as String for now
         private val algorithmEnum: CryptoAlgorithm // Use the CryptoAlgorithm enum
     ) : CryptoStreamProcessorFactory {
+        private val logger = LoggerFactory.getLogger(CryptoStreamProcessorFactoryPlaceholder::class.java)
         override fun build(): CryptoStreamProcessor = object : CryptoStreamProcessor {
-            init { println("INFO: CryptoStreamProcessorPlaceholder created for ${algorithmEnum.name}") }
-            override fun encrypt(data: ByteArray): ByteArray { println("Crypto: Encrypting ${data.size} bytes"); return data; }
-            override fun decrypt(data: ByteArray): ByteArray { println("Crypto: Decrypting ${data.size} bytes"); return data; }
+            private val cryptoLogger = LoggerFactory.getLogger("CryptoStreamProcessorPlaceholder.${algorithmEnum.name}")
+            init { cryptoLogger.info("Instance created for {}", algorithmEnum.name) }
+            override fun encrypt(data: ByteArray): ByteArray { cryptoLogger.trace("Encrypting {} bytes", data.size); return data; }
+            override fun decrypt(data: ByteArray): ByteArray { cryptoLogger.trace("Decrypting {} bytes", data.size); return data; }
             override fun toString(): String = "CryptoStreamProcessorPlaceholder(${algorithmEnum.name})"
         }
     }
@@ -75,15 +83,17 @@ open class ShadowsocksAdapter(
     private val streamObfuscator: StreamObfuscater,
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket()
 ) : AdapterSocket(initialRawSocket) {
+    private val logger = LoggerFactory.getLogger(ShadowsocksAdapter::class.java) // Logger for placeholder adapter
+
     init {
-        println("INFO: ShadowsocksAdapter created for $serverHost:$serverPort. Obfuscators: $protocolObfuscater, $streamObfuscator. Cryptor: $cryptor")
+        logger.info("Created for {}:{}. Obfuscators: {}, {}. Cryptor: {}", serverHost, serverPort, protocolObfuscater, streamObfuscator, cryptor)
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session)
         val currentRawSocket = rawSocket ?: return // Error handled in super or here
         _status = SocketStatus.CONNECTING
-        println("INFO: ShadowsocksAdapter: Opening socket for session $session to $serverHost:$serverPort (TODO: Implement Shadowsocks connection and data phase)")
+        logger.info("Opening socket for session {} to {}:{} (TODO: Implement Shadowsocks connection and data phase)", session, serverHost, serverPort)
         // 1. Connect rawSocket to serverHost:serverPort
         // 2. Upon connection (didConnect from RawTCPSocketDelegate):
         //    - Start Shadowsocks handshake (if any, often just starts sending encrypted data)

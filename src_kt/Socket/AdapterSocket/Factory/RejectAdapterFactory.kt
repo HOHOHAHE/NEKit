@@ -3,6 +3,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
+import org.slf4j.LoggerFactory // Added import
 
 // Assuming AdapterFactory.kt, ConnectSession.kt (Messages), AdapterSocket.kt, Opt.kt are available.
 // Placeholder for RejectAdapter.kt needs to be defined or available.
@@ -10,9 +11,10 @@ import java.io.IOException
 // --- Placeholder for RejectAdapter ---
 // TODO: Move to its own file: src_kt/Socket/AdapterSocket/RejectAdapter.kt
 open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw socket for RejectAdapter */, observe = true) {
+    private val logger = LoggerFactory.getLogger(RejectAdapter::class.java) // Logger for placeholder
 
     init {
-        println("INFO: RejectAdapter instance created with delay: ${delayMs}ms.")
+        logger.info("Instance created with delay: {}ms.", delayMs)
         // A RejectAdapter doesn't truly connect, so its status might immediately be considered
         // disconnecting or closed after a delay. The openSocketWith will handle this.
     }
@@ -27,7 +29,7 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
 
         _status = SocketStatus.CONNECTING // Indicate it's "processing" the request
 
-        println("INFO: RejectAdapter: Simulating rejection for session $session after ${delayMs}ms delay.")
+        logger.info("Simulating rejection for session {} after {}ms delay.", session, delayMs)
 
         val rejectScope = CoroutineScope(Dispatchers.Default) // TODO: Use a managed scope
         rejectScope.launch {
@@ -66,7 +68,7 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
         }
     }
 
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) { // Changed to non-suspend to match SocketProtocol
         throw IOException("Cannot write to RejectAdapter; connection is rejected.")
     }
 
@@ -75,7 +77,7 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
         // Could immediately signal disconnect if a read is attempted on a "pending rejection"
         // or simply do nothing. If status is already CLOSED, delegate is null.
         if (status != SocketStatus.CLOSED) {
-             println("WARN: RejectAdapter: readData() called, but connection is intended for rejection.")
+             logger.warn("readData() called for session {}, but connection is intended for rejection.", if(::_session.isInitialized) session else "uninitialized")
              // forceDisconnect(IOException("Read attempt on rejecting socket")) // Option: aggressively close
         }
     }

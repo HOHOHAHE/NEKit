@@ -2,6 +2,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope // For launching super.didAcceptNewSocket
 import kotlinx.coroutines.launch     // For launching super.didAcceptNewSocket
+import org.slf4j.LoggerFactory
 
 // Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
@@ -14,9 +15,10 @@ import kotlinx.coroutines.launch     // For launching super.didAcceptNewSocket
 open class SOCKS5ProxySocket(
     private val acceptedSocket: KotlinAcceptedSocketInterface // The underlying socket (e.g., KotlinTCPSocketWrapper)
 ) : ProxySocketInterface { // ProxySocketInterface was defined in ProxyServer.kt context
+    private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
 
     init {
-        println("INFO: SOCKS5ProxySocket: Initialized with socket $acceptedSocket. (TODO: Implement full SOCKS5 proxy connection logic: handshake, command parsing, data relay)")
+        logger.info("Initialized with socket {}. (TODO: Implement full SOCKS5 proxy connection logic: handshake, command parsing, data relay)", acceptedSocket)
         // Specific SOCKS5 proxy logic for this connection would start here or be managed by Tunnel.
         // e.g., start SOCKS5 handshake by reading greeting message from acceptedSocket.
     }
@@ -39,6 +41,8 @@ open class SOCKS5ProxySocket(
  * Extends GCDProxyServer to handle incoming TCP connections as SOCKS5 proxy sessions.
  */
 class GCDSOCKS5ProxyServer : GCDProxyServer {
+    // Inherits logger from ProxyServer, or can define its own if specific logging needed here.
+    private val socks5Logger = LoggerFactory.getLogger(GCDSOCKS5ProxyServer::class.java)
 
     /**
      * Creates an instance of SOCKS5 proxy server.
@@ -60,7 +64,7 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
      * @param acceptedSocket The newly accepted socket (e.g., KotlinTCPSocketWrapper).
      */
     override fun handleNewAcceptedSocket(acceptedSocket: KotlinAcceptedSocketInterface) {
-        println("INFO: GCDSOCKS5ProxyServer: New socket accepted, wrapping as SOCKS5ProxySocket: $acceptedSocket")
+        socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", acceptedSocket)
         val socks5ProxySocket = SOCKS5ProxySocket(acceptedSocket)
 
         // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
@@ -70,11 +74,11 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
             try {
                 super.didAcceptNewSocket(socks5ProxySocket)
             } catch (e: Exception) {
-                System.err.println("ERROR: GCDSOCKS5ProxyServer: Error processing newly accepted SOCKS5 socket: ${e.message}")
+                socks5Logger.error("Error processing newly accepted SOCKS5 socket {}: {}", acceptedSocket, e.message, e)
                 try {
                     acceptedSocket.close() // Close the raw socket if super.didAcceptNewSocket fails
                 } catch (ioe: Exception) {
-                    System.err.println("ERROR: GCDSOCKS5ProxyServer: Exception closing socket after error: ${ioe.message}")
+                    socks5Logger.error("Exception closing socket {} after error: {}", acceptedSocket, ioe.message, ioe)
                 }
             }
         }

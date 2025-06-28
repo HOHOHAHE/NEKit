@@ -7,12 +7,15 @@ object Resolver {
     var queue: Any? = null
 }
 
+import org.slf4j.LoggerFactory
+
 // Placeholder for the QueueFactory dependency
 // TODO: Replace with actual QueueFactory class/object definition
 object QueueFactory {
+    private val logger = LoggerFactory.getLogger(QueueFactory::class.java)
     // Assuming getQueue() returns some queue object. Its type is unknown for now.
     fun getQueue(): Any {
-        println("INFO: QueueFactory.getQueue() called - returning placeholder queue object.")
+        logger.info("getQueue() called - returning placeholder queue object.")
         return object {} // Represents a generic queue object
     }
 }
@@ -23,24 +26,42 @@ object QueueFactory {
  * The primary initialization logic is executed when the `initialized` property
  * is first accessed, thanks to Kotlin's `lazy` delegate.
  */
+import java.security.Security // Added for Security.addProvider
+import org.bouncycastle.jce.provider.BouncyCastleProvider // Added for BouncyCastleProvider
+
 object GlobalInitializer {
+    private val logger = LoggerFactory.getLogger(GlobalInitializer::class.java)
 
     /**
      * A flag that becomes true after the first-time initialization logic is executed.
      * Accessing this property triggers the initialization block if it hasn't run yet.
      */
     private val initialized: Boolean by lazy {
-        println("INFO: GlobalInitializer: Performing one-time initialization...")
+        logger.info("Performing one-time initialization...")
+        var success = true
+        try {
+            // Register BouncyCastle provider
+            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+                Security.addProvider(BouncyCastleProvider())
+                logger.info("BouncyCastle provider registered successfully.")
+            } else {
+                logger.info("BouncyCastle provider already registered.")
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to register BouncyCastle provider: {}", e.message, e)
+            success = false // Mark initialization as failed if BC provider registration fails
+        }
+
         // Original Swift code: Resolver.queue = QueueFactory.getQueue()
         try {
             Resolver.queue = QueueFactory.getQueue()
-            println("INFO: GlobalInitializer: Resolver.queue has been set.")
-            true // Indicates successful initialization
+            logger.info("Resolver.queue has been set.")
         } catch (e: Exception) {
-            System.err.println("ERROR: GlobalInitializer: Failed during initialization: ${e.message}")
-            e.printStackTrace() // Print stack trace for better debugging
-            false // Indicates failed initialization
+            logger.error("Failed during Resolver.queue initialization: {}", e.message, e)
+            success = false // Mark initialization as failed
         }
+
+        success // Return overall success status
     }
 
     /**

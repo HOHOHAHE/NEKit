@@ -1,5 +1,7 @@
 import java.lang.ref.WeakReference
 
+import org.slf4j.LoggerFactory
+
 // Assuming SocketProtocol.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, Observer.kt, etc. are available.
 
 // --- Ensure EventSource is available for ConnectSession.disconnected ---
@@ -24,6 +26,8 @@ open class AdapterSocket(
                                                  // Let's make it a constructor param for clarity that subclasses provide it.
     observe: Boolean = true
 ) : SocketProtocol, RawTCPSocketDelegate {
+
+    private val logger = LoggerFactory.getLogger(this::class.java) // Logger for specific subclass instance
 
     // To be more robust, subclasses should provide the rawSocket in their constructor.
     // constructor(initialRawSocket: RawTCPSocketProtocol, observe: Boolean = true) : this(observe) {
@@ -84,7 +88,7 @@ open class AdapterSocket(
      */
     open fun openSocketWith(session: ConnectSession) {
         if (isCancelled) {
-            System.err.println("WARN: AdapterSocket: openSocketWith called on a cancelled socket for session: $session")
+            logger.warn("openSocketWith called on a cancelled socket for session: {}", session)
             return
         }
 
@@ -95,7 +99,7 @@ open class AdapterSocket(
         val currentRawSocket = rawSocket ?: run {
             // This case should ideally not happen if subclasses correctly initialize rawSocket.
             // Or, if this base class was responsible for creating a default rawSocket.
-            System.err.println("ERROR: AdapterSocket: rawSocket is null in openSocketWith for session: $session. Cannot proceed.")
+            logger.error("rawSocket is null in openSocketWith for session: {}. Cannot proceed.", session)
             _status = SocketStatus.CLOSED // Mark as closed/failed
             delegate?.get()?.didDisconnect(this) // Notify delegate
             return
@@ -185,7 +189,7 @@ open class AdapterSocket(
 
     override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
         // Added to RawTCPSocketDelegate for better error propagation
-        println("ERROR: AdapterSocket: Raw socket error on $on: ${error.message}")
+        logger.error("Raw socket error on {}: {}", on, error.message, error)
         observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this))
         // Decide if this error should lead to disconnection
         // this.delegate?.didErrorOccur(error, this) // If SocketDelegate also has didErrorOccur

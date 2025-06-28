@@ -1,3 +1,9 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
+
+
 // Assuming ConnectSession.kt (Messages), AdapterSocket.kt (AdapterSocket),
 // RawSocketFactory.kt (RawSocket) are available.
 // Placeholder for DirectAdapter.kt needs to be defined or available.
@@ -12,6 +18,7 @@
 // open class DirectAdapter(initialRawSocket: RawTCPSocketProtocol) : AdapterSocket(initialRawSocket) {
 // If AdapterSocket has a settable rawSocket property (as it does in current AdapterSocket.kt):
 open class DirectAdapter : AdapterSocket(RawSocketFactory.getRawSocket()) {
+    private val logger = LoggerFactory.getLogger(DirectAdapter::class.java) // Logger for placeholder DirectAdapter
     // RawSocketFactory.getRawSocket() is called here. AdapterSocket constructor takes it.
     // The actual connection logic is typically in openSocketWith.
 
@@ -19,7 +26,7 @@ open class DirectAdapter : AdapterSocket(RawSocketFactory.getRawSocket()) {
         super.openSocketWith(session) // Sets up session, registers delegate to rawSocket
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: DirectAdapter: Raw socket is null in openSocketWith. This should not happen if constructor provides it.")
+            logger.error("Raw socket is null in openSocketWith for session: {}. This should not happen if constructor provides it.", session)
             _status = SocketStatus.CLOSED
             this.delegate?.get()?.didDisconnect(this)
             return
@@ -30,7 +37,7 @@ open class DirectAdapter : AdapterSocket(RawSocketFactory.getRawSocket()) {
         // TODO: Implement actual direct connection logic using currentRawSocket.
         // This involves calling currentRawSocket.connectTo and handling its async result via RawTCPSocketDelegate methods
         // which are implemented by AdapterSocket (and thus by DirectAdapter).
-        println("INFO: DirectAdapter: Attempting direct connection for session: $session to host ${session.host}:${session.port}")
+        logger.info("Attempting direct connection for session: {} to host {}:{}", session, session.host, session.port)
 
         // Example of how connection might be initiated.
         // The RawTCPSocketProtocol.connectTo is a suspend function.
@@ -44,7 +51,7 @@ open class DirectAdapter : AdapterSocket(RawSocketFactory.getRawSocket()) {
                 // Connection result will be handled by didConnect/didDisconnect callbacks (RawTCPSocketDelegate)
                 // which in turn update AdapterSocket status and call SocketDelegate.
             } catch (e: Exception) {
-                System.err.println("ERROR: DirectAdapter: Failed to connect to ${session.host}:${session.port}: ${e.message}")
+                logger.error("Failed to connect to {}:{}: {}", session.host, session.port, e.message, e)
                 // Ensure state is cleaned up and delegate notified if connectTo throws immediately
                 _status = SocketStatus.CLOSED
                 delegate?.get()?.didErrorOccur(e, this@DirectAdapter) // Assuming SocketDelegate has didErrorOccur

@@ -45,11 +45,12 @@ dependencies {
     // - Specific Libsodium JVM binding if one is chosen (e.g., Kalium, libsodium-jni)
 }
 
-// Configure Source Sets to include src_kt
+// Configure Source Sets to include only src_kt/Utils for this compilation pass
 sourceSets {
     main {
         kotlin {
-            srcDir("src_kt")
+            setSrcDirs(listOf("src_kt/Utils")) // Temporarily focus on Utils
+            // To revert, use: srcDir("src_kt")
         }
         resources {
             srcDir("resources") // If you have resource files
@@ -57,7 +58,8 @@ sourceSets {
     }
     test {
         kotlin {
-            srcDir("test_kt")
+            setSrcDirs(listOf("test_kt/Utils")) // Assuming tests for Utils might be here
+            // To revert, use: srcDir("test_kt")
         }
         resources {
             srcDir("test_resources")

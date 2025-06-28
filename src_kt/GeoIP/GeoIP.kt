@@ -1,103 +1,88 @@
-import java.io.File
-import java.net.InetAddress
 // TODO: Add dependency for MaxMind GeoIP2 Java API (e.g., com.maxmind.geoip2:geoip2:version)
-// import com.maxmind.geoip2.DatabaseReader
-// import com.maxmind.geoip2.model.CountryResponse
-// import com.maxmind.geoip2.exception.GeoIp2Exception
+import com.maxmind.geoip2.DatabaseReader
+import com.maxmind.geoip2.exception.GeoIp2Exception
+// import com.maxmind.geoip2.model.CountryResponse // Not directly needed if only getting isoCode
+import java.io.File
+import java.io.IOException
+import java.net.InetAddress
+import java.net.UnknownHostException
+import org.slf4j.LoggerFactory
 
-// --- Placeholder for actual MaxMind library classes ---
-// These would be replaced by actual imports from the MaxMind library.
-interface GeoIPDatabaseReader {
-    fun lookupCountry(ipAddress: String): GeoIPCountry?
-}
-
-data class GeoIPCountry( // Represents MMDBCountry from Swift
-    val isoCode: String?,
-    val name: String?
-    // Add other fields if MMDBCountry has them (e.g., continent, confidence, etc.)
-) {
-    // Example: If MMDBCountry had a method like "isInEuropeanUnion"
-    // val isInEuropeanUnion: Boolean = false
-}
-
-// --- End Placeholders ---
-
+// Placeholder GeoIPDatabaseReader interface and GeoIPCountry data class are removed.
 
 object GeoIP {
 
-    // TODO: Replace this placeholder implementation with actual MaxMind GeoIP2-java library usage.
-    private class PlaceholderMMDBReader : GeoIPDatabaseReader {
-        private val dummyData = mapOf(
-            "8.8.8.8" to GeoIPCountry("US", "United States"),
-            "1.1.1.1" to GeoIPCountry("AU", "Australia"),
-            "2001:4860:4860::8888" to GeoIPCountry("US", "United States (IPv6)")
-        )
+    private val logger = LoggerFactory.getLogger(GeoIP::class.java)
+    private var database: DatabaseReader? = null
 
-        init {
-            println("WARNING: Using placeholder GeoIP database. No actual .mmdb file is loaded.")
-            // In a real implementation, you would load the database file here:
-            // try {
-            //     val databaseFile = File("path/to/your/GeoLite2-Country.mmdb") // TODO: Configure database path
-            //     if (!databaseFile.exists()) {
-            //         throw IOException("GeoIP database file not found at ${databaseFile.absolutePath}")
-            //     }
-            //     // actualReader = DatabaseReader.Builder(databaseFile).build()
-            //     println("GeoIP Database loaded successfully from ${databaseFile.absolutePath}")
-            // } catch (e: IOException) {
-            //     System.err.println("Failed to load GeoIP database: ${e.message}")
-            //     // Handle error appropriately - maybe throw, or operate with a null reader
-            // } catch (e: GeoIp2Exception) { // Specific exception from MaxMind library
-            //     System.err.println("Failed to initialize GeoIP database reader: ${e.message}")
-            // }
+    /**
+     * Initializes the GeoIP database from the given file path.
+     * This method should be called once during application startup.
+     *
+     * @param databasePath The path to the GeoIP2 database file (e.g., GeoLite2-Country.mmdb).
+     */
+    fun initialize(databasePath: String) {
+        if (database != null) {
+            logger.info("GeoIP database already initialized. Skipping re-initialization.")
+            return
         }
-
-        override fun lookupCountry(ipAddress: String): GeoIPCountry? {
-            // val inetAddr = InetAddress.getByName(ipAddress)
-            // val response: CountryResponse? = actualReader?.country(inetAddr)
-            // return response?.let {
-            //     GeoIPCountry(
-            //         isoCode = it.country?.isoCode,
-            //         name = it.country?.name
-            //         // map other fields from it.country, it.continent, etc.
-            //     )
-            // }
-            println("GeoIP Lookup (Placeholder): $ipAddress")
-            return dummyData[ipAddress]
+        try {
+            val dbFile = File(databasePath)
+            if (!dbFile.exists()) {
+                logger.error("GeoIP database file not found at: {}", dbFile.absolutePath)
+                throw IOException("GeoIP database file not found at ${dbFile.absolutePath}")
+            }
+            database = DatabaseReader.Builder(dbFile).build()
+            logger.info("GeoIP database loaded successfully from: {}", dbFile.absolutePath)
+        } catch (e: IOException) {
+            logger.error("Failed to load GeoIP database (IOException): {}", e.message, e)
+            database = null // Ensure database is null on failure
+        } catch (e: GeoIp2Exception) {
+            logger.error("Failed to initialize GeoIP database reader (GeoIp2Exception): {}", e.message, e)
+            database = null // Ensure database is null on failure
+        } catch (e: Exception) { // Catch any other unexpected exceptions during init
+            logger.error("An unexpected error occurred during GeoIP database initialization: {}", e.message, e)
+            database = null
         }
-    }
-
-
-    // The Swift code used `MMDB()!`, implying a crash if init fails.
-    // A more robust Kotlin version would handle initialization errors gracefully.
-    // For now, using a placeholder that "always works".
-    // TODO: Initialize this with a real DatabaseReader from a library like MaxMind's GeoIP2-java.
-    private val database: GeoIPDatabaseReader by lazy {
-        // The lazy block ensures initialization is attempted only once.
-        // The actual initialization logic involving file loading should be here.
-        // If it fails, it could throw an exception or return a non-functional instance.
-        PlaceholderMMDBReader() // Replace with actual DB reader initialization
     }
 
     /**
-     * Looks up the country information for a given IP address.
+     * Looks up the country ISO code for a given IP address.
      *
      * @param ipAddress The IP address string to look up (e.g., "8.8.8.8" or "2001:4860:4860::8888").
-     * @return A [GeoIPCountry] object containing country information if found, or null otherwise.
-     *         Returns null if the IP address string is invalid or not found in the database.
+     * @return A String containing the country ISO code (e.g., "US", "GB") if found, or null otherwise.
+     *         Returns null if the IP address string is invalid, not found in the database,
+     *         or if the database is not initialized.
      */
-    fun lookUp(ipAddress: String): GeoIPCountry? {
-        // Input validation for IP address string can be added here if needed,
-        // though InetAddress.getByName() in a real implementation would also validate.
-        if (ipAddress.isBlank()) {
+    fun lookUp(ipAddress: String): String? {
+        if (database == null) {
+            logger.warn("GeoIP database not initialized. Cannot perform lookup for IP '{}'.", ipAddress)
             return null
         }
-        try {
-            return database.lookupCountry(ipAddress)
-        } catch (e: Exception) {
-            // Catch exceptions from the lookup process (e.g., invalid IP format if not caught by library,
-            // or issues with the database reader itself).
-            System.err.println("GeoIP lookup failed for IP '$ipAddress': ${e.message}")
+        if (ipAddress.isBlank()) {
+            logger.debug("GeoIP lookup called with blank IP address.")
             return null
+        }
+
+        val inetAddress: InetAddress = try {
+            InetAddress.getByName(ipAddress)
+        } catch (e: UnknownHostException) {
+            logger.warn("GeoIP lookup: Could not convert IP string '{}' to InetAddress: {}", ipAddress, e.message)
+            return null
+        }
+
+        return try {
+            val response = database?.country(inetAddress) // This is CountryResponse
+            response?.country?.isoCode // Returns String?
+        } catch (e: GeoIp2Exception) {
+            logger.warn("GeoIP lookup failed for IP '{}' ({}): {}", ipAddress, inetAddress.hostAddress, e.message)
+            null
+        } catch (e: IOException) { // DatabaseReader.country() can throw IOException
+            logger.error("GeoIP lookup I/O error for IP '{}': {}", ipAddress, e.message, e)
+            null
+        } catch (e: Exception) { // Catch any other unexpected runtime errors from the lookup
+            logger.error("Unexpected error during GeoIP lookup for IP '{}': {}", ipAddress, e.message, e)
+            null
         }
     }
 }

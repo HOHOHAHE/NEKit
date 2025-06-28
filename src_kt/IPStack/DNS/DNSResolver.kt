@@ -1,6 +1,12 @@
-import java.lang.ref.WeakReference // For weak delegate if needed, though direct nullable often used in Kotlin
+// Removed WeakReference as direct delegate will be used for RawUDPSocketDelegate
+// import java.lang.ref.WeakReference
 
 // Assuming IPAddress.kt, Port.kt, DNSSession.kt (placeholder) are available.
+// Assuming new RawSocket types are available.
+import com.example.project.RawSocket.NettyRawUDPSocket
+import com.example.project.RawSocket.RawUDPSocketProtocol
+import com.example.project.RawSocket.RawUDPSocketDelegate
+
 
 // --- Placeholder for DNSSession ---
 // This should be defined in its own file: DNSSession.kt
@@ -21,77 +27,14 @@ class DNSSession(val requestMessage: DNSMessage) { // Assuming DNSMessage.kt is 
 // --- End Placeholder for DNSSession ---
 
 
-// --- Placeholders for NWUDPSocket and its delegate ---
-// These represent the abstracted UDP socket functionality.
-// TODO: Implement these interfaces using Java/Kotlin networking (e.g., DatagramSocket, NIO DatagramChannel, or a library like Netty/Ktor).
+import org.slf4j.LoggerFactory
 
-interface KotlinUDPSocketDelegate {
-    fun didReceive(data: ByteArray, from: KotlinUDPSocket)
-    fun didCancel(socket: KotlinUDPSocket) // Or handle errors/closure differently
-}
-
-interface KotlinUDPSocket {
-    var delegate: KotlinUDPSocketDelegate?
-    fun connect() // Not in original NWUDPSocket init, but often sockets connect or are bound.
-                  // Original used host/port in init, implying it's setup there.
-    fun write(data: ByteArray)
-    fun disconnect()
-}
-
-// A placeholder implementation for KotlinUDPSocket for structural compilation.
-class PlaceholderUDPSocket(private val host: String, private val port: Int) : KotlinUDPSocket {
-    override var delegate: KotlinUDPSocketDelegate? = null
-    private var isConnected = false
-
-    init {
-        // Simulate socket setup. In a real scenario, this would bind or prepare the socket.
-        println("INFO: PlaceholderUDPSocket: Initialized for $host:$port. (TODO: Implement real UDP socket)")
-        // For a client sending a DNS query, it might not explicitly "connect" in UDP terms,
-        // but rather just sendto a specific server address.
-        // For simplicity, let's say it's "connected" or ready.
-        isConnected = true
-
-        // Simulate receiving a response for testing purposes (remove in real impl)
-        // Thread {
-        //     Thread.sleep(1000)
-        //     if (isConnected) {
-        //         val dummyResponse = DNSMessage().apply { transactionID = 1u; messageType = DNSMessageType.RESPONSE }.build()
-        //         dummyResponse?.let { delegate?.didReceive(it, this) }
-        //     }
-        // }.start()
-    }
-
-    override fun connect() {
-        // For DatagramSocket, this might involve bind() if it's a server, or nothing for client before send.
-        // If it's connection-oriented UDP (connect() call on DatagramSocket), it filters packets.
-        println("INFO: PlaceholderUDPSocket: connect() called. (TODO: Implement if needed)")
-        isConnected = true
-    }
-
-
-    override fun write(data: ByteArray) {
-        if (!isConnected) {
-            System.err.println("ERROR: PlaceholderUDPSocket: Socket not connected or ready. Cannot write.")
-            return
-        }
-        println("INFO: PlaceholderUDPSocket: Writing ${data.size} bytes to $host:$port. (TODO: Implement real send)")
-        // Simulate a response being received after a write for testing delegate
-        // This is highly artificial; real responses are asynchronous.
-        // GlobalScope.launch { delay(100); delegate?.didReceive(dummyResponseBytes, this@PlaceholderUDPSocket) }
-    }
-
-    override fun disconnect() {
-        if (!isConnected) return
-        println("INFO: PlaceholderUDPSocket: disconnect() called. (TODO: Implement real close/cleanup)")
-        isConnected = false
-        delegate?.didCancel(this) // Notify delegate about cancellation/closure
-    }
-}
-// --- End Placeholders for NWUDPSocket ---
+// --- Removed Placeholders for KotlinUDPSocket ---
+// KotlinUDPSocketDelegate, KotlinUDPSocket, PlaceholderUDPSocket
 
 
 interface DNSResolverProtocol {
-    var delegate: DNSResolverDelegate? // Original was weak, consider WeakReference if cycles are likely
+    var delegate: DNSResolverDelegate?
     fun resolve(session: DNSSession)
     fun stop()
 }
@@ -101,47 +44,74 @@ interface DNSResolverDelegate {
 }
 
 open class UDPDNSResolver(
-    address: IPAddress, // Assuming IPAddress.kt is available
-    port: Port        // Assuming Port.kt is available
-) : DNSResolverProtocol, KotlinUDPSocketDelegate {
+    private val remoteAddress: IPAddress, // Store remote DNS server address
+    private val remotePort: Port           // Store remote DNS server port
+) : DNSResolverProtocol, RawUDPSocketDelegate {
 
-    private val socket: KotlinUDPSocket
-    // Using direct reference for delegate. If memory cycles are a concern, use WeakReference.
+    private val logger = LoggerFactory.getLogger(UDPDNSResolver::class.java)
+    private val socket: RawUDPSocketProtocol = NettyRawUDPSocket() // Use Netty-based UDP socket
+
     override var delegate: DNSResolverDelegate? = null
 
     init {
-        // The Swift code force-unwrapped NWUDPSocket. Assuming placeholder can be created.
-        socket = PlaceholderUDPSocket(address.presentation, port.hostOrderValue.toInt())
-        socket.delegate = this
-        // In Swift, NWUDPSocket might implicitly "connect" or be ready after init.
-        // If explicit connect is needed for the Kotlin UDP socket impl, call it here.
-        // socket.connect()
+        socket.delegate = WeakReference(this) // Set this resolver as the delegate for socket events
+        try {
+            // Bind to an ephemeral port on all local interfaces.
+            // DNS client usually doesn't need a fixed local port.
+            socket.bind(host = null, port = 0)
+            logger.info("UDPDNSResolver bound to local address: {}", socket.localAddress)
+        } catch (e: Exception) {
+            logger.error("Failed to bind UDPDNSResolver socket: {}", e.message, e)
+            // This resolver might be unusable if bind fails.
+            // Consider throwing an exception or having a resolvable state.
+        }
     }
 
     override fun resolve(session: DNSSession) {
         val payload = session.builtRequestPayload
         if (payload != null) {
-            socket.write(data = payload)
+            try {
+                logger.debug("Sending DNS query for {} ({} bytes) to {}:{}",
+                    session.requestMessage.queries.firstOrNull()?.name ?: "N/A",
+                    payload.size,
+                    remoteAddress.presentation,
+                    remotePort.value)
+                socket.send(
+                    data = payload,
+                    destinationHost = remoteAddress.presentation,
+                    destinationPort = remotePort.value.toInt()
+                )
+            } catch (e: Exception) {
+                logger.error("Failed to send DNS query for session {}: {}", session, e.message, e)
+                // Optionally, notify DNSResolverDelegate of the error immediately
+                // delegate?.didFailToResolve(session, e)
+            }
         } else {
-            System.err.println("ERROR: UDPDNSResolver: DNS request payload is null for session resolving ${session.requestMessage.queries.firstOrNull()?.name}.")
-            // Optionally, notify delegate of error or throw
+            logger.error("DNS request payload is null for session resolving {}", session.requestMessage.queries.firstOrNull()?.name)
         }
     }
 
     override fun stop() {
+        logger.info("Stopping UDPDNSResolver and disconnecting socket.")
         socket.disconnect()
     }
 
-    // Implementation of KotlinUDPSocketDelegate
-    override fun didReceive(data: ByteArray, from: KotlinUDPSocket) {
-        // Pass the raw response to this resolver's delegate
-        delegate?.didReceive(rawResponse = data)
+    // Implementation of RawUDPSocketDelegate
+    override fun didReceive(data: ByteArray, fromHost: String, fromPort: Int, onSocket: RawUDPSocketProtocol) {
+        // Check if the response is from the expected DNS server
+        if (fromHost == remoteAddress.presentation && fromPort == remotePort.value.toInt()) {
+            logger.debug("Received {} bytes DNS response from {}:{}", data.size, fromHost, fromPort)
+            delegate?.didReceive(rawResponse = data)
+        } else {
+            logger.warn("Received UDP packet from unexpected source {}:{}. Expected {}:{}. Ignoring.",
+                fromHost, fromPort, remoteAddress.presentation, remotePort.value)
+        }
     }
 
-    override fun didCancel(socket: KotlinUDPSocket) {
-        // This might be called if the socket is closed due to an error or explicitly by stop().
-        // Propagate this as an error or specific event if DNSResolverDelegate needs to know.
-        println("INFO: UDPDNSResolver: Underlying socket was cancelled/closed.")
-        // delegate?.resolverDidStopWithError(this, error) or similar could be added.
+    override fun didErrorOccur(error: Throwable, onSocket: RawUDPSocketProtocol) {
+        logger.error("Error occurred on UDP socket for DNS resolver: {}", error.message, error)
+        // This might indicate a problem with the socket that could affect future resolutions.
+        // Depending on the error, might need to re-initialize the socket or signal failure for pending queries.
+        // For now, just logging. If it's a fatal socket error, new sends might fail.
     }
 }

@@ -1,4 +1,9 @@
-// Assuming RawTCPSocketProtocol.kt, NWTCPSocket.kt, GCDTCPSocket.kt are available.
+// Assuming RawTCPSocketProtocol.kt and RawUDPSocketProtocol.kt are available.
+// NWTCPSocket.kt and GCDTCPSocket.kt placeholders will be effectively replaced by NettyRawTCPClientSocket.
+import com.example.project.RawSocket.NettyRawTCPClientSocket
+import com.example.project.RawSocket.NettyRawUDPSocket // Added import for UDP
+import com.example.project.RawSocket.RawUDPSocketProtocol // Added import for UDP
+import org.slf4j.LoggerFactory
 
 /**
  * Represents the preferred underlying socket implementation type.
@@ -15,64 +20,69 @@ enum class SocketBaseType {
  * Factory to create `RawTCPSocketProtocol` instances based on configuration or environment.
  */
 object RawSocketFactory {
+    private val logger = LoggerFactory.getLogger(RawSocketFactory::class.java)
 
     /**
      * A flag indicating if a "native" or "Network.framework-style" environment is available.
      * This conceptually replaces the `TunnelProvider: NETunnelProvider?` check in Swift.
-     *
-     * In a real Kotlin application, this might be set based on whether:
-     *  - A JNI/JNA library for TUN/TAP or advanced networking is successfully loaded.
-     *  - A specific high-performance networking backend (like Netty with native transports) is configured.
-     *
-     * TODO: Determine how to set this flag in a Kotlin application context.
-     *       It could be based on successful initialization of a native component wrapper.
+     * With Netty as the primary implementation, this flag's relevance for TCP sockets diminishes,
+     * but it might still be used for other decisions or future socket types.
+     * For TCP, Netty works across environments.
      */
-    @JvmStatic // To make it accessible as a static field from Java if needed
+    @JvmStatic
     var nativeEnvironmentAvailable: Boolean = false
-        // Example: Could be set by GlobalInitializer or a specific module loader
-        // `set(value) { field = value; println("INFO: RawSocketFactory: Native environment availability set to $value") }`
+        set(value) {
+            field = value
+            logger.info("Native environment availability set to {}", value)
+        }
 
 
     /**
-     * Returns a `RawTCPSocketProtocol` instance.
+     * Returns a `RawTCPSocketProtocol` instance, now defaulting to Netty-based implementation.
      *
-     * The choice of implementation (NW-style or GCD-style) depends on the optional `type` parameter
-     * or the availability of a "native" environment (mimicking the Swift TunnelProvider check).
-     *
-     * @param type The preferred type of the socket. If null, the factory decides based on environment.
+     * @param type The preferred type of the socket. This parameter is largely legacy if Netty
+     *             is the sole TCP client socket implementation.
      * @return An instance implementing `RawTCPSocketProtocol`.
-     *
-     * TODO: The created sockets (NWTCPSocket, GCDTCPSocket) are currently using placeholder
-     *       implementations for their underlying native/async operations. These need to be
-     *       replaced with functional implementations (e.g., Java NIO, Netty, Ktor, or JNI/JNA).
      */
     @JvmStatic
     fun getRawSocket(type: SocketBaseType? = null): RawTCPSocketProtocol {
-        return when (type) {
+        // Logic simplified to primarily return NettyRawTCPClientSocket.
+        // The 'type' and 'nativeEnvironmentAvailable' checks are less critical if Netty is the default TCP socket.
+        when (type) {
             SocketBaseType.NW -> {
-                println("INFO: RawSocketFactory: Explicitly creating NW-style TCPSocket.")
-                NWTCPSocket() // Assumes NWTCPSocket.kt is translated
+                // If NWTCPSocket was a distinct, still needed implementation (e.g. JNI to Network.framework),
+                // it could be returned here. For now, defaulting to Netty.
+                logger.info("Requested NW-style TCPSocket, returning Netty-based implementation.")
+                return NettyRawTCPClientSocket()
             }
             SocketBaseType.GCD -> {
-                println("INFO: RawSocketFactory: Explicitly creating GCD-style TCPSocket.")
-                GCDTCPSocket() // Assumes GCDTCPSocket.kt is translated
+                logger.info("Requested GCD-style TCPSocket, returning Netty-based implementation.")
+                return NettyRawTCPClientSocket()
             }
             null -> {
-                // Default logic: Prefer NW-style if native environment is considered available.
+                // Default logic
                 if (nativeEnvironmentAvailable) {
-                    println("INFO: RawSocketFactory: Native environment available, creating NW-style TCPSocket by default.")
-                    NWTCPSocket()
+                    logger.info("Native environment available, creating Netty-based TCPSocket by default (legacy NW path).")
+                    return NettyRawTCPClientSocket()
                 } else {
-                    println("INFO: RawSocketFactory: Native environment NOT available, creating GCD-style (e.g., NIO/Netty based) TCPSocket by default.")
-                    GCDTCPSocket()
+                    logger.info("Native environment NOT available, creating Netty-based TCPSocket by default (legacy GCD path).")
+                    return NettyRawTCPClientSocket()
                 }
             }
         }
     }
 
-    // Note: The original Swift RawSocketFactory also had TunnelProvider implicitly used by NWTCPSocket/NWUDPSocket
-    // for `createTCPConnection` and `createUDPSession`. In the Kotlin translation,
-    // NWTCPSocket and NWUDPSocket use placeholder factories (KotlinNWConnectionFactory, KotlinNWUDPSessionFactory)
-    // which would need to be aware of this "native environment" or be configured accordingly.
-    // This `nativeEnvironmentAvailable` flag serves as the global switch for default socket type selection.
+    /**
+     * Returns a `RawUDPSocketProtocol` instance, currently defaulting to Netty-based implementation.
+     *
+     * @param type The preferred type of the UDP socket (currently ignored, defaults to Netty).
+     * @return An instance implementing `RawUDPSocketProtocol`.
+     */
+    @JvmStatic
+    fun getRawUDPSocket(type: SocketBaseType? = null): RawUDPSocketProtocol {
+        // For now, directly returns NettyRawUDPSocket, ignoring type and nativeEnvironmentAvailable
+        // as Netty is the primary UDP implementation.
+        logger.info("Requested RawUDPSocket (type: {}), returning Netty-based implementation.", type ?: "default")
+        return NettyRawUDPSocket()
+    }
 }

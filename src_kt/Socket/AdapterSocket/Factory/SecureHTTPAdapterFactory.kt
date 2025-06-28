@@ -1,3 +1,8 @@
+import org.slf4j.LoggerFactory // Added import
+import kotlinx.coroutines.CoroutineScope // Added missing import
+import kotlinx.coroutines.Dispatchers // Added missing import
+import kotlinx.coroutines.launch // Added missing import
+
 // Assuming HTTPAdapterFactory.kt, ConnectSession.kt (Messages),
 // AdapterSocket.kt, RawSocketFactory.kt (RawSocket), HTTPAuthentication.kt (Utils) are available.
 // Placeholder for SecureHTTPAdapter.kt needs to be defined or available.
@@ -10,23 +15,24 @@ open class SecureHTTPAdapter(
     val auth: HTTPAuthentication?,
     initialRawSocket: RawTCPSocketProtocol? = RawSocketFactory.getRawSocket()
 ) : AdapterSocket(initialRawSocket) { // Or could extend HTTPAdapter if much logic is shared
+    private val logger = LoggerFactory.getLogger(SecureHTTPAdapter::class.java) // Logger for placeholder
 
     init {
-        println("INFO: SecureHTTPAdapter instance created for secure proxy $serverHost:$serverPort (Auth: ${auth != null})")
+        logger.info("Instance created for secure proxy {}:{} (Auth: {})", serverHost, serverPort, auth != null)
     }
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session) // Basic setup
 
         val currentRawSocket = rawSocket ?: run {
-            System.err.println("ERROR: SecureHTTPAdapter: Raw socket is null in openSocketWith. Cannot connect.")
+            logger.error("Raw socket is null in openSocketWith for session: {}. Cannot connect.", session)
             _status = SocketStatus.CLOSED
             this.delegate?.get()?.didDisconnect(this)
             return
         }
         _status = SocketStatus.CONNECTING
-        println("INFO: SecureHTTPAdapter: Opening socket for session $session to secure proxy $serverHost:$serverPort.")
-        println("TODO: Implement TLS connection TO PROXY, then HTTP CONNECT logic using rawSocket.")
+        logger.info("Opening socket for session {} to secure proxy {}:{}.", session, serverHost, serverPort)
+        println("TODO: Implement TLS connection TO PROXY, then HTTP CONNECT logic using rawSocket.") // Developer TODO left as is
 
         // Example of how connection and SOCKS5 handshake might be initiated:
         val tempScope = CoroutineScope(Dispatchers.Default) // Replace with proper scope management
@@ -73,7 +79,7 @@ open class SecureHTTPAdapter(
                 // It will rely on the TODOs in the actual method implementations.
 
             } catch (e: Exception) {
-                System.err.println("ERROR: SecureHTTPAdapter: Failed to connect or establish TLS with secure proxy $serverHost:$serverPort: ${e.message}")
+                logger.error("Failed to connect or establish TLS with secure proxy {}:{}: {}", serverHost, serverPort, e.message, e)
                 this@SecureHTTPAdapter._status = SocketStatus.CLOSED
                 this@SecureHTTPAdapter.delegate?.get()?.didErrorOccur(e, this@SecureHTTPAdapter)
                 this@SecureHTTPAdapter.delegate?.get()?.didDisconnect(this@SecureHTTPAdapter)

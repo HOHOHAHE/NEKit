@@ -1,5 +1,7 @@
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch // Added missing import
+import org.slf4j.LoggerFactory
 
 // Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
@@ -12,9 +14,10 @@ import kotlinx.coroutines.Dispatchers
 open class HTTPProxySocket(
     private val acceptedSocket: KotlinAcceptedSocketInterface // The underlying socket (e.g., KotlinTCPSocketWrapper)
 ) : ProxySocketInterface { // ProxySocketInterface was defined in ProxyServer.kt context
+    private val logger = LoggerFactory.getLogger(HTTPProxySocket::class.java)
 
     init {
-        println("INFO: HTTPProxySocket: Initialized with socket $acceptedSocket. (TODO: Implement full HTTP proxy connection logic)")
+        logger.info("Initialized with socket {}. (TODO: Implement full HTTP proxy connection logic)", acceptedSocket)
         // Specific HTTP proxy logic for this connection would start here or be managed by Tunnel.
         // e.g., start reading HTTP request from acceptedSocket.
     }
@@ -36,6 +39,10 @@ open class HTTPProxySocket(
  * Extends GCDProxyServer to handle incoming TCP connections as HTTP proxy sessions.
  */
 class GCDHTTPProxyServer : GCDProxyServer {
+    // Inherits logger from ProxyServer, or can define its own if specific logging needed here.
+    // For instance-specific logging related to GCDHTTPProxyServer behavior, can add:
+    private val httpLogger = LoggerFactory.getLogger(GCDHTTPProxyServer::class.java)
+
 
     /**
      * Creates an instance of HTTP proxy server.
@@ -57,7 +64,7 @@ class GCDHTTPProxyServer : GCDProxyServer {
      * @param acceptedSocket The newly accepted socket (e.g., KotlinTCPSocketWrapper).
      */
     override fun handleNewAcceptedSocket(acceptedSocket: KotlinAcceptedSocketInterface) {
-        println("INFO: GCDHTTPProxyServer: New socket accepted, wrapping as HTTPProxySocket: $acceptedSocket")
+        httpLogger.info("New socket accepted, wrapping as HTTPProxySocket: {}", acceptedSocket)
         val httpProxySocket = HTTPProxySocket(acceptedSocket)
 
         // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
@@ -72,11 +79,11 @@ class GCDHTTPProxyServer : GCDProxyServer {
             try {
                 super.didAcceptNewSocket(httpProxySocket)
             } catch (e: Exception) {
-                System.err.println("ERROR: GCDHTTPProxyServer: Error processing newly accepted HTTP socket: ${e.message}")
+                httpLogger.error("Error processing newly accepted HTTP socket {}: {}", acceptedSocket, e.message, e)
                 try {
                     acceptedSocket.close() // Close the raw socket if super.didAcceptNewSocket fails
                 } catch (ioe: Exception) {
-                    System.err.println("ERROR: GCDHTTPProxyServer: Exception closing socket after error: ${ioe.message}")
+                    httpLogger.error("Exception closing socket {} after error: {}", acceptedSocket, ioe.message, ioe)
                 }
             }
         }

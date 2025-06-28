@@ -1,3 +1,5 @@
+import org.slf4j.LoggerFactory
+
 // Assuming HTTPHeader.kt and Opt.kt will be available in the same package or imported.
 
 // Placeholder for HTTPHeader.swift - Will be properly translated later
@@ -21,16 +23,20 @@ data class HTTPHeader(
         // In a real scenario, this constructor would parse the raw headerData
         // to populate the fields of HTTPHeader.
     }
+    companion object {
+        // No logger here as it's a data class, logging would be in parsing logic if complex
+    }
 }
 
 // Placeholder functions for parsing logic - these would be part of HTTPHeader proper parsing
+// If these were complex, they might have their own logging.
 private fun 호출자_정의_헤더_파싱_로직_필요_host(headerData: ByteArray): String? = "example.com"
 private fun 호출자_정의_헤더_파싱_로직_필요_contentLength(headerData: ByteArray): Int = if (호출자_정의_헤더_파싱_로직_필요_isConnect(headerData)) 0 else headerData.size // Example
 private fun 호출자_정의_헤더_파싱_로직_필요_isConnect(headerData: ByteArray): Boolean = false // Example
 
 
 // Placeholder for Opt constants - Will be properly translated later
-object Opt {
+object Opt { // Opt might have its own logger if it had complex static init blocks
     const val MAXHTTPContentBlockLength: Int = 8192 // A common default value
 }
 
@@ -60,33 +66,37 @@ class ScannerIsStoppedException(message: String = "Scanner is stopped") : Except
 class UnsupportedStreamTypeException(message: String = "Unsupported stream type") : Exception(message)
 
 class HTTPStreamScanner {
+    companion object {
+        private val logger = LoggerFactory.getLogger(HTTPStreamScanner::class.java)
+    }
+
     var nextAction: ReadAction = ReadAction.ReadHeader
     var remainContentLength: Int = 0
     var currentHeader: HTTPHeader? = null // Initialized to null
     var isConnect: Boolean = false
 
     fun input(data: ByteArray): ProcessedData {
+        logger.debug("input called with data size: ${data.size}, current nextAction: $nextAction")
         when (val currentAction = nextAction) {
             is ReadAction.ReadHeader -> {
                 val newHeader: HTTPHeader
                 try {
                     // Assumes `data` is a complete header block
                     newHeader = HTTPHeader(data)
+                    logger.debug("Parsed new HTTPHeader: host=${newHeader.host}, contentLength=${newHeader.contentLength}, isConnect=${newHeader.isConnect}")
 
                     // "To temporarily solve a bug in firefox for mac"
-                    // This logic seems to suggest that if a currentHeader already exists,
-                    // and the new header's host is different, it's an error.
-                    // This might be specific to a particular proxy or tunneling scenario.
                     if (currentHeader != null && newHeader.host != null && newHeader.host != currentHeader?.host) {
+                        logger.warn("Host changed in stream from ${currentHeader?.host} to ${newHeader.host}. Throwing UnsupportedStreamTypeException.")
                         throw UnsupportedStreamTypeException("Host changed in stream")
                     }
                 } catch (e: Exception) {
+                    logger.error("Error parsing HTTP header: ${e.message}", e)
                     nextAction = ReadAction.Stop
-                    // Propagate original error or a specific scanner error
                     when(e) {
                         is UnsupportedStreamTypeException -> throw e
                         is IllegalArgumentException -> throw e // from HTTPHeader constructor
-                        else -> throw Exception("Failed to parse HTTP header", e)
+                        else -> throw Exception("Failed to parse HTTP header", e) // Generic wrapper
                     }
                 }
 
@@ -97,13 +107,10 @@ class HTTPStreamScanner {
                     } else {
                         newHeader.contentLength
                     }
-                } else { // Subsequent headers (e.g. trailers, though less common, or new req in keep-alive)
-                    // If it's a new request on a keep-alive connection, currentHeader would be from previous.
-                    // The logic seems to imply we are processing one logical stream.
-                    // If currentHeader is not null, it means we are likely processing parts of the *same* message
-                    // or there's a specific context (like proxying) that this scanner is designed for.
-                    // The Swift code just updates remainContentLength based on the new header's content length.
+                    logger.info("First header processed. isConnect: $isConnect, remainContentLength: $remainContentLength")
+                } else { // Subsequent headers
                     remainContentLength = newHeader.contentLength
+                    logger.info("Subsequent header processed. remainContentLength updated to: $remainContentLength")
                 }
 
                 currentHeader = newHeader
@@ -111,11 +118,13 @@ class HTTPStreamScanner {
                 return ProcessedData.Header(newHeader)
             }
             is ReadAction.ReadContent -> {
-                if (!isConnect && remainContentLength >= 0) { // only deduct if not CONNECT and not already error
+                if (!isConnect && remainContentLength >= 0) {
                     remainContentLength -= data.size
                 }
+                logger.debug("Processed content data. New remainContentLength: $remainContentLength (isConnect: $isConnect)")
 
                 if (!isConnect && remainContentLength < 0) {
+                    logger.error("ContentIsTooLongException: Received more content than specified by Content-Length. remainContentLength: $remainContentLength")
                     nextAction = ReadAction.Stop
                     throw ContentIsTooLongException("Received more content than specified by Content-Length")
                 }
@@ -124,21 +133,25 @@ class HTTPStreamScanner {
                 return ProcessedData.Content(data)
             }
             is ReadAction.Stop -> {
+                logger.warn("Input called on a stopped scanner.")
                 throw ScannerIsStoppedException("Input called on a stopped scanner")
             }
         }
     }
 
     private fun setNextAction() {
-        if (isConnect) { // For CONNECT, we just keep reading content until external signal (socket close)
+        val previousNextAction = nextAction
+        if (isConnect) {
             nextAction = ReadAction.ReadContent(-1)
-            return
+        } else {
+            nextAction = when {
+                remainContentLength == 0 -> ReadAction.ReadHeader
+                remainContentLength < 0 -> ReadAction.Stop // Error state
+                else -> ReadAction.ReadContent(minOf(remainContentLength, Opt.MAXHTTPContentBlockLength))
+            }
         }
-
-        nextAction = when {
-            remainContentLength == 0 -> ReadAction.ReadHeader // Expect next header or end of stream
-            remainContentLength < 0 -> ReadAction.Stop // Error state or CONNECT handled above
-            else -> ReadAction.ReadContent(minOf(remainContentLength, Opt.MAXHTTPContentBlockLength))
+        if (previousNextAction != nextAction) {
+            logger.debug("setNextAction: Transitioned from $previousNextAction to $nextAction")
         }
     }
 }

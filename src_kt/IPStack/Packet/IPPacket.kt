@@ -2,6 +2,8 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.random.Random // For default identification
 
+import org.slf4j.LoggerFactory
+
 // Assuming utilities like IPAddress, Port, BinaryDataScanner, Checksum are available
 // Assuming DNSEnums (for TransportProtocol if used directly, though it has its own here)
 
@@ -41,6 +43,7 @@ interface TransportProtocolParser {
 
 // Placeholder for UDPProtocolParser (refine based on actual UDPProtocolParser.swift)
 class UDPProtocolParserImpl(override val pseudoHeaderChecksum: UInt = 0u) : TransportProtocolParser {
+    private val logger = LoggerFactory.getLogger(UDPProtocolParserImpl::class.java)
     override val protocol = TransportProtocol.UDP
     override val headerLength = 8 // UDP Header is 8 bytes
     var sourcePort: Port? = null
@@ -62,7 +65,7 @@ class UDPProtocolParserImpl(override val pseudoHeaderChecksum: UInt = 0u) : Tran
             payload = ByteArray(dataLength)
             headerData.get(payload!!)
         } else if (dataLength < 0) {
-            System.err.println("UDP Parse Error: Invalid UDP payload length $udpPayloadLength")
+            logger.error("UDP Parse Error: Invalid UDP payload length {}", udpPayloadLength)
         }
         // TODO: Validate checksum
     }
@@ -92,6 +95,7 @@ class UDPProtocolParserImpl(override val pseudoHeaderChecksum: UInt = 0u) : Tran
  * Allows parsing from and building to ByteArray.
  */
 open class IPPacket {
+    private val logger = LoggerFactory.getLogger(IPPacket::class.java)
     open var version: IPVersion = IPVersion.IPv4
     open var ipHeaderLength: Int = 20 // In bytes, min for IPv4
     open var tos: UByte = 0u // Type of Service
@@ -157,7 +161,7 @@ open class IPPacket {
         this.tos = buffer.get().toUByte()
         this.totalLength = buffer.short.toUShort()
         if (this.totalLength.toInt() != data.size) {
-            System.err.println("WARN: IP packet total length in header (${this.totalLength}) does not match actual data length (${data.size}). Using actual data length.")
+            logger.warn("IP packet total length in header ({}) does not match actual data length ({}). Using actual data length.", this.totalLength, data.size)
             // This warning is because NEPacketTunnelFlow might provide full data, not just up to totalLength.
             // For consistency, totalLength should reflect the received data size if it's what we process.
             // However, if building, totalLength should be accurate for header.
@@ -171,7 +175,7 @@ open class IPPacket {
         val protoByte = buffer.get().toUByte()
         this.transportProtocol = TransportProtocol.fromByte(protoByte)
             ?: run {
-                System.err.println("WARN: Unknown transport protocol byte: $protoByte")
+                logger.warn("Unknown transport protocol byte: {}", protoByte)
                 TransportProtocol.UNKNOWN
             }
 
@@ -191,7 +195,7 @@ open class IPPacket {
             val payloadOffset = this.ipHeaderLength
             val payloadLength = this.totalLength.toInt() - this.ipHeaderLength
             if (buffer.remaining() < payloadLength) {
-                 System.err.println("WARN: Not enough bytes in buffer for declared payload. Buffer remaining: ${buffer.remaining()}, payloadLength: $payloadLength")
+                 logger.warn("Not enough bytes in buffer for declared payload. Buffer remaining: {}, payloadLength: {}", buffer.remaining(), payloadLength)
                  // Potentially throw error or truncate
             }
 
@@ -205,14 +209,14 @@ open class IPPacket {
                 }
                 TransportProtocol.TCP -> {
                     // TODO: val tcpParser = TCPProtocolParserImpl(); tcpParser.parse(buffer, pseudoHeaderChecksumVal); this.protocolParser = tcpParser
-                    System.err.println("TCP parsing not yet implemented.")
+                    logger.warn("TCP parsing not yet implemented.")
                 }
                 TransportProtocol.ICMP -> {
                      // TODO: val icmpParser = ICMPProtocolParserImpl(); icmpParser.parse(buffer); this.protocolParser = icmpParser
-                    System.err.println("ICMP parsing not yet implemented.")
+                    logger.warn("ICMP parsing not yet implemented.")
                 }
                 else -> {
-                    System.err.println("No parser for protocol: ${this.transportProtocol}")
+                    logger.warn("No parser for protocol: {}", this.transportProtocol)
                     // Store raw payload if needed
                     val rawPayload = ByteArray(payloadLength)
                     buffer.get(rawPayload)
@@ -220,7 +224,7 @@ open class IPPacket {
                 }
             }
         } else if (this.totalLength.toInt() < this.ipHeaderLength) {
-             System.err.println("WARN: IP total length less than header length.")
+             logger.warn("IP total length ({}) less than header length ({}).", this.totalLength, this.ipHeaderLength)
         }
     }
 

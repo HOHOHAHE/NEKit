@@ -5,22 +5,17 @@ import javax.crypto.spec.SecretKeySpec
 import org.slf4j.LoggerFactory
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-// Assuming CryptoOp and StreamCrypto are defined in CryptoEnum.kt and StreamCryptoProtocol.kt respectively
-// and are correctly imported or accessible within the same package.
-// e.g.:
-// import com.example.nekit.Crypto.CryptoOp
-// import com.example.nekit.Crypto.StreamCrypto
-
-// --- Removed Placeholders for CryptoOp and StreamCrypto ---
+import Crypto.CryptoOperation // Corrected import
+import Crypto.StreamCryptoProtocol // Corrected import
 
 
 class CCCryptoAdapter(
-    operation: CryptoOp,
+    operation: CryptoOperation,
     mode: CCCryptoAdapter.Mode,
     algorithm: CCCryptoAdapter.Algorithm,
     initialVector: ByteArray?,
     key: ByteArray
-) : StreamCrypto {
+) : StreamCryptoProtocol {
 
     private val logger = LoggerFactory.getLogger(CCCryptoAdapter::class.java)
 

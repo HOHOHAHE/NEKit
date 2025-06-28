@@ -1,5 +1,7 @@
 // Assuming Rule.kt, DNSSession.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available.
-// Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt, DirectAdapterFactory.kt (placeholders from Config) are available.
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
 // Assuming DNSQuery.kt placeholder (from DNSMessage.kt context) has a 'name: String' property.
 
 // --- Ensure DNSQuery placeholder has 'name' ---

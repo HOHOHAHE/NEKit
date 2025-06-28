@@ -9,15 +9,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays // For Arrays.equals on byte arrays if not using contentEquals
 
-// Assuming actual UInt128.kt and IPInterval.kt are in the same package or correctly imported.
-// e.g.:
-// import com.example.nekit.Utils.UInt128
-// import com.example.nekit.Utils.IPInterval
-// For this diff, we assume they are directly accessible if in the same package.
 
-// --- Removed Placeholders for UInt128 and IPInterval ---
-// These types are now expected to be defined in their own files (UInt128.kt, IPInterval.kt)
-// and imported or accessible via package scope.
 
 
 // Using java.net.InetAddress as the backing object

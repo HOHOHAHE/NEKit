@@ -1,3 +1,5 @@
+package Socket.AdapterSocket.Factory
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -10,16 +12,16 @@ import org.slf4j.LoggerFactory // Added import
 
 // --- Placeholder for RejectAdapter ---
 // TODO: Move to its own file: src_kt/Socket/AdapterSocket/RejectAdapter.kt
-open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw socket for RejectAdapter */, observe = true) {
+open class RejectAdapter(val delayMs: Int) : Socket.AdapterSocket.AdapterSocket(null /* No real raw socket for RejectAdapter */, observe = true) {
     private val logger = LoggerFactory.getLogger(RejectAdapter::class.java) // Logger for placeholder
 
     init {
         logger.info("Instance created with delay: {}ms.", delayMs)
         // A RejectAdapter doesn't truly connect, so its status might immediately be considered
-        // disconnecting or closed after a delay. The openSocketWith will handle this.
+        // disconnecting or closed after a delay.
     }
 
-    override fun openSocketWith(session: ConnectSession) {
+    override fun openSocketWith(session: Messages.ConnectSession) {
         // Call super to initialize session property, observer, etc.
         // Even though rawSocket is null, AdapterSocket.openSocketWith will handle it if it checks.
         // My current AdapterSocket.openSocketWith expects rawSocket to be set by subclass usually.
@@ -27,7 +29,7 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
         // Let's ensure _status is managed.
         super.openSocketWith(session) // Sets this.session
 
-        _status = SocketStatus.CONNECTING // Indicate it's "processing" the request
+        _status = Socket.SocketStatus.CONNECTING // Simulate attempting to connect
 
         logger.info("Simulating rejection for session {} after {}ms delay.", session, delayMs)
 
@@ -49,17 +51,17 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
             // For now, using the rejectScope's dispatcher.
 
             // From AdapterSocket's disconnect/forceDisconnect:
-            this@RejectAdapter._status = SocketStatus.DISCONNECTING // Mark as disconnecting first
+            this@RejectAdapter._status = Socket.SocketStatus.DISCONNECTING // Mark as disconnecting first
             this@RejectAdapter._cancelled = true // Internal cancel flag
             if (this@RejectAdapter::_session.isInitialized) {
-                 this@RejectAdapter.session.disconnected(becauseOf = error, by = EventSource.ADAPTER)
+                 this@RejectAdapter.session.disconnected(becauseOf = error, by = Messages.EventSource.ADAPTER)
             }
-            this@RejectAdapter.observer?.signal(AdapterSocketEvent.ForceDisconnectCalled(this@RejectAdapter))
+            this@RejectAdapter.observer?.signal(Event.Event.AdapterSocketEvent.ForceDisconnectCalled(this@RejectAdapter))
             // Since there's no real rawSocket to call disconnect on, directly call our own delegate's didDisconnect.
 
-            this@RejectAdapter._status = SocketStatus.CLOSED
-            this@RejectAdapter.observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this@RejectAdapter))
-            this@RejectAdapter.observer?.signal(AdapterSocketEvent.Disconnected(this@RejectAdapter))
+            this@RejectAdapter._status = Socket.SocketStatus.CLOSED
+            this@RejectAdapter.observer?.signal(Event.Event.AdapterSocketEvent.ErrorOccurred(error, this@RejectAdapter))
+            this@RejectAdapter.observer?.signal(Event.Event.AdapterSocketEvent.Disconnected(this@RejectAdapter))
 
             val currentDelegate = this@RejectAdapter.delegate?.get()
             this@RejectAdapter.delegate = null // Clear delegate
@@ -76,7 +78,7 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
         // No data will ever be read; the connection is rejected.
         // Could immediately signal disconnect if a read is attempted on a "pending rejection"
         // or simply do nothing. If status is already CLOSED, delegate is null.
-        if (status != SocketStatus.CLOSED) {
+        if (status != Socket.SocketStatus.CLOSED) {
              logger.warn("readData() called for session {}, but connection is intended for rejection.", if(::_session.isInitialized) session else "uninitialized")
              // forceDisconnect(IOException("Read attempt on rejecting socket")) // Option: aggressively close
         }
@@ -97,16 +99,26 @@ open class RejectAdapter(val delayMs: Int) : AdapterSocket(null /* No real raw s
  * @property delay The delay in milliseconds before the connection is "rejected".
  */
 open class RejectAdapterFactory(
-    val delay: Int = Opt.REJECT_ADAPTER_DEFAULT_DELAY // From Opt.kt
+    val delay: Int = Opts.Opt.REJECT_ADAPTER_DEFAULT_DELAY // From Opt.kt
 ) : AdapterFactory() {
 
     /**
-     * Creates and returns a [RejectAdapter] configured with the factory's delay.
+     * Creates and returns a [RejectAdapter] configured with the factory's
+     * delay.
      *
      * @param session The connect session for which the adapter is being created.
      * @return A new [RejectAdapter] instance.
      */
-    override fun getAdapterFor(session: ConnectSession): AdapterSocket {
+    override fun getAdapterFor(session: Messages.ConnectSession): Socket.AdapterSocket.AdapterSocket {
         return RejectAdapter(delay)
+    }
+
+    // This is the method that AdapterFactoryParser.parseServerAdapterFactory expects.
+    // It creates a new instance of the factory itself, which then can be used to getAdapterFor.
+    // This is a common pattern in Swift where `Type` objects are passed around.
+    // In Kotlin, we pass the class directly or a lambda that constructs it.
+    // Here, it's a factory method on the factory itself.
+    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+        return RejectAdapterFactory(delay)
     }
 }

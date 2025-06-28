@@ -1,11 +1,7 @@
-// Assuming EventType.kt is in this package or imported.
-// Assuming ProxySocket, ConnectSession, AdapterSocket are available (possibly as placeholders).
-
-// --- Placeholders for external types (if not already defined in shared context) ---
-// class ProxySocket { override fun toString(): String = "ProxySocket(${hashCode()})" }
-// class ConnectSession { override fun toString(): String = "ConnectSession(${hashCode()})" }
-// class AdapterSocket { override fun toString(): String = "AdapterSocket(${hashCode()})" }
-// --- End Placeholders ---
+import Event.EventType // Corrected import
+import Socket.ProxySocket.ProxySocket // Corrected import
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
 
 sealed class ProxySocketEvent : EventType {
     data class SocketOpened(val socket: ProxySocket) : ProxySocketEvent()

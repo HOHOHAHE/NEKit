@@ -11,32 +11,18 @@ import Rule.Rule
 import Rule.RuleManager
 import Config.RuleParser
 import GeoIP.GeoIP // Corrected import for GeoIP
+import Config.ConfigurationException // Import the new ConfigurationException
 
 // YamlNode typealias is no longer needed with Jackson.
 // typealias YamlRootNode = Map<String, Any>
 // typealias YamlNode = Any // Can be Map, List, String, Int, etc.
 
-// --- ConfigurationParserError Definitions ---
-// Ideally, these would be in a separate file like "ConfigurationErrors.kt"
-sealed class ConfigurationException(message: String) : Exception(message) {
-    class InvalidYamlFileException(message: String = "Invalid YAML file content.") : ConfigurationException(message)
-    class NoRuleDefinedException(message: String = "No rule defined in configuration.") : ConfigurationException(message)
-    class RuleTypeMissingException(message: String = "Rule type is missing.") : ConfigurationException(message)
-    class UnknownRuleTypeException(typeName: String) : ConfigurationException("Unknown rule type: $typeName")
-    class RuleParsingException(errorInfo: String) : ConfigurationException("Rule parsing error: $errorInfo")
-    class NoAdapterDefinedException(message: String = "No adapter defined in configuration.") : ConfigurationException(message)
-    class AdapterIDMissingException(message: String = "Adapter ID is missing.") : ConfigurationException(message)
-    class AdapterTypeMissingException(message: String = "Adapter type is missing.") : ConfigurationException(message)
-    class UnknownAdapterTypeException(typeName: String) : ConfigurationException("Unknown adapter type: $typeName")
-    class AdapterParsingException(errorInfo: String) : ConfigurationException("Adapter parsing error: $errorInfo")
-}
+// Removed ConfigurationException definition from here.
 
 // --- Placeholders for dependent classes/objects ---
 // These should be defined in their respective modules/files.
 
-// From AdapterFactoryParser.kt context (or its own file)
-// interface AdapterFactory
-// class AdapterFactoryManager(val factoryDict: Map<String, AdapterFactory>)
+import Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
 
 // Removed placeholder Rule and RuleManager, as they are now imported from Rule package.
 // Removed placeholder RuleParser, as it's now imported from Config package.

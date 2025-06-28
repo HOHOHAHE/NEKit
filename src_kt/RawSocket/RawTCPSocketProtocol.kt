@@ -1,6 +1,7 @@
 import java.lang.ref.WeakReference
 
-// Assuming IPAddress.kt and Port.kt from Utils are available
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
 
 /**
  * Delegate protocol to handle events from a RawTCPSocketProtocol instance.

@@ -12,9 +12,7 @@ import Rule.Rule
 import GeoIP.GeoIP
 
 // Enum for event source, as defined in Swift
-enum class EventSource { // Renamed from EventSourceEnum for Kotlin style
-    PROXY, ADAPTER, TUNNEL
-}
+
 
 
 /**

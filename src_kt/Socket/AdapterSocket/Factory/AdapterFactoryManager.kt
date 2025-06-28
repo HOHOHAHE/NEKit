@@ -1,3 +1,5 @@
+package Socket.AdapterSocket.Factory
+
 // Assuming AdapterFactory.kt and DirectAdapterFactory.kt are available.
 
 /**

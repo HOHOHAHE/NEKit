@@ -1,15 +1,6 @@
-// Assuming EventType.kt is in this package or imported.
-// Assuming AdapterSocket and ConnectSession are available (possibly as placeholders).
-
-// --- Placeholders for external types ---
-// class AdapterSocket // Defined in DebugObserver.kt context, assume accessible or define here.
-// For safety, if not sharing context for file creation, redefine:
-// class AdapterSocket { override fun toString(): String = "AdapterSocket(${hashCode()})" }
-
-class ConnectSession { // New placeholder
-    override fun toString(): String = "ConnectSession(${hashCode()})"
-}
-// --- End Placeholders ---
+import Event.EventType // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Messages.ConnectSession // Corrected import
 
 sealed class AdapterSocketEvent : EventType {
     // Cases as data classes

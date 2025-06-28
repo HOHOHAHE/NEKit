@@ -2,9 +2,17 @@ import java.lang.ref.WeakReference
 import java.io.IOException
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming SocketProtocol.kt, RawTCPSocketProtocol.kt, RawTCPSocketDelegate.kt,
-// ConnectSession.kt (Messages), Observer.kt, ProxySocketEvent.kt (Event), ObserverFactory.kt (Event),
-// AdapterSocket.kt (AdapterSocket), EventSource.kt (Messages) are available.
+import Socket.SocketProtocol // Corrected import
+import Socket.SocketDelegate // Corrected import
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import RawSocket.RawTCPSocketDelegate // Corrected import
+import Messages.ConnectSession // Corrected import
+import Event.Observer // Corrected import
+import Event.Event.ProxySocketEvent // Corrected import
+import Event.ObserverFactory // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Messages.EventSource // Corrected import
+import Socket.SocketStatus // Corrected import
 
 /**
  * Base class for proxy sockets, representing the server-side of a connection that handles

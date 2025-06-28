@@ -6,32 +6,11 @@ import org.slf4j.LoggerFactory
 // Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
 
-// --- Placeholders for dependencies ---
-
-// Placeholder for HTTPProxySocket (likely to be in a different package, e.g., ...Socket.ProxySocket)
-// For now, defined here for compilation of GCDHTTPProxyServer.
-// TODO: Move HTTPProxySocket to its correct file and package, and import it here.
-open class HTTPProxySocket(
-    private val acceptedSocket: KotlinAcceptedSocketInterface // The underlying socket (e.g., KotlinTCPSocketWrapper)
-) : ProxySocketInterface { // ProxySocketInterface was defined in ProxyServer.kt context
-    private val logger = LoggerFactory.getLogger(HTTPProxySocket::class.java)
-
-    init {
-        logger.info("Initialized with socket {}. (TODO: Implement full HTTP proxy connection logic)", acceptedSocket)
-        // Specific HTTP proxy logic for this connection would start here or be managed by Tunnel.
-        // e.g., start reading HTTP request from acceptedSocket.
-    }
-
-    override fun toString(): String {
-        return "HTTPProxySocket(socket=$acceptedSocket)"
-    }
-
-    // TODO: Implement methods required by ProxySocketInterface and any specific HTTP proxy methods.
-    // For example:
-    // fun startProcessing()
-    // fun close()
-}
-// --- End Placeholders ---
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import Socket.ProxySocket.HTTPProxySocket // Corrected import
+import Socket.SocketProtocol.KotlinAcceptedSocketInterface // Corrected import
+import Socket.SocketProtocol.ProxySocketInterface // Corrected import
 
 
 /**

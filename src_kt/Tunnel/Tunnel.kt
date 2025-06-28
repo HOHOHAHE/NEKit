@@ -5,18 +5,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
 
-import Socket.SocketProtocol
-import Socket.SocketDelegate
-import Socket.ProxySocket.ProxySocket
-import Socket.AdapterSocket.AdapterSocket
-import Messages.ConnectSession
-import Rule.RuleManager
-import Socket.AdapterSocket.Factory.AdapterFactory
-import Event.Event.TunnelEvent
-import Event.Observer
-import Event.ObserverFactory
-import Tunnel.QueueFactory
-import Opts.Opt
+import Socket.SocketProtocol // Corrected import
+import Socket.SocketDelegate // Corrected import
+import Socket.ProxySocket.ProxySocket // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Messages.ConnectSession // Corrected import
+import Rule.RuleManager // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import Event.Event.TunnelEvent // Corrected import
+import Event.Observer // Corrected import
+import Event.ObserverFactory // Corrected import
+import Tunnel.QueueFactory // Corrected import
+import Opts.Opt // Corrected import
 
 interface TunnelDelegate {
     fun tunnelDidClose(tunnel: Tunnel)

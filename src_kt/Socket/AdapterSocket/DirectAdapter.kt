@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 import java.io.IOException // For connection exceptions
 
 import Messages.ConnectSession
+import Socket.AdapterSocket.AdapterSocket // Corrected import
 import RawSocket.RawTCPSocketProtocol
 import RawSocket.RawSocketFactory
 import Socket.SocketStatus

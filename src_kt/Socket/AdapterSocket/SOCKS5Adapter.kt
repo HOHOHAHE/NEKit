@@ -9,9 +9,15 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming AdapterSocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, IPAddress.kt (Utils), Port.kt (Utils),
-// SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt, ObserverFactory.kt are available.
-// Assuming Utils.toByteArray placeholder is not needed if using ByteBuffer.
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import RawSocket.RawSocketFactory // Corrected import
+import Messages.ConnectSession // Corrected import
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import Socket.SocketStatus // Corrected import
+import Event.Event.AdapterSocketEvent // Corrected import
+import Messages.EventSource // Corrected import
+import Event.ObserverFactory // Corrected import
 
 // --- SOCKS5 Constants ---
 private const val SOCKS_VERSION_5: Byte = 0x05

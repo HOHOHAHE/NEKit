@@ -1,9 +1,7 @@
 import java.lang.ref.WeakReference
 
-import Socket.AdapterSocket.AdapterSocket
-import Socket.ProxySocket.ProxySocket
-import RawSocket.RawTCPSocketProtocol // Assuming this is the correct import for RawTCPSocketProtocol
-import Messages.ConnectSession
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import Messages.ConnectSession // Corrected import
 
 
 /**

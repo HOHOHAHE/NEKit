@@ -3,8 +3,11 @@ import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException // For creating an error object if needed
 import org.slf4j.LoggerFactory
 
-// Assuming AdapterSocket.kt, ConnectSession.kt (Messages), QueueFactory.kt (placeholder),
-// SocketStatus.kt, AdapterSocketEvent.kt, EventSource.kt are available.
+import Messages.ConnectSession // Corrected import
+import Tunnel.QueueFactory // Corrected import
+import Socket.SocketStatus // Corrected import
+import Event.Event.AdapterSocketEvent // Corrected import
+import Messages.EventSource // Corrected import
 
 /**
  * Adapter that simulates a connection rejection after a specified delay.

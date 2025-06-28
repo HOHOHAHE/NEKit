@@ -51,4 +51,31 @@ object ShadowsocksAdapterNested {
             override fun toString(): String = "OriginStreamObfuscaterPlaceholder"
         }
     }
+
+    // Placeholder for HTTPProtocolObfuscaterFactory
+    class HTTPProtocolObfuscaterFactory(val method: String, val hosts: List<String>, val customHeader: String?) : ProtocolObfuscaterFactory {
+        override fun build(): ProtocolObfuscater = object : ProtocolObfuscater {
+            override fun PObfs(data: ByteArray): ByteArray { /* Implement HTTP obfuscation */ return data }
+            override fun IObfs(data: ByteArray): ByteArray { /* Implement HTTP de-obfuscation */ return data }
+            override fun toString(): String = "HTTPProtocolObfuscaterFactory"
+        }
+    }
+
+    // Placeholder for TLSProtocolObfuscaterFactory
+    class TLSProtocolObfuscaterFactory(val hosts: List<String>) : ProtocolObfuscaterFactory {
+        override fun build(): ProtocolObfuscater = object : ProtocolObfuscater {
+            override fun PObfs(data: ByteArray): ByteArray { /* Implement TLS obfuscation */ return data }
+            override fun IObfs(data: ByteArray): ByteArray { /* Implement TLS de-obfuscation */ return data }
+            override fun toString(): String = "TLSProtocolObfuscaterFactory"
+        }
+    }
+
+    // Placeholder for OTAStreamObfuscaterFactory
+    class OTAStreamObfuscaterFactory : StreamObfuscaterFactory {
+        override fun build(forSession: Messages.ConnectSession): StreamObfuscater = object : StreamObfuscater {
+            override fun SObfs(data: ByteArray): ByteArray { /* Implement OTA obfuscation */ return data }
+            override fun IObfs(data: ByteArray): ByteArray { /* Implement OTA de-obfuscation */ return data }
+            override fun toString(): String = "OTAStreamObfuscaterFactory"
+        }
+    }
 }

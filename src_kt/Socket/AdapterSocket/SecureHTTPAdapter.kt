@@ -1,6 +1,6 @@
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming HTTPAdapter.kt is available in this package or imported.
+import Socket.AdapterSocket.HTTPAdapter // Corrected import
 // Assuming HTTPAuthentication.kt (Utils) and RawSocketFactory.kt (RawSocket) are available
 // for the superclass constructor's default arguments if used.
 

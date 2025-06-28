@@ -1,4 +1,4 @@
-package com.example.project.RawSocket // Adjust if actual package differs
+package RawSocket
 
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
@@ -8,9 +8,16 @@ import kotlinx.coroutines.sync.Mutex // For writeMutex
 
 import org.slf4j.LoggerFactory
 
-// Assuming RawTCPSocketProtocol.kt, RawTCPSocketDelegate.kt, IPAddress.kt, Port.kt,
-// StreamScanner.kt, QueueFactory.kt, AdapterSocket.kt, SocketStatus.kt,
-// AdapterSocketEvent.kt, EventSource.kt (from Messages) are available.
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import RawSocket.RawTCPSocketDelegate // Corrected import
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import Utils.StreamScanner // Corrected import
+import Tunnel.QueueFactory // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Socket.SocketStatus // Corrected import
+import Event.Event.AdapterSocketEvent // Corrected import
+import Messages.EventSource // Corrected import
 // Import JNA related LibTun2Socks interfaces
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface

@@ -1,15 +1,12 @@
+import org.slf4j.LoggerFactory
+import Tunnel.QueueFactory // Corrected import
+
 // This object acts as a holder for the primary queue/dispatcher used by the Resolver concept in the original Swift.
 // In Kotlin, the QueueFactory.getProcessingDispatcher() returns a CoroutineDispatcher.
 // The 'Resolver' here is a conceptual bridge, not a direct mapping to DNSServer.
 object Resolver {
     var queue: kotlinx.coroutines.CoroutineDispatcher? = null // Specific type from QueueFactory
 }
-
-import org.slf4j.LoggerFactory
-
-// Placeholder for the QueueFactory dependency
-// TODO: Replace with actual QueueFactory class/object definition
-import Tunnel.QueueFactory
 
 /**
  * Handles one-time global initialization tasks.

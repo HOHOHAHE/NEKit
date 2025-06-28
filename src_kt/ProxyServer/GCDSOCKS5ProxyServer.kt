@@ -7,33 +7,11 @@ import org.slf4j.LoggerFactory
 // Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
 
-// --- Placeholders for dependencies ---
-
-// Placeholder for SOCKS5ProxySocket (likely to be in a different package, e.g., ...Socket.ProxySocket)
-// For now, defined here for compilation of GCDSOCKS5ProxyServer.
-// TODO: Move SOCKS5ProxySocket to its correct file and package, and import it here.
-open class SOCKS5ProxySocket(
-    private val acceptedSocket: KotlinAcceptedSocketInterface // The underlying socket (e.g., KotlinTCPSocketWrapper)
-) : ProxySocketInterface { // ProxySocketInterface was defined in ProxyServer.kt context
-    private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
-
-    init {
-        logger.info("Initialized with socket {}. (TODO: Implement full SOCKS5 proxy connection logic: handshake, command parsing, data relay)", acceptedSocket)
-        // Specific SOCKS5 proxy logic for this connection would start here or be managed by Tunnel.
-        // e.g., start SOCKS5 handshake by reading greeting message from acceptedSocket.
-    }
-
-    override fun toString(): String {
-        return "SOCKS5ProxySocket(socket=$acceptedSocket)"
-    }
-
-    // TODO: Implement methods required by ProxySocketInterface and any specific SOCKS5 proxy methods.
-    // For example:
-    // fun startHandshake()
-    // fun handleConnectCommand(...)
-    // fun close()
-}
-// --- End Placeholders ---
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import Socket.ProxySocket.SOCKS5ProxySocket // Corrected import
+import Socket.SocketProtocol.KotlinAcceptedSocketInterface // Corrected import
+import Socket.SocketProtocol.ProxySocketInterface // Corrected import
 
 
 /**

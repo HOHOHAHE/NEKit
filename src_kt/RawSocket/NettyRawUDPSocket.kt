@@ -1,4 +1,4 @@
-package com.example.project.RawSocket // Adjust package as needed
+package RawSocket
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.InetSocketAddress
-
-// Assuming RawUDPSocketProtocol.kt and RawUDPSocketDelegate.kt are correctly defined and accessible.
 
 class NettyRawUDPSocket(
     // Consider making workerGroup shared/passed in for better resource management.

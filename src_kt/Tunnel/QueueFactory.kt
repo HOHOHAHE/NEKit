@@ -13,7 +13,7 @@ object QueueFactory {
      * Using CloseableCoroutineDispatcher to allow closing the underlying thread if needed on application shutdown.
      */
     @OptIn(ExperimentalCoroutinesApi::class) // For newSingleThreadContext
-    val processingQueueDispatcher: CloseableCoroutineDispatcher =
+    val processingQueueDispatcher: kotlinx.coroutines.CloseableCoroutineDispatcher =
         newSingleThreadContext("NEKit.ProcessingQueue")
 
     /**

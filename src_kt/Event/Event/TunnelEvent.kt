@@ -1,18 +1,9 @@
-// Assuming EventType.kt is in this package or imported.
-// Assuming Tunnel, ConnectSession, ProxySocket, AdapterSocket, SocketProtocol are available (possibly as placeholders).
-
-// --- Placeholders for external types (if not already defined in shared context) ---
-// class Tunnel { override fun toString(): String = "Tunnel(${hashCode()})" }
-// class ConnectSession { override fun toString(): String = "ConnectSession(${hashCode()})" }
-// class ProxySocket { override fun toString(): String = "ProxySocket(${hashCode()})" }
-// class AdapterSocket { override fun toString(): String = "AdapterSocket(${hashCode()})" }
-
-interface SocketProtocol { // New placeholder interface
-    // Define common properties/methods for SocketProtocol if any.
-    // toString() is good for debugging in events.
-    override fun toString(): String // Make it an interface that requires toString
-}
-// --- End Placeholders ---
+import Event.EventType // Corrected import
+import Tunnel.Tunnel // Corrected import
+import Messages.ConnectSession // Corrected import
+import Socket.ProxySocket.ProxySocket // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Socket.SocketProtocol // Corrected import
 
 sealed class TunnelEvent : EventType {
     data class Opened(val tunnel: Tunnel) : TunnelEvent()

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import org.slf4j.LoggerFactory
 import Config.ConfigurationException
 import Config.ConfigurationException.RuleParsingException
-import Config.AdapterFactoryManager
-import Config.AdapterFactory
+import Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
 import Config.getOptString
 import Config.getOptInt
 import Config.getOptBool
@@ -37,7 +37,7 @@ fun expandTilde(path: String): String {
     return path
 }
 
-// --- JsonNode Helper Extensions (Moved to ConfigExtensions.kt) ---
+// --- JsonNode Helper Extensions (Moved to ConfigExtensions.kt)---
 // The actual implementations are in ConfigExtensions.kt.
 // These are commented out as they are now imported implicitly or explicitly.
 // --- End JsonNode Helper Extensions ---

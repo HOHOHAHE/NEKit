@@ -1,5 +1,7 @@
 // Assuming Rule.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available in this package.
-// Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt, DirectAdapterFactory.kt (placeholders from Config) are available.
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
 // Assuming DNSSession.kt placeholder will be updated or defined to include countryCode.
 
 // --- Refined Placeholder for DNSSession if not already updated ---

@@ -9,26 +9,12 @@ import org.slf4j.LoggerFactory
 // Assuming KotlinUDPSocket.kt, KotlinUDPSocketDelegate.kt (from DNSResolver context) are available.
 // Assuming ConnectSession.kt (placeholder) is available.
 
-// --- Placeholders (ensure these are consistent with definitions elsewhere) ---
-// data class IPAddress(...) // from Utils
-// value class Port(...) // from Utils
-// interface KotlinUDPSocket { ... }
-// interface KotlinUDPSocketDelegate { ... }
-// class PlaceholderUDPSocket(...) : KotlinUDPSocket // from DNSResolver context
-
-// Refined placeholder for ConnectSession for UDPDirectStack usage
-open class ConnectSession(val host: String, val port: Int) {
-    // Original Swift code might have more logic in ConnectSession, e.g., for connection status.
-    // This is simplified based on usage in UDPDirectStack.
-    constructor(ipAddress: IPAddress, portObj: Port) : this(ipAddress.presentation, portObj.hostOrderValue.toInt()) {
-        // In Swift, `session.host` and `session.port` were used for NWUDPSocket.
-        // If `host` can be a domain name that needs resolution before socket creation,
-        // this constructor or the socket creation logic would need to handle that.
-        // For UDPDirectStack, it seems to be used directly with IPAddress.presentation.
-    }
-     override fun toString(): String = "ConnectSession($host:$port)"
-}
-// --- End Placeholders ---
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import RawSocket.RawUDPSocketProtocol // Corrected import
+import RawSocket.RawUDPSocketDelegate // Corrected import
+import RawSocket.NettyRawUDPSocket // Corrected import
+import Messages.ConnectSession // Corrected import
 
 data class ConnectInfo(
     val sourceAddress: IPAddress,

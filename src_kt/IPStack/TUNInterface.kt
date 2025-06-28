@@ -10,10 +10,7 @@ import java.io.IOException // For potential IO errors from TUN device
 // Assuming IPStackProtocol.kt and other necessary interfaces/classes are available.
 // Assuming QueueFactory.kt provides CoroutineScope/Dispatchers.
 // Assuming AddressFamily.AF_INET is defined somewhere (e.g. in a common utility file or object)
-object AddressFamily { // Placeholder
-    const val AF_INET = 2 // Typically 2 for IPv4
-    const val AF_INET6 = 10 // Typically 10 or similar for IPv6
-}
+
 
 
 // --- Removed NativePacketFlowInterface and PlaceholderNativePacketFlow ---

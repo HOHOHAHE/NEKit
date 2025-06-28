@@ -1,9 +1,4 @@
-// Placeholder for EventType interface, which should be in Event/EventType.kt
-// For now, defining it here to make Observer generic constraint valid.
-interface EventType {
-    // This interface can be expanded based on the actual EventType.swift definition.
-    // For example, it might enforce a name or timestamp.
-}
+import Event.EventType // Corrected import
 
 
 /**

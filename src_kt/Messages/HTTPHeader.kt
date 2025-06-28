@@ -4,7 +4,7 @@ import java.net.MalformedURLException
 import java.net.URI // Using URI for more robust path/host/port parsing than URL for arbitrary strings
 import java.nio.charset.StandardCharsets
 
-// Assuming HTTPURL.kt from Utils is available.
+import Utils.HTTPURL // Corrected import
 
 // --- HTTPHeaderException Definitions ---
 sealed class HTTPHeaderParseException(message: String) : Exception(message) {

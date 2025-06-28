@@ -30,8 +30,12 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
 // Assuming RawTCPSocketProtocol.kt (from RawSocket module) is available for NettyAcceptedRawSocketAdapter.
 
-// --- Removed Placeholder Socket Interfaces and NIOServerSocket ---
-// KotlinAcceptedSocketInterface, KotlinTCPSocketWrapper, KotlinServerSocketDelegate, KotlinServerSocketInterface, NIOServerSocket
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import Tunnel.QueueFactory // Corrected import
+import RawSocket.NettyAcceptedRawSocketAdapter // Corrected import
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import Socket.SocketProtocol.KotlinAcceptedSocketInterface // Corrected import
 
 /**
  * Base class for proxy servers that listen on a TCP port.

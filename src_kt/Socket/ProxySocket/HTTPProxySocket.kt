@@ -5,8 +5,18 @@ import kotlinx.coroutines.launch
 
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming ProxySocket.kt, RawTCPSocketProtocol.kt, HTTPHeader.kt (Messages), HTTPStreamScanner.kt (Utils),
-// ConnectSession.kt (Messages), AdapterSocket.kt, SocketDelegate.kt, ProxySocketEvent.kt (Event) are available.
+import Messages.HTTPHeader // Corrected import
+import Messages.HTTPHeaderParseException // Corrected import
+import Utils.HTTPStreamScanner // Corrected import
+import Utils.ReadAction // Corrected import
+import Utils.ProcessedData // Corrected import
+import Utils.HTTPConstants // Corrected import
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Socket.SocketDelegate // Corrected import
+import Event.Event.ProxySocketEvent // Corrected import
+import Opts.Opt // Corrected import
 
 // --- Placeholder for HTTP Data Constants ---
 // TODO: Move to a common HTTP utilities file if not already there.

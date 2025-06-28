@@ -16,22 +16,14 @@ import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
 // import com.example.project.Socket.ProxySocket.DirectProxySocket // Adjust if package is different
 // import com.example.project.ProxyServer.ProxyServerInterface // Adjust if package is different
 
-// --- Removed Placeholders for TSTCPSocketInterface, TSIPStackDelegate, TSIPStackInterface, PlaceholderTSIPStack ---
-
-// --- Placeholder for dependent classes if not properly imported/available ---
-// These should ideally be imported from their actual locations.
-// For the purpose of this diff, we assume they can be resolved.
-// If TUNTCPSocket is in a different package, it would need an import.
-// class TUNTCPSocket(val socketId: Int, val stackInterface: LibTun2SocksStackInterface, val observe: Boolean) : LibTun2SocksSocketCallbacks, RawTCPSocketProtocol { /* ... */ }
-// interface ProxyServerInterface { fun didAcceptNewSocket(socket: AbstractProxySocket) }
-// open class AbstractProxySocket(val underlyingSocket: Any)
-// class DirectProxySocket(socket: TUNTCPSocket) : AbstractProxySocket(socket)
-// object QueueFactory { fun getProcessingDispatcher(): CoroutineDispatcher = Dispatchers.Default }
-// object IPPacket { fun peekProtocol(packet: ByteArray): TransportProtocol? = TransportProtocol.TCP }
-// enum class TransportProtocol { TCP, UDP, ICMP, UNKNOWN }
-// object AddressFamily { const val AF_INET = 2 }
-// interface IPStackProtocol { var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)?; fun input(packet: ByteArray, version: Int?): Boolean; fun start(); fun stop() }
-// --- End Placeholders for dependent classes ---
+import RawSocket.TUNTCPSocket // Corrected import
+import ProxyServer.ProxyServerInterface // Corrected import
+import Socket.ProxySocket.DirectProxySocket // Corrected import
+import Tunnel.QueueFactory // Corrected import
+import IPStack.Packet.IPPacket // Corrected import
+import IPStack.Packet.TransportProtocol // Corrected import
+import IPStack.IPStackProtocol // Corrected import
+import IPStack.Native.AddressFamily // Corrected import
 
 
 /**

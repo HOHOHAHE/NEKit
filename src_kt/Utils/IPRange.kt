@@ -1,6 +1,11 @@
 package Utils
 
-// Depends on IPAddress.kt, IPInterval.kt, IPMask.kt, UInt128.kt (placeholder)
+import Utils.IPAddress
+import Utils.IPInterval
+import Utils.IPMask
+import Utils.UInt128
+
+
 
 // Define IPRange specific exceptions
 open class IPRangeException(message: String) : Exception(message)

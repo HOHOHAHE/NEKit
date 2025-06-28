@@ -1,34 +1,10 @@
 package Rule
 
-// Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt (placeholder from Config) are available.
-// Placeholders for DNSSession, DNSSessionMatchType, DNSSessionMatchResult will be defined/refined shortly.
-
-// --- Placeholder definitions (will be replaced by actual files from this Rule directory) ---
-// Placeholder for DNSSession (ensure this is consistent with its use in other modules like IPStack/DNS)
-open class DNSSession(
-    // Example properties, actual definition might vary
-    open var requestMessage: Any, // Placeholder for DNSMessage
-    open var matchResult: DNSSessionMatchResultType? = null // Placeholder for match result
-) {
-    override fun toString(): String = "DNSSession(${requestMessage})"
-}
-
-// Placeholder for DNSSessionMatchType (will be an enum class)
-enum class DNSSessionMatchType {
-    DOMAIN, // Example value, replace with actual values from DNSSessionMatchType.swift
-    IP      // Example value
-}
-
-// Placeholder for DNSSessionMatchResult (will be an enum class or sealed class)
-// The .real value used in Rule.swift's base matchDNS implies this type.
-enum class DNSSessionMatchResult {
-    FAKE,
-    REAL,
-    UNKNOWN,
-    PASS,
-    DIRECT // Added based on possible values seen elsewhere.
-}
-// --- End Placeholder definitions ---
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import IPStack.DNS.DNSSession // Corrected import
+import Rule.DNSSessionMatchType // Corrected import
+import Rule.DNSSessionMatchResult // Corrected import
 
 
 /**

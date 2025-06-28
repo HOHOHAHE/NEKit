@@ -1,13 +1,9 @@
 package Utils
 
 import org.slf4j.LoggerFactory
-// Assuming actual HTTPHeader.kt from Messages and Opt.kt are correctly imported
 import Messages.HTTPHeader // Corrected import
-import Opts.Opt // Corrected import
 import Messages.HTTPHeaderParseException // Corrected import
-
-// Removed placeholder HTTPHeader data class, dummy parsing functions, and placeholder Opt object.
-// The actual HTTPHeader class (from Messages) and Opt object should be used.
+import Opts.Opt // Corrected import
 
 
 sealed class ReadAction {

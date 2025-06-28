@@ -58,6 +58,9 @@ interface TransportProtocolParser {
 /**
  * Parser for UDP (User Datagram Protocol) segments.
  */
+import Utils.Port // Corrected import
+import Utils.Checksum // Corrected import
+
 class UDPProtocolParser : TransportProtocolParser {
     override lateinit var ipPacketRawData: ByteArray
     override var transportHeaderOffset: Int = 0

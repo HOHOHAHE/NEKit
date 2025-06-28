@@ -11,8 +11,13 @@ import java.io.ByteArrayOutputStream // Added missing import
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
 
-// Assuming ProxySocket.kt, RawTCPSocketProtocol.kt, ConnectSession.kt (Messages),
-// AdapterSocket.kt, SocketDelegate.kt, ProxySocketEvent.kt (Event) are available.
+import Messages.ConnectSession // Corrected import
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import Socket.AdapterSocket.AdapterSocket // Corrected import
+import Socket.SocketDelegate // Corrected import
+import Event.Event.ProxySocketEvent // Corrected import
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
 // Also IPAddress.kt, Port.kt (Utils).
 
 // --- SOCKS5 Constants (already defined in SOCKS5Adapter.kt, ensure consistency or move to common place) ---

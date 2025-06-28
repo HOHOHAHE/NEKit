@@ -1,7 +1,8 @@
 package Utils
 
-// Assuming UInt128.kt will be available in the same package or imported.
-// For now, it relies on the UInt128 placeholder defined previously (e.g., in IPAddress.kt or separately).
+import Utils.UInt128
+
+
 
 /**
  * Represents an interval for IP addresses, which can be different types for IPv4 and IPv6.

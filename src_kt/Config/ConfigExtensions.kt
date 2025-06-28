@@ -10,11 +10,11 @@ fun JsonNode.getOptBool(key: String): Boolean? = this.get(key)?.takeIf { it.isBo
 
 fun JsonNode.getReqString(key: String, adapterId: String? = "Unknown"): String =
     this.get(key)?.takeIf { it.isTextual }?.asText()
-        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (string) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
+        ?: throw ConfigurationException.AdapterParsingException("\"$key\" (string) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
 fun JsonNode.getReqInt(key: String, adapterId: String? = "Unknown"): Int =
     this.get(key)?.takeIf { it.isInt }?.asInt()
-        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
+        ?: throw ConfigurationException.AdapterParsingException("\"$key\" (integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
 // Keep getStringOrIntString as its logic is specific for mixed type fields
 fun JsonNode.getStringOrIntString(key: String): String? {
@@ -29,7 +29,7 @@ fun JsonNode.getStringOrIntString(key: String): String? {
 
 fun JsonNode.getReqStringOrIntString(key: String, adapterId: String? = "Unknown"): String =
     this.getStringOrIntString(key)
-        ?: throw ConfigurationParserError.AdapterParsingError("\"$key\" (string or integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
+        ?: throw ConfigurationException.AdapterParsingException("\"$key\" (string or integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
 fun JsonNode.getOptStringArray(key: String): List<String>? =
     this.get(key)?.takeIf { it.isArray }?.mapNotNull { it.takeIf {el -> el.isTextual}?.asText() }

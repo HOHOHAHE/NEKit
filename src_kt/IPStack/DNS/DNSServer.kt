@@ -141,12 +141,12 @@ open class DNSServer(
         // Fallback to full parse if peeking not good enough (less efficient)
         val tempIpPacketForCheck: IPPacket? = try { IPPacket(packet.copyOf(), version) } catch (e: Exception) { null }
         if (tempIpPacketForCheck?.destinationAddress != serverAddress ||
-            (tempIpPacketForCheck?.protocolParser as? UDPProtocolParser)?.destinationPort != serverPort) {
+            (tempIpPacketForCheck?.protocolParser as? UDPProtocolParserImpl)?.destinationPort != serverPort) {
             // This check is inefficient if peek methods are not implemented.
             // For now, let's assume peeking works or this is a simplified path.
             // If peeking is not reliable, then the full parse below is the first point we'd know.
              if (IPPacket.peekDestinationAddress(packet) != serverAddress && tempIpPacketForCheck?.destinationAddress != serverAddress) return false
-             if (IPPacket.peekDestinationPort(packet) != serverPort && (tempIpPacketForCheck?.protocolParser as? UDPProtocolParser)?.destinationPort != serverPort) return false
+             if (IPPacket.peekDestinationPort(packet) != serverPort && (tempIpPacketForCheck?.protocolParser as? UDPProtocolParserImpl)?.destinationPort != serverPort) return false
         }
 
 

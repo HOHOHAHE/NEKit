@@ -3,7 +3,10 @@ import java.util.concurrent.ConcurrentHashMap // For thread-safe NAT table
 
 import org.slf4j.LoggerFactory
 
-// Assuming IPAddress.kt, Port.kt, IPMutablePacket.kt, TCPMutablePacket.kt,
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
+import IPStack.Packet.IPMutablePacket // Corrected import
+import IPStack.Packet.TCPMutablePacket // Corrected import
 // IPVersion.kt, TransportProtocol.kt are available.
 // TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
 

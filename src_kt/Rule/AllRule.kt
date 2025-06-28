@@ -1,12 +1,8 @@
 // Assuming Rule.kt, DNSSession.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available in this package.
 // Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt, DirectAdapterFactory.kt (placeholders from Config) are available.
 
-// --- Ensure placeholder for DirectAdapterFactory is consistent ---
-// If not defined in a shared context accessible here, a local placeholder might be needed.
-// For now, assuming it's resolvable from previous translations (e.g. AdapterFactoryParser.kt context)
-// interface AdapterFactory // Base interface
-// class DirectAdapterFactory : AdapterFactory // Example placeholder
-// ---
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
 
 /**
  * Rule that matches all DNS and connect sessions, applying a specified adapter factory.

@@ -7,7 +7,7 @@ import java.util.concurrent.Semaphore
  * within the `withBox` lambda.
  * Note: This class is final and primarily for use with `Atomic`.
  */
-class Box<T>(var value: T) // Made final, `open var value` becomes `var value`
+class Box<T>(var value: T)
 
 /**
  * Atomic provides thread-safety to access a variable by ensuring that

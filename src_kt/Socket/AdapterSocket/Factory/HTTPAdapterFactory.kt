@@ -1,8 +1,10 @@
+package Socket.AdapterSocket.Factory
+
 import org.slf4j.LoggerFactory
 
 import Messages.ConnectSession
 import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.HTTPAdapter // Corrected import for HTTPAdapter
+import Socket.AdapterSocket.HTTPAdapter
 import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
 import Utils.HTTPAuthentication // Assuming this is the correct import for HTTPAuthentication
 
@@ -34,5 +36,14 @@ open class HTTPAdapterFactory(
         val rawSocket = RawSocketFactory.getRawSocket() // Create a new raw socket
         // Pass the raw socket to the HTTPAdapter constructor
         return HTTPAdapter(this.serverHost, this.serverPort, this.auth, rawSocket)
+    }
+
+    // This is the method that AdapterFactoryParser.parseServerAdapterFactory expects.
+    // It creates a new instance of the factory itself, which then can be used to getAdapterFor.
+    // This is a common pattern in Swift where `Type` objects are passed around.
+    // In Kotlin, we pass the class directly or a lambda that constructs it.
+    // Here, it's a factory method on the factory itself.
+    override fun create(serverHost: String, serverPort: Int, auth: HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+        return HTTPAdapterFactory(serverHost, serverPort, auth)
     }
 }

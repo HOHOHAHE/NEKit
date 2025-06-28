@@ -4,24 +4,12 @@ package Rule
 // Assuming DNSSession.kt, ConnectSession.kt, AdapterFactory.kt, Observer.kt, RuleMatchEvent.kt, ObserverFactory.kt
 // and related enums (DNSSessionMatchType, DNSSessionMatchResult) are available.
 
-// --- Refined Placeholders (ensure these are consistent with actual definitions or update them) ---
-
-// In DNSSession.kt (placeholder or actual file)
-// open class DNSSession(...) {
-//     // ... other properties ...
-//     open var indexToMatch: Int = 0
-//     open var matchedRule: Rule? = null
-//     open var ruleMatchResult: DNSSessionMatchResult? = null // Specific for rule matching outcome
-//     // ...
-// }
-
-// In ConnectSession.kt (actual file in Messages)
-// class ConnectSession(...) {
-//     // ... other properties ...
-//     var matchedRule: Rule? = null // Add this if not present
-// }
-
-// --- End Placeholders ---
+import IPStack.DNS.DNSSession // Corrected import
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import Event.Observer // Corrected import
+import Event.Event.RuleMatchEvent // Corrected import
+import Event.ObserverFactory // Corrected import
 
 
 /**

@@ -1,6 +1,6 @@
 package Utils
 
-import java.util.regex.PatternSyntaxException
+
 
 class HTTPURL private constructor(
     val scheme: String?,

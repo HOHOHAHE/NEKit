@@ -88,7 +88,7 @@ object CryptoHelper {
         // temp = md5_1 + password_bytes
         // ... until result is long enough.
 
-        val derivedKeyMaterial = ByteArrayOutputStream()
+val derivedKeyMaterial = java.io.ByteArrayOutputStream()
         val passwordBytes = password.toByteArray(Charsets.UTF_8)
 
         var currentMD5 = md5Hash(passwordBytes) // md5_0

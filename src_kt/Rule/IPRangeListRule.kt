@@ -1,5 +1,6 @@
 // Assuming Rule.kt, DNSSession.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available.
-// Assuming ConnectSession.kt (from Messages), AdapterFactory.kt (placeholder from Config),
+import Messages.ConnectSession // Corrected import
+import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
 // IPAddress.kt (from Utils), and IPRange.kt (from Utils) are available.
 
 // --- Ensure DNSSession placeholder has `realIP: IPAddress?` ---

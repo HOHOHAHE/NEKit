@@ -1,11 +1,7 @@
 // Assuming AllRule.kt is available in this package.
 // Assuming DirectAdapterFactory.kt (placeholder from Config) is available.
 
-// --- Ensure placeholder for DirectAdapterFactory is consistent ---
-// From AdapterFactoryParser.kt context:
-// interface AdapterFactory // Base interface
-// class DirectAdapterFactory : AdapterFactory // Example placeholder
-// ---
+import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
 
 /**
  * A rule that matches every request and directs it through a `DirectAdapterFactory`.

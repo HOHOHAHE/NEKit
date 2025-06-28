@@ -1,6 +1,6 @@
 package Utils
 
-import java.util.Base64
+
 import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory // Moved import to top of file
 

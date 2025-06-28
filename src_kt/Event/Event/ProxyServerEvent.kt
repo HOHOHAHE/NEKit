@@ -1,11 +1,7 @@
-// Assuming EventType.kt is in this package or imported.
-// Assuming ProxySocket, ProxyServer, Tunnel are available (possibly as placeholders).
-
-// --- Placeholders for external types (if not already defined in shared context) ---
-// class ProxySocket { override fun toString(): String = "ProxySocket(${hashCode()})" }
-// class ProxyServer { override fun toString(): String = "ProxyServer(${hashCode()})" }
-// class Tunnel { override fun toString(): String = "Tunnel(${hashCode()})" }
-// --- End Placeholders ---
+import Event.EventType // Corrected import
+import Socket.ProxySocket.ProxySocket // Corrected import
+import ProxyServer.ProxyServer // Corrected import
+import Tunnel.Tunnel // Corrected import
 
 
 sealed class ProxyServerEvent : EventType {

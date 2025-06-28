@@ -1,3 +1,5 @@
+package Socket.AdapterSocket.Factory
+
 import org.slf4j.LoggerFactory
 
 import Messages.ConnectSession
@@ -46,5 +48,14 @@ open class ShadowsocksAdapterFactory(
             streamObfuscator = streamObfuscator,
             initialRawSocket = rawSocket
         )
+    }
+
+    // This is the method that AdapterFactoryParser.parseServerAdapterFactory expects.
+    // It creates a new instance of the factory itself, which then can be used to getAdapterFor.
+    // This is a common pattern in Swift where `Type` objects are passed around.
+    // In Kotlin, we pass the class directly or a lambda that constructs it.
+    // Here, it's a factory method on the factory itself.
+    open fun create(serverHost: String, serverPort: Int, protocolObfuscaterFactory: ShadowsocksAdapterNested.ProtocolObfuscaterFactory, cryptorFactory: ShadowsocksAdapterNested.CryptoStreamProcessorFactory, streamObfuscaterFactory: ShadowsocksAdapterNested.StreamObfuscaterFactory): ShadowsocksAdapterFactory {
+        return ShadowsocksAdapterFactory(serverHost, serverPort, protocolObfuscaterFactory, cryptorFactory, streamObfuscaterFactory)
     }
 }

@@ -1,8 +1,10 @@
+package Socket.AdapterSocket.Factory
+
 import org.slf4j.LoggerFactory
 
 import Messages.ConnectSession
 import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.DirectAdapter // Corrected import for DirectAdapter
+import Socket.AdapterSocket.DirectAdapter
 import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
 
 
@@ -39,13 +41,8 @@ open class AdapterFactory {
     // but rather in openSocketWith. RawSocketFactory.getRawSocket() is general.
     fun getDirectAdapter(session: ConnectSession): AdapterSocket {
         // RawSocketFactory.getRawSocket() creates the low-level socket.
-        // DirectAdapter's constructor now takes this socket.
-        val rawSocket = RawSocketFactory.getRawSocket() // Assuming this returns a valid RawTCPSocketProtocol
-        val adapter = DirectAdapter() // DirectAdapter constructor now handles its own raw socket via RawSocketFactory
-        // The original Swift code: adapter.socket = RawSocketFactory.getRawSocket()
-        // My AdapterSocket.kt takes rawSocket in constructor or expects it to be set.
-        // The DirectAdapter placeholder above now gets it from RawSocketFactory itself.
-        // If AdapterSocket.rawSocket was settable: (adapter as? AdapterSocket)?.rawSocket = rawSocket
+        // DirectAdapter's constructor now handles its own raw socket via RawSocketFactory
+        val adapter = DirectAdapter() 
         return adapter
     }
 }

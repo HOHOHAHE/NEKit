@@ -42,7 +42,7 @@ interface TransportProtocolParser {
 }
 
 // Placeholder for UDPProtocolParser (refine based on actual UDPProtocolParser.swift)
-class UDPProtocolParserImpl(override val pseudoHeaderChecksum: UInt = 0u) : TransportProtocolParser {
+class UDPProtocolParser(override val pseudoHeaderChecksum: UInt = 0u) : TransportProtocolParser {
     private val logger = LoggerFactory.getLogger(UDPProtocolParserImpl::class.java)
     override val protocol = TransportProtocol.UDP
     override val headerLength = 8 // UDP Header is 8 bytes
@@ -203,7 +203,7 @@ open class IPPacket {
 
             when (this.transportProtocol) {
                 TransportProtocol.UDP -> {
-                    val udpParser = UDPProtocolParserImpl(pseudoHeaderChecksumVal)
+                    val udpParser = UDPProtocolParser(pseudoHeaderChecksumVal)
                     udpParser.parse(buffer, pseudoHeaderChecksumVal) // buffer is now positioned at start of UDP
                     this.protocolParser = udpParser
                 }

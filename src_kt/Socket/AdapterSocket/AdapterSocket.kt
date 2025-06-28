@@ -2,7 +2,16 @@ import java.lang.ref.WeakReference
 
 import org.slf4j.LoggerFactory
 
-// Assuming SocketProtocol.kt, RawTCPSocketProtocol.kt, ConnectSession.kt, Observer.kt, etc. are available.
+import Socket.SocketProtocol // Corrected import
+import Socket.SocketDelegate // Corrected import
+import RawSocket.RawTCPSocketProtocol // Corrected import
+import RawSocket.RawTCPSocketDelegate // Corrected import
+import Messages.ConnectSession // Corrected import
+import Event.Observer // Corrected import
+import Event.ObserverFactory // Corrected import
+import Socket.SocketStatus // Corrected import
+import Event.Event.AdapterSocketEvent // Corrected import
+import Messages.EventSource // Corrected import
 
 // --- Ensure EventSource is available for ConnectSession.disconnected ---
 // enum class EventSource { PROXY, ADAPTER, TUNNEL } // From ConnectSession.kt context

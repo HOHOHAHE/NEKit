@@ -1,64 +1,18 @@
-package com.example.project.RawSocket // Assuming a package structure
-
-package com.example.project.RawSocket // Assuming a package structure
+package RawSocket
 
 import io.netty.channel.socket.SocketChannel
 import io.netty.buffer.Unpooled
-import io.netty.buffer.ByteBuf // Added import
+import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelFutureListener
-import io.netty.channel.ChannelHandlerContext // Added import
-import io.netty.channel.ChannelInboundHandlerAdapter // Added import
+import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInboundHandlerAdapter
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 import java.io.IOException
-import java.net.InetSocketAddress // Added import
+import java.net.InetSocketAddress
 
-// Assuming RawTCPSocketProtocol.kt and RawTCPSocketDelegate.kt are in a location accessible by this import.
-// Adjust import path if they are in a different module structure.
-// For now, assuming they are in a package that can be imported.
-// import com.example.project.RawSocket.RawTCPSocketProtocol // If defined in the same module/package
-// import com.example.project.RawSocket.RawTCPSocketDelegate
-
-// --- Required interfaces (ensure these are correctly defined and imported) ---
-// These would typically be in a common module or the RawSocket module.
-// For this file creation, I'll include minimal definitions if they weren't in the prompt's scope.
-
-interface RawTCPSocketProtocol {
-    var delegate: WeakReference<RawTCPSocketDelegate?>? // Changed to var to be settable
-    fun connectTo(host: String, port: Int, enableTLS: Boolean = false, tlsSettings: Map<String, Any>? = null)
-    fun write(data: ByteArray)
-    fun readData()
-    fun readDataTo(delimiter: ByteArray, maxLength: Int)
-    fun readDataTo(length: Int)
-    fun disconnect()
-    fun forceDisconnect()
-    val isConnected: Boolean
-    val sourceIPAddress: IPAddress? // Assuming IPAddress.kt
-    val sourcePort: Port?         // Assuming Port.kt
-    val destinationIPAddress: IPAddress?
-    val destinationPort: Port?
-}
-
-interface RawTCPSocketDelegate {
-    fun didConnect(socket: RawTCPSocketProtocol)
-    fun didDisconnect(socket: RawTCPSocketProtocol)
-    fun didRead(data: ByteArray, from: RawTCPSocketProtocol)
-    fun didWrite(data: ByteArray?, by: RawTCPSocketProtocol) // data can be null if not applicable
-    fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol)
-}
-
-// Minimal IPAddress and Port placeholders if not imported from elsewhere
-// Assuming actual IPAddress class handles isIPv4/isIPv6 based on InetAddress object or similar
-data class IPAddress(val presentation: String) {
-    // Simplified: real one would parse or take InetAddress
-    val isIPv4: Boolean by lazy { presentation.contains(".") } // Very basic check
-    val isIPv6: Boolean by lazy { presentation.contains(":") } // Very basic check
-    val addressBytes: ByteArray? by lazy { try { InetAddress.getByName(presentation)?.address } catch (e:Exception) { null } }
-}
-value class Port(val value: UShort) { // Changed from hostOrderValue to simple value for clarity
-    val hostOrderValue: UShort get() = value // Keep original if needed elsewhere
-}
-// --- End Required Interfaces ---
+import Utils.IPAddress // Corrected import
+import Utils.Port // Corrected import
 
 
 /**

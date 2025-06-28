@@ -1,8 +1,10 @@
+package Socket.AdapterSocket.Factory
+
 import org.slf4j.LoggerFactory
 
 import Messages.ConnectSession
 import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.SpeedAdapter // Corrected import for SpeedAdapter
+import Socket.AdapterSocket.SpeedAdapter
 import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
 
 
@@ -63,5 +65,14 @@ open class SpeedAdapterFactory : AdapterFactory() {
         }
         speedAdapter.adapters = concreteAdapters
         return speedAdapter
+    }
+
+    // This is the method that AdapterFactoryParser.parseServerAdapterFactory expects.
+    // It creates a new instance of the factory itself, which then can be used to getAdapterFor.
+    // This is a common pattern in Swift where `Type` objects are passed around.
+    // In Kotlin, we pass the class directly or a lambda that constructs it.
+    // Here, it's a factory method on the factory itself.
+    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+        return SpeedAdapterFactory()
     }
 }

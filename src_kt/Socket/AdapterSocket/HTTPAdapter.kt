@@ -14,8 +14,9 @@ import Utils.HTTPAuthentication
 import RawSocket.RawSocketFactory
 import Socket.SocketStatus
 import Event.Event.AdapterSocketEvent
-// Assuming EventSource.kt, ObserverFactory.kt, HTTPURL.kt (Utils) are available
-// No direct import needed for EventSource, ObserverFactory, HTTPURL if used via fully qualified names or if they are in common packages.
+import Messages.EventSource // Corrected import
+import Event.ObserverFactory // Corrected import
+import Utils.HTTPURL // Corrected import
 
 /**
  * Adapter for connecting to a remote host through an HTTP proxy using the CONNECT method.

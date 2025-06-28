@@ -3,7 +3,7 @@ package IPStack.DNS
 import Messages.ConnectSession
 import org.slf4j.LoggerFactory
 import IPStack.Packet.IPPacket
-import IPStack.Packet.UDPProtocolParserImpl // For parsing UDP payload
+import IPStack.Packet.UDPProtocolParser // For parsing UDP payload
 import Utils.IPAddress
 import Rule.Rule // For matchedRule
 import Rule.DNSSessionMatchResultType // For matchResult

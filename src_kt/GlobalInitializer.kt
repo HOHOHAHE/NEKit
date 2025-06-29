@@ -1,10 +1,8 @@
 package com.example.nekit
+
 import org.slf4j.LoggerFactory
 import com.example.nekit.Tunnel.QueueFactory
 
-// This object acts as a holder for the primary queue/dispatcher used by the Resolver concept in the original Swift.
-// In Kotlin, the QueueFactory.getProcessingDispatcher() returns a CoroutineDispatcher.
-// The 'Resolver' here is a conceptual bridge, not a direct mapping to DNSServer.
 object Resolver {
     var queue: kotlinx.coroutines.CoroutineDispatcher? = null // Specific type from QueueFactory
 }
@@ -15,8 +13,7 @@ object Resolver {
  * The primary initialization logic is executed when the `initialized` property
  * is first accessed, thanks to Kotlin's `lazy` delegate.
  */
-import java.security.Security // Added for Security.addProvider
-import org.bouncycastle.jce.provider.BouncyCastleProvider // Added for BouncyCastleProvider
+
 
 object GlobalInitializer {
     private val logger = LoggerFactory.getLogger(GlobalInitializer::class.java)

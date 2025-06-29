@@ -1,6 +1,6 @@
 package com.example.nekit.Event
 import com.example.nekit.Event.Observer // Corrected import
-import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Event.Event.EventType // Corrected import
 import com.example.nekit.Tunnel.Tunnel
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Socket.ProxySocket.ProxySocket

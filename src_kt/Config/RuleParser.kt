@@ -87,17 +87,17 @@ object RuleParser {
 
     @Throws(ConfigurationException::class)
     private fun parseCountryRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): CountryRule {
-        val country = config.getReqString("country", ruleType = "country")
-        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "country")
+        val country = config.getReqString("country", adapterId = "country")
+        val adapterId = config.getReqStringOrIntString("adapter", adapterId = "country")
         val adapter = adapterFactoryManager[adapterId] // Using AdapterFactoryManager's get operator
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for country rule.")
-        val match = config.getReqBool("match", ruleType = "country")
+        val match = config.getReqBool("match", adapterId = "country")
         return CountryRule(country, match, adapter)
     }
 
     @Throws(ConfigurationException::class)
     private fun parseAllRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): AllRule {
-        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "all")
+        val adapterId = config.getReqStringOrIntString("adapter", adapterId = "all")
         val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for all rule.")
         return AllRule(adapter)
@@ -105,10 +105,10 @@ object RuleParser {
 
     @Throws(ConfigurationException::class)
     private fun parseDomainListRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): DomainListRule {
-        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "domainlist")
+        val adapterId = config.getReqStringOrIntString("adapter", adapterId = "domainlist")
         val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for domain list rule.")
-        var filepath = config.getReqStringOrIntString("file", ruleType = "domainlist")
+        var filepath = config.getReqStringOrIntString("file", adapterId = "domainlist")
 
         filepath = expandTilde(filepath)
 
@@ -131,10 +131,10 @@ object RuleParser {
 
     @Throws(ConfigurationException::class)
     private fun parseIPRangeListRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): IPRangeListRule {
-        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "iplist")
+        val adapterId = config.getReqStringOrIntString("adapter", adapterId = "iplist")
         val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for IP range list rule.")
-        var filepath = config.getReqStringOrIntString("file", ruleType = "iplist")
+        var filepath = config.getReqStringOrIntString("file", adapterId = "iplist")
 
         filepath = expandTilde(filepath)
 
@@ -151,7 +151,7 @@ object RuleParser {
 
     @Throws(ConfigurationException::class)
     private fun parseDNSFailRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): DNSFailRule {
-        val adapterId = config.getReqStringOrIntString("adapter", ruleType = "dnsfail")
+        val adapterId = config.getReqStringOrIntString("adapter", adapterId = "dnsfail")
         val adapter = adapterFactoryManager[adapterId]
             ?: throw ConfigurationException.RuleParsingException("Unknown adapter id '$adapterId' for DNS fail rule.")
         return DNSFailRule(adapter)

@@ -16,6 +16,10 @@ fun JsonNode.getReqInt(key: String, adapterId: String? = "Unknown"): Int =
     this.get(key)?.takeIf { it.isInt }?.asInt()
         ?: throw ConfigurationException.AdapterParsingException("\"$key\" (integer) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
 
+fun JsonNode.getReqBool(key: String, adapterId: String? = "Unknown"): Boolean =
+    this.get(key)?.takeIf { it.isBoolean }?.asBoolean()
+        ?: throw ConfigurationException.AdapterParsingException("\"$key\" (boolean) is required for adapter \"${adapterId ?: this.getOptString("id") ?: "Unnamed"}\".")
+
 // Keep getStringOrIntString as its logic is specific for mixed type fields
 fun JsonNode.getStringOrIntString(key: String): String? {
     val node = this.get(key)

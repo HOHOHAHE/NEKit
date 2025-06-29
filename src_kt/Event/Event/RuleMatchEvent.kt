@@ -1,5 +1,5 @@
 package com.example.nekit.Event.Event
-import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Event.Event.EventType // Corrected import
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Rule.Rule
 import com.example.nekit.IPStack.DNS.DNSSession

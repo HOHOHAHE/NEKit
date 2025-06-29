@@ -36,7 +36,7 @@ import com.example.nekit.Utils.Port
 import com.example.nekit.Tunnel.QueueFactory
 import com.example.nekit.RawSocket.NettyAcceptedRawSocketAdapter
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.Socket.SocketProtocol.KotlinAcceptedSocketInterface
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
 
 /**
  * Base class for proxy servers that listen on a TCP port.

@@ -6,10 +6,10 @@ import com.example.nekit.IPStack.Packet.IPPacket
 import com.example.nekit.IPStack.Packet.UDPProtocolParser
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Rule.Rule
-import com.example.nekit.Rule.DNSSessionMatchResultType
-import com.example.nekit.IPStack.DNS.DNSEnums.DNSType
-import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessage
-import com.example.nekit.IPStack.DNS.DNSEnums.DNSQuery
+import com.example.nekit.Rule.DNSSessionMatchResult
+import com.example.nekit.IPStack.DNS.DNSType
+import com.example.nekit.IPStack.DNS.DNSMessage
+import com.example.nekit.IPStack.DNS.DNSQuery
 
 /**
  * Represents a DNS session, encapsulating the request, response, and associated metadata.
@@ -20,7 +20,7 @@ open class DNSSession(
     open var requestMessage: DNSMessage,
     open var requestIPPacket: IPPacket? = null
 ) {
-    open var matchResult: DNSSessionMatchResultType? = null
+    open var matchResult: DNSSessionMatchResult? = null
     open var fakeIP: IPAddress? = null
     open var realResponseMessage: DNSMessage? = null
     open var realIP: IPAddress? = null
@@ -40,7 +40,7 @@ open class DNSSession(
         requestMessage = DNSMessage(), // Dummy, will be replaced by parsed message
         requestIPPacket = packet
     ) {
-        val udpParser = packet.protocolParser as? UDPProtocolParserImpl
+        val udpParser = packet.protocolParser as? UDPProtocolParser
         if (udpParser?.payload != null) {
             try {
                 this.requestMessage = DNSMessage(udpParser.payload!!) // Parse the actual DNS message

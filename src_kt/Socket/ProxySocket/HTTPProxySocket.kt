@@ -87,7 +87,7 @@ class HTTPProxySocket(
         httpProxyLogger.info("openSocket() called for session {}. Reading initial HTTP header.", session)
         internalReadStatus = ReadState.READING_FIRST_HEADER
         // Read up to the end of the first HTTP header block
-        rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSCAN_LENGTH)
+        rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE)
     }
 
     /**
@@ -136,7 +136,7 @@ class HTTPProxySocket(
             is ReadAction.ReadHeader -> {
                 internalReadStatus = ReadState.READING_HEADER
                 httpProxyLogger.debug("Reading next HTTP header for session {}", session)
-                rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSCAN_LENGTH)
+                rawSocket.readDataTo(delimiter = HTTPDataConstants.DOUBLE_CRLF, maxLength = Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE)
             }
             is ReadAction.Stop -> {
                 internalReadStatus = ReadState.STOPPED
@@ -276,7 +276,7 @@ class HTTPProxySocket(
             internalWriteStatus = WriteState.SENDING_CONNECT_RESPONSE
             // write() is suspend in RawTCPSocketProtocol, ProxySocket.write calls it.
             // Launch in a scope or make respondTo suspend.
-            val scope = CoroutineScope(Dispatchers.Default) // TODO: Use managed scope
+            val scope = CoroutineScope(Dispatchers.IO)
             scope.launch {
                 try {
                     write(HTTPDataConstants.CONNECT_SUCCESS_RESPONSE)

@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 import com.example.nekit.Tunnel.QueueFactory
 import com.example.nekit.IPStack.Packet.IPPacket
 import com.example.nekit.IPStack.Packet.TransportProtocol
-import com.example.nekit.IPStack.Packet.UDPProtocolParserImpl
+import com.example.nekit.IPStack.Packet.UDPProtocolParser
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Utils.IPPool
@@ -22,7 +22,7 @@ import com.example.nekit.IPStack.DNS.DNSEnums.DNSType
 import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessage
 import com.example.nekit.IPStack.DNS.DNSEnums.DNSResource
 import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessageType
-import com.example.nekit.IPStack.DNS.DNSEnums.DNSReturnCode
+import com.example.nekit.IPStack.DNS.DNSReturnCode
 
 // No longer a placeholder, as DNSSession.kt is now a separate file
 // import com.example.nekit.IPStack.DNS.DNSSession // This will be imported implicitly or directly if needed
@@ -81,23 +81,23 @@ open class DNSServer(
 
     private fun lookup(session: DNSSession) {
         if (!shouldMatch(session)) {
-            session.matchResult = DNSSessionMatchResultType.REAL
+            session.matchResult = DNSSessionMatchResult.REAL
             lookupRemotely(session)
             return
         }
 
-        RuleManager.currentManager.matchDNS(session, RuleManagerInstance.DNSTypeDomainOrIP.DOMAIN)
+        RuleManager.currentManager.matchDNS(session, DNSSessionMatchType.DOMAIN)
 
         when (session.matchResult) {
-            DNSSessionMatchResultType.FAKE -> {
+            DNSSessionMatchResult.FAKE -> {
                 if (!setUpFakeIP(session)) {
-                    session.matchResult = DNSSessionMatchResultType.REAL
+                    session.matchResult = DNSSessionMatchResult.REAL
                     lookupRemotely(session)
                     return
                 }
                 outputSession(session)
             }
-            DNSSessionMatchResultType.REAL, DNSSessionMatchResultType.UNKNOWN -> {
+            DNSSessionMatchResult.REAL, DNSSessionMatchResult.UNKNOWN -> {
                 lookupRemotely(session)
             }
             else -> { // E.g., PASS, or null
@@ -141,12 +141,12 @@ open class DNSServer(
         // Fallback to full parse if peeking not good enough (less efficient)
         val tempIpPacketForCheck: IPPacket? = try { IPPacket(packet.copyOf(), version) } catch (e: Exception) { null }
         if (tempIpPacketForCheck?.destinationAddress != serverAddress ||
-            (tempIpPacketForCheck?.protocolParser as? UDPProtocolParserImpl)?.destinationPort != serverPort) {
+            (tempIpPacketForCheck?.protocolParser as? UDPProtocolParser)?.destinationPort != serverPort) {
             // This check is inefficient if peek methods are not implemented.
             // For now, let's assume peeking works or this is a simplified path.
             // If peeking is not reliable, then the full parse below is the first point we'd know.
              if (IPPacket.peekDestinationAddress(packet) != serverAddress && tempIpPacketForCheck?.destinationAddress != serverAddress) return false
-             if (IPPacket.peekDestinationPort(packet) != serverPort && (tempIpPacketForCheck?.protocolParser as? UDPProtocolParserImpl)?.destinationPort != serverPort) return false
+             if (IPPacket.peekDestinationPort(packet) != serverPort && (tempIpPacketForCheck?.protocolParser as? UDPProtocolParser)?.destinationPort != serverPort) return false
         }
 
 
@@ -155,7 +155,7 @@ open class DNSServer(
             val parsed = IPPacket(packet.copyOf(), version) // Create a copy to avoid issues if `packet` is reused
             // Manually set up UDP parser if not done by IPPacket constructor
             if (parsed.transportProtocol == TransportProtocol.UDP && parsed.protocolParser == null) {
-                 val udpParser = UDPProtocolParserImpl()
+                 val udpParser = packet.protocolParser as? UDPProtocolParser
                  // TODO: This requires IPPacket to provide access to its payload (UDP datagram)
                  // and for UDPProtocolParser to parse it. This is complex.
                  // For now, assume DNSSession constructor will handle it if IPPacket has raw payload.
@@ -172,7 +172,7 @@ open class DNSServer(
         }
 
         // Ensure protocol parser (UDP) is set by IPPacket constructor
-        if (ipPacket.protocolParser !is UDPProtocolParserImpl) {
+        if (ipPacket.protocolParser !is UDPProtocolParser) {
              logger.error("DNS Server received non-UDP packet or IPPacket parsing failed to set UDP parser.")
             return false
         }
@@ -237,7 +237,7 @@ open class DNSServer(
         responseDnsMessage.authoritative = false // This server is not authoritative for actual domains
 
         when (resultType) {
-            DNSSessionMatchResultType.REAL -> {
+            DNSSessionMatchResult.REAL -> {
                 // Use the real response message if available
                 session.realResponseMessage?.let {
                     // Copy relevant parts from real response to our responseDnsMessage shell
@@ -253,7 +253,7 @@ open class DNSServer(
                     responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
                 }
             }
-            DNSSessionMatchResultType.FAKE -> {
+            DNSSessionMatchResult.FAKE -> {
                 val fakeIp = session.fakeIP ?: run {
                     logger.error("outputSession: Fake match but no fake IP for session query: {}", session.requestMessage.queries.firstOrNull()?.name)
                     responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
@@ -270,7 +270,7 @@ open class DNSServer(
                      logger.error("Failed to create A record for fake IP {}", fakeIp)
                      responseDnsMessage.returnCode = DNSReturnCode.SERVER_FAILURE
                 }
-                // session.expireAt = System.currentTimeMillis() + Opt.DNSFakeIPTTL * 1000L // Already set in setUpFakeIP
+                // session.expireAt = System.currentTimeMillis() + Opt.DNS_FAKE_IP_TTL * 1000L // Already set in setUpFakeIP
             }
             else -> {
                 logger.error("outputSession called with unhandled matchResult: {} for session query: {}", resultType, session.requestMessage.queries.firstOrNull()?.name)
@@ -284,7 +284,7 @@ open class DNSServer(
             return
         }
 
-        val responseUdpParser = UDPProtocolParserImpl()
+        val responseUdpParser = UDPProtocolParser()
         responseUdpParser.sourcePort = serverPort
         responseUdpParser.destinationPort = requestUdpParser.sourcePort
         responseUdpParser.payload = responsePayload
@@ -338,9 +338,9 @@ open class DNSServer(
         }
         session.fakeIP = fakeIP
         fakeSessions[fakeIP] = session // ConcurrentHashMap handles thread safety
-        session.expireAt = System.currentTimeMillis() + Opt.DNSFakeIPTTL * 1000L
+        session.expireAt = System.currentTimeMillis() + Opt.DNS_FAKE_IP_TTL * 1000L
         // Schedule cleanup for the fake IP mapping
-        scheduleCleanupFakeIP(fakeIP, afterDelaySeconds = Opt.DNSFakeIPTTL * 2)
+        scheduleCleanupFakeIP(fakeIP, afterDelaySeconds = Opt.DNS_FAKE_IP_TTL * 2)
         logger.info("Setup fake IP {} for session (query: {})", fakeIP, session.requestMessage.queries.firstOrNull()?.name)
         return true
     }
@@ -366,20 +366,20 @@ open class DNSServer(
 
             // If the original match result was not definitively FAKE or REAL (e.g., UNKNOWN),
             // re-evaluate rules with the IP information.
-            if (session.matchResult != DNSSessionMatchResultType.FAKE && session.matchResult != DNSSessionMatchResultType.REAL) {
-                RuleManager.currentManager.matchDNS(session, RuleManagerInstance.DNSTypeDomainOrIP.IP)
+            if (session.matchResult != DNSSessionMatchResult.FAKE && session.matchResult != DNSSessionMatchResult.REAL) {
+                RuleManager.currentManager.matchDNS(session, DNSSessionMatchType.IP)
             }
 
             when (session.matchResult) {
-                DNSSessionMatchResultType.FAKE -> {
+                DNSSessionMatchResult.FAKE -> {
                     if (!setUpFakeIP(session)) {
                         // Failed to set up fake IP (e.g., pool empty), so fallback to sending real response
                         logger.warn("Could not set up fake IP for {}, falling back to REAL response.", session.requestMessage.queries.firstOrNull()?.name)
-                        session.matchResult = DNSSessionMatchResultType.REAL
+                        session.matchResult = DNSSessionMatchResult.REAL
                     }
                     outputSession(session)
                 }
-                DNSSessionMatchResultType.REAL -> {
+                DNSSessionMatchResult.REAL -> {
                     outputSession(session)
                 }
                 else -> {

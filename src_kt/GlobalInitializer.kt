@@ -1,19 +1,13 @@
 package com.example.nekit
 
+import java.security.Security
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.LoggerFactory
 import com.example.nekit.Tunnel.QueueFactory
 
 object Resolver {
-    var queue: kotlinx.coroutines.CoroutineDispatcher? = null // Specific type from QueueFactory
+    var queue: kotlinx.coroutines.CoroutineDispatcher? = null
 }
-
-/**
- * Handles one-time global initialization tasks.
- *
- * The primary initialization logic is executed when the `initialized` property
- * is first accessed, thanks to Kotlin's `lazy` delegate.
- */
-
 
 object GlobalInitializer {
     private val logger = LoggerFactory.getLogger(GlobalInitializer::class.java)

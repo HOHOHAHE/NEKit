@@ -1,6 +1,6 @@
 package com.example.nekit.IPStack.DNS
 // Removed WeakReference as direct delegate will be used for RawUDPSocketDelegate
-// import java.lang.ref.WeakReference
+
 
 // Assuming IPAddress.kt, Port.kt, DNSSession.kt (placeholder) are available.
 // Assuming new RawSocket types are available.
@@ -39,7 +39,7 @@ open class UDPDNSResolver(
     override var delegate: DNSResolverDelegate? = null
 
     init {
-        socket.delegate = WeakReference(this) // Set this resolver as the delegate for socket events
+        socket.delegate = this // Set this resolver as the delegate for socket events
         try {
             // Bind to an ephemeral port on all local interfaces.
             // DNS client usually doesn't need a fixed local port.

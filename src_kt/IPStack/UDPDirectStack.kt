@@ -138,7 +138,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         replyIpPacket.destinationAddress = connectInfo.sourceAddress   // Original src is now dest
         replyIpPacket.transportProtocol = TransportProtocol.UDP
 
-        val replyUdpParser = UDPProtocolParserImpl() // Using placeholder Impl for now
+        val replyUdpParser = UDPProtocolParser() // Using placeholder Impl for now
         replyUdpParser.sourcePort = connectInfo.destinationPort // Original dest port is now src
         replyUdpParser.destinationPort = connectInfo.sourcePort   // Original src port is now dest
         replyUdpParser.payloadData = data

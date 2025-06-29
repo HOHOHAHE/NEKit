@@ -8,8 +8,12 @@ import kotlinx.coroutines.Dispatchers // For a default dispatcher if QueueFactor
 
 import org.slf4j.LoggerFactory
 
-// Assuming Port.kt, IPAddress.kt (Utils), Observer.kt, ProxyServerEvent.kt, ObserverFactory.kt (Event)
-// GlobalInitializer.kt are available.
+import com.example.nekit.Event.Observer
+import com.example.nekit.Event.ObserverFactory
+import com.example.nekit.GlobalInitializer
+import com.example.nekit.ProxyServer.ProxyServerEvent
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 // --- Placeholders for dependencies ---
 

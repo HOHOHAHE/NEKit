@@ -23,6 +23,7 @@ import com.example.nekit.Rule.AllRule
 import com.example.nekit.Rule.DomainListRule
 import com.example.nekit.Rule.IPRangeListRule
 import com.example.nekit.Rule.DNSFailRule
+import com.example.nekit.Rule.DomainListRule.MatchCriterion
 
 // Removed placeholder Rule types and RuleManager, as they are now imported from Rule package.
 

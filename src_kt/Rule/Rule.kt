@@ -3,8 +3,8 @@ package com.example.nekit.Rule
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
 import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.Rule.DNSSessionMatchType // Corrected import
-import com.example.nekit.Rule.DNSSessionMatchResult // Corrected import
+import com.example.nekit.IPStack.DNS.DNSSessionMatchType
+import com.example.nekit.IPStack.DNS.DNSSessionMatchResult
 
 
 /**

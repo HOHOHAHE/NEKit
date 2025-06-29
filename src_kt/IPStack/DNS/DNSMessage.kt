@@ -14,7 +14,7 @@ class DNSMessage {
     var truncation: Boolean = false
     var recursionDesired: Boolean = false
     var recursionAvailable: Boolean = false
-    var returnCode: DNSReturnCode = DNSReturnCode.SUCCESS // Renamed from status
+    var returnCode: DNSReturnCode = DNSReturnCode.NO_ERROR // Renamed from status
     var queries: MutableList<DNSQuery> = mutableListOf()
     var answers: MutableList<DNSResource> = mutableListOf()
     var nameservers: MutableList<DNSResource> = mutableListOf()
@@ -58,7 +58,7 @@ class DNSMessage {
         val flags2 = buffer.get().toUByte()
         recursionAvailable = (flags2 and 0x80u) > 0u
         // Z reserved bits ignored: (flags2 shr 4) and 0x07u
-        returnCode = DNSReturnCode.fromRawValue(flags2 and 0x0Fu)
+        returnCode = DNSReturnCode.fromRawValue((flags2 and 0x0Fu).toInt())
             ?: run {
                 System.err.println("Received DNS response with unknown status: ${flags2 and 0x0Fu}.")
                 DNSReturnCode.SERVER_FAILURE // Default or throw

@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.20" // Upgrading Kotlin to support JVM 21
-    application // For setting mainClassName and creating distributions if needed
+    
 }
 
 group = "com.example.nekit" // Placeholder group
@@ -33,6 +33,7 @@ dependencies {
     // Cryptography (BouncyCastle Provider)
     // Use bcprov-jdk18on for JDK 1.8+ or bcprov-jdk15on for older. Assuming modern JDK.
     implementation("org.bouncycastle:bcprov-jdk18on:1.77") // Check for latest
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.77") // Added for additional crypto functionalities
 
     // Networking (Netty for low-level socket control and async I/O)
     // Netty is a good choice for implementing custom TCP/UDP clients and servers,
@@ -49,39 +50,22 @@ dependencies {
 // Configure Source Sets to include only src_kt/Utils for this compilation pass
 sourceSets {
     main {
-        kotlin {
-            srcDir("src_kt") // Include all Kotlin source files under src_kt
-        }
-        resources {
-            srcDir("resources") // If you have resource files
-        }
+        kotlin.srcDirs("src_kt")
+        kotlin.include("**/*.kt")
+        resources.srcDirs("resources")
     }
     test {
-        kotlin {
-            srcDir("src_kt") // Include all Kotlin source files under src_kt for tests as well
-            srcDir("src_kt_test") // Include test specific Kotlin source files
-        }
-        resources {
-            srcDir("test_resources")
-        }
+        kotlin.srcDirs("src_kt", "src_kt_test")
+        kotlin.include("**/*.kt")
+        resources.srcDirs("test_resources")
     }
 }
 
 // Configure Kotlin compilation options
-tasks.withType<KotlinCompile> {
-    kotlinOptions {
-        jvmTarget = "21" // Setting JVM target to 21 to match user's Java version
-        freeCompilerArgs = listOf("-Xjsr305=strict") // Example compiler arg
-    }
-}
+
 
 // Application plugin configuration (optional, for running the application)
-application {
-    // TODO: Define the main class name once an entry point is established
-    // Example: mainClass.set("com.example.nekit.MainKt")
-    // For now, it can be commented out or set to a placeholder if no main function exists yet.
-    mainClass.set("com.example.nekit.PlaceholderMainKt") // Requires a file with fun main()
-}
+
 
 // If creating a fat JAR (optional)
 // tasks.jar {

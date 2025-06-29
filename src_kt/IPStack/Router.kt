@@ -47,7 +47,7 @@ object NetworkInterface { // Mimicking Swift structure
                     delay(1000) // Simulate network delay
                     // Create a dummy TCP/IP packet for testing the router logic
                     // val dummyTcpPayload = "Hello".toByteArray()
-                    // val dummyUdpParser = UDPProtocolParserImpl().apply { payloadData = dummyTcpPayload } // Incorrect for TCP
+                    // val dummyUdpParser = UDPProtocolParser().apply { payloadData = dummyTcpPayload } // Incorrect for TCP
                     // val ipPacket = IPPacket().apply {
                     //     sourceAddress = IPAddress.parse("192.168.1.100")
                     //     destinationAddress = IPAddress.parse("10.0.0.1") // interfaceIP for one path

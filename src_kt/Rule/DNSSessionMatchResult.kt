@@ -1,31 +1,29 @@
 package com.example.nekit.Rule
 
 /**
- * Represents the result of matching a DNS request against a rule.
+ * Represents the result of a DNS session matching attempt against a rule.
  */
 enum class DNSSessionMatchResult {
     /**
-     * The request matches the rule, and the connection should proceed with a real IP address.
-     * This might involve DNS resolution if not already done.
-     */
-    REAL,
-
-    /**
-     * The request matches the rule, and a "fake" IP address should be used or generated.
-     * This is typically used in scenarios where DNS manipulation is performed for routing or filtering.
-     * The system will need to track this fake IP to handle subsequent connections.
+     * The rule indicates that the DNS query should be responded to with a fake IP address.
+     * This typically means the traffic should be intercepted or handled by the proxy.
      */
     FAKE,
 
     /**
-     * The rule cannot determine a match based on the current information (e.g., only domain is available,
-     * but the rule requires the resolved IP address). The matching process might need to re-evaluate
-     * this rule after more information (like the resolved IP) is obtained.
+     * The rule indicates that the DNS query should be responded to with the real IP address.
+     * This typically means the traffic should be allowed to go direct.
+     */
+    REAL,
+
+    /**
+     * The rule cannot definitively determine the outcome based on the current information.
+     * This might require further processing, like resolving the domain to an IP and re-evaluating.
      */
     UNKNOWN,
 
     /**
-     * The rule does not match the DNS request. The rule engine should proceed to the next rule.
+     * The rule does not match the current DNS session and processing should pass to the next rule.
      */
-    PASS;
+    PASS
 }

@@ -1,4 +1,3 @@
-package Opts
 
 /**
  * Object holding global constants and configuration values for the application.

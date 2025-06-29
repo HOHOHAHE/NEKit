@@ -1,3 +1,4 @@
+package Socket.AdapterSocket
 import org.slf4j.LoggerFactory // Added import
 
 import Socket.AdapterSocket.HTTPAdapter // Corrected import

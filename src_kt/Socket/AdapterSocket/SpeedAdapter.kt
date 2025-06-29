@@ -1,3 +1,4 @@
+package Socket.AdapterSocket
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger

@@ -1,11 +1,13 @@
+package Crypto
 import java.security.Security
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import org.slf4j.LoggerFactory
 import org.bouncycastle.jce.provider.BouncyCastleProvider // For BouncyCastle specific algorithms
-
-// Assuming StreamCrypto.kt (for StreamCrypto interface) and CryptoEnum.kt (for CryptoOperation, CryptoAlgorithm) are available.
+import Crypto.CryptoOperation // Import CryptoOperation
+import Crypto.CryptoAlgorithm // Import CryptoAlgorithm
+import Crypto.StreamCryptoProtocol as StreamCrypto // Import StreamCryptoProtocol and alias it to StreamCrypto
 
 /**
  * Adapter for stream ciphers (like ChaCha20, Salsa20, RC4) using JCE and BouncyCastle.

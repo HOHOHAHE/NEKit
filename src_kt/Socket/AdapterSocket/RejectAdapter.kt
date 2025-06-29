@@ -1,3 +1,4 @@
+package Socket.AdapterSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException // For creating an error object if needed

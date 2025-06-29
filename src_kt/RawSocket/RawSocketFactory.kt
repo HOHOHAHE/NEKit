@@ -1,3 +1,4 @@
+package RawSocket
 // Assuming RawTCPSocketProtocol.kt and RawUDPSocketProtocol.kt are available.
 // NWTCPSocket.kt and GCDTCPSocket.kt placeholders will be effectively replaced by NettyRawTCPClientSocket.
 import RawSocket.NettyRawTCPClientSocket

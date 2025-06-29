@@ -1,8 +1,8 @@
+package Crypto
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import java.nio.charset.StandardCharsets
-
-// Assuming HashAlgorithm.kt is in the same package or imported.
+import Crypto.CryptoEnum.HashAlgorithm // Import HashAlgorithm
 
 object HMAC {
 

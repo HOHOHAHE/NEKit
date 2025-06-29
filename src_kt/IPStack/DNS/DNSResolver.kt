@@ -1,3 +1,4 @@
+package IPStack.DNS
 // Removed WeakReference as direct delegate will be used for RawUDPSocketDelegate
 // import java.lang.ref.WeakReference
 

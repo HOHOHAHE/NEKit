@@ -1,3 +1,4 @@
+package Event
 import Event.EventType // Corrected import
 
 

@@ -1,3 +1,4 @@
+package Event.Event
 import Event.EventType // Corrected import
 import Messages.ConnectSession // Corrected import
 import Rule.Rule // Corrected import

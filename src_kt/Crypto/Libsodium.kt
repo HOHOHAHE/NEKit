@@ -1,3 +1,4 @@
+package Crypto
 // Represents the need to initialize the Libsodium library.
 // Actual Libsodium functions would be called via JNI/JNA or a JVM binding library.
 

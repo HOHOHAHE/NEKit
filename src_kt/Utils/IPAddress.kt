@@ -8,6 +8,7 @@ import java.net.UnknownHostException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays // For Arrays.equals on byte arrays if not using contentEquals
+import Utils.UInt128.Companion.ZERO // Import ZERO
 
 
 
@@ -72,8 +73,6 @@ class IPAddress private constructor(private val inetAddress: InetAddress) : Comp
     override fun toString(): String {
         return presentation
     }
-
-import Utils.UInt128.Companion.ZERO // Import ZERO
 
     val uint32InNetworkOrder: UInt?
         get() {

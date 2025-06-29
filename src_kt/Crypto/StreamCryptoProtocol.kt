@@ -1,3 +1,4 @@
+package Crypto
 /**
  * Protocol/interface for stream-based cryptographic operations (encryption/decryption).
  */

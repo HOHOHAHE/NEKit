@@ -51,7 +51,6 @@ sourceSets {
     main {
         kotlin {
             srcDir("src_kt") // Include all Kotlin source files under src_kt
-            // To revert, use: srcDir("src_kt")
         }
         resources {
             srcDir("resources") // If you have resource files
@@ -59,8 +58,8 @@ sourceSets {
     }
     test {
         kotlin {
-            setSrcDirs(listOf("test_kt/Utils")) // Assuming tests for Utils might be here
-            // To revert, use: srcDir("test_kt")
+            srcDir("src_kt") // Include all Kotlin source files under src_kt for tests as well
+            srcDir("src_kt_test") // Include test specific Kotlin source files
         }
         resources {
             srcDir("test_resources")

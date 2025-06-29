@@ -1,3 +1,4 @@
+package Event
 // TODO: Replace CocoaLumberjackSwift with a Kotlin logging framework (e.g., SLF4J + Logback/Log4j2)
 // For now, using println for basic logging.
 

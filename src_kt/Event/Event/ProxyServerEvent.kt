@@ -1,3 +1,4 @@
+package Event.Event
 import Event.EventType // Corrected import
 import Socket.ProxySocket.ProxySocket // Corrected import
 import ProxyServer.ProxyServer // Corrected import

@@ -1,3 +1,4 @@
+package Event.Event
 import Event.EventType // Corrected import
 import Socket.AdapterSocket.AdapterSocket // Corrected import
 import Messages.ConnectSession // Corrected import

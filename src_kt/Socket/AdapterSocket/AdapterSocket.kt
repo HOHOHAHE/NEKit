@@ -1,3 +1,4 @@
+package Socket.AdapterSocket
 import java.lang.ref.WeakReference
 
 import org.slf4j.LoggerFactory

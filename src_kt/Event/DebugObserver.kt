@@ -51,14 +51,14 @@ open class DebugTunnelObserver : Observer<TunnelEvent>() {
     override fun signal(event: TunnelEvent) {
         val message = event.toString() // logger will handle formatting
         when (event) {
-            TunnelEvent.RECEIVED_REQUEST,
-            TunnelEvent.CLOSED ->
+            is TunnelEvent.ReceivedRequest,
+            is TunnelEvent.Closed ->
                 logger.info(message)
-            TunnelEvent.OPENED,
-            TunnelEvent.CONNECTED_TO_REMOTE,
-            TunnelEvent.UPDATING_ADAPTER_SOCKET ->
+            is TunnelEvent.Opened,
+            is TunnelEvent.ConnectedToRemote,
+            is TunnelEvent.UpdatingAdapterSocket ->
                 logger.debug(message) // VERBOSE -> debug
-            else -> // .closeCalled, .forceCloseCalled, .receivedReadySignal, etc.
+            else -> // Catch-all for other TunnelEvent types
                 logger.trace(message) // DEBUG -> trace
         }
     }
@@ -69,16 +69,16 @@ open class DebugProxySocketObserver : Observer<ProxySocketEvent>() {
     override fun signal(event: ProxySocketEvent) {
         val message = event.toString()
         when (event) {
-            ProxySocketEvent.ERROR_OCCURED ->
+            is ProxySocketEvent.ErrorOccurred ->
                 logger.error(message)
-            ProxySocketEvent.DISCONNECTED,
-            ProxySocketEvent.RECEIVED_REQUEST ->
+            is ProxySocketEvent.Disconnected,
+            is ProxySocketEvent.ReceivedRequest ->
                 logger.info(message)
-            ProxySocketEvent.SOCKET_OPENED,
-            ProxySocketEvent.ASKED_TO_RESPONSE_TO,
-            ProxySocketEvent.READY_FOR_FORWARD ->
+            is ProxySocketEvent.SocketOpened,
+            is ProxySocketEvent.AskedToResponseTo,
+            is ProxySocketEvent.ReadyForForward ->
                 logger.debug(message) // VERBOSE -> debug
-            else -> // .disconnectCalled, .forceDisconnectCalled, .readData, .wroteData
+            else -> // Catch-all for other ProxySocketEvent types
                 logger.trace(message) // DEBUG -> trace
         }
     }
@@ -89,15 +89,15 @@ open class DebugAdapterSocketObserver : Observer<AdapterSocketEvent>() {
     override fun signal(event: AdapterSocketEvent) {
         val message = event.toString()
         when (event) {
-            AdapterSocketEvent.ERROR_OCCURED ->
+            is AdapterSocketEvent.ErrorOccurred ->
                 logger.error(message)
-            AdapterSocketEvent.DISCONNECTED,
-            AdapterSocketEvent.CONNECTED ->
+            is AdapterSocketEvent.Disconnected,
+            is AdapterSocketEvent.Connected ->
                 logger.info(message)
-            AdapterSocketEvent.SOCKET_OPENED,
-            AdapterSocketEvent.READY_FOR_FORWARD ->
+            is AdapterSocketEvent.SocketOpened,
+            is AdapterSocketEvent.ReadyForForward ->
                 logger.debug(message) // VERBOSE -> debug
-            else -> // .disconnectCalled, .forceDisconnectCalled, .readData, .wroteData
+            else -> // Catch-all for other AdapterSocketEvent types
                 logger.trace(message) // DEBUG -> trace
         }
     }
@@ -108,13 +108,14 @@ open class DebugProxyServerObserver : Observer<ProxyServerEvent>() {
     override fun signal(event: ProxyServerEvent) {
         val message = event.toString()
         when (event) {
-            ProxyServerEvent.STARTED,
-            ProxyServerEvent.STOPPED ->
+            is ProxyServerEvent.Started,
+            is ProxyServerEvent.Stopped ->
                 logger.info(message)
-            ProxyServerEvent.NEW_SOCKET_ACCEPTED,
-            ProxyServerEvent.TUNNEL_CLOSED ->
+            is ProxyServerEvent.NewSocketAccepted,
+            is ProxyServerEvent.TunnelClosed ->
                 logger.debug(message) // VERBOSE -> debug
-            // else -> logger.trace(message) // No original DEBUG cases
+            else -> // Ensure 'when' is exhaustive
+                logger.trace(message)
         }
     }
 }
@@ -124,11 +125,12 @@ open class DebugRuleManagerObserver : Observer<RuleMatchEvent>() {
     override fun signal(event: RuleMatchEvent) {
         val message = event.toString()
         when (event) {
-            RuleMatchEvent.RULE_DID_NOT_MATCH, RuleMatchEvent.DNS_RULE_MATCHED ->
+            is RuleMatchEvent.RuleDidNotMatch, is RuleMatchEvent.DnsRuleMatched ->
                 logger.debug(message) // VERBOSE -> debug
-            RuleMatchEvent.RULE_MATCHED ->
+            is RuleMatchEvent.RuleMatched ->
                 logger.info(message)
-            // else -> logger.trace(message) // No original DEBUG cases
+            else -> // Ensure 'when' is exhaustive
+                logger.trace(message)
         }
     }
 }

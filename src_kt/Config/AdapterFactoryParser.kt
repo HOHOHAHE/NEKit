@@ -79,8 +79,8 @@ object AdapterFactoryParser {
 
             factoryDict[id] = when (type) {
                 "speed" -> parseSpeedAdapterFactory(adapterConfig, factoryDict)
-                "http" -> parseServerAdapterFactory(adapterConfig, HTTPAdapterFactory())
-                "shttp" -> parseServerAdapterFactory(adapterConfig, SecureHTTPAdapterFactory())
+                "http" -> parseServerAdapterFactory(adapterConfig) { h, p, a -> HTTPAdapterFactory(h, p, a) }
+                "shttp" -> parseServerAdapterFactory(adapterConfig) { h, p, a -> SecureHTTPAdapterFactory(h, p, a) }
                 "ss" -> parseShadowsocksAdapterFactory(adapterConfig)
                 "socks5" -> parseSOCKS5AdapterFactory(adapterConfig)
                 "reject" -> parseRejectAdapterFactory(adapterConfig)
@@ -92,8 +92,8 @@ object AdapterFactoryParser {
 
     @Throws(ConfigurationException::class)
     private fun parseServerAdapterFactory(
-        config: JsonNode, // Changed to JsonNode
-        type: HTTPAuthenticationAdapterFactory
+        config: JsonNode,
+        factoryCreator: (String, Int, com.example.nekit.Utils.HTTPAuthentication?) -> ServerAdapterFactory
     ): ServerAdapterFactory {
         val id = config.getOptString("id") // For error messages
         val host = config.getReqString("host", adapterId = id)
@@ -105,7 +105,7 @@ object AdapterFactoryParser {
             val password = config.getReqStringOrIntString("password", adapterId = id)
             authentication = HTTPAuthentication(username, password)
         }
-        return type
+        return factoryCreator(host, port, authentication)
     }
 
     @Throws(ConfigurationException::class)

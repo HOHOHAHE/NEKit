@@ -32,26 +32,23 @@ import com.example.nekit.Messages.EventSource
  */
 @Suppress(" इसको ") // Suppress ' इसको ' for 'var _status' if linter has issues with underscore
 open class AdapterSocket(
-    override var rawSocket: RawTCPSocketProtocol?, // Made var and nullable, subclasses might set it up. Or pass in constructor.
-                                                 // Let's make it a constructor param for clarity that subclasses provide it.
     observe: Boolean = true
 ) : SocketProtocol, RawTCPSocketDelegate {
 
-    private val logger = LoggerFactory.getLogger(this::class.java) // Logger for specific subclass instance
+    // Removed direct rawSocket property from primary constructor.
+    // It will be managed internally.
+    protected var _rawSocket: com.example.nekit.RawSocket.RawTCPSocketProtocol? = null
 
-    // To be more robust, subclasses should provide the rawSocket in their constructor.
-    // constructor(initialRawSocket: RawTCPSocketProtocol, observe: Boolean = true) : this(observe) {
-    //     this.rawSocket = initialRawSocket
-    // }
-    // For now, let's assume it can be null initially and set by openSocketWith or subclasses before use.
-    // If openSocketWith requires it, then it must be non-null by then.
-    // The Swift code `socket?.delegate = self` in openSocketWith means it expects socket to be there.
-    // Let's make it a lateinit var that subclasses must initialize or openSocketWith must handle.
-    // Given subclasses like DirectAdapter create it, lateinit is appropriate.
-    // However, to match `override var rawSocket` from interface, it needs to be settable or constructor arg.
-    // The interface made it `val rawSocket: RawTCPSocketProtocol?`. Let's stick to that.
-    // This means subclasses should initialize it. The base class can't guarantee non-null without it.
-    // For now, making it nullable as per interface. Subclasses will make it non-null.
+    // Override the rawSocket property from SocketProtocol interface.
+    override val rawSocket: com.example.nekit.RawSocket.RawTCPSocketProtocol?
+        get() = _rawSocket
+
+    private val logger = LoggerFactory.getLogger(this::class.java)
+
+    // Secondary constructor to allow subclasses to provide an initial RawTCPSocketProtocol.
+    constructor(initialRawSocket: com.example.nekit.RawSocket.RawTCPSocketProtocol, observe: Boolean = true) : this(observe) {
+        this._rawSocket = initialRawSocket
+    }
 
     lateinit var session: ConnectSession
         protected set // Can be set by openSocketWith, read by anyone.
@@ -106,17 +103,17 @@ open class AdapterSocket(
         // Assuming AdapterSocketEvent.kt is available
         observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
 
-        val currentRawSocket = rawSocket ?: run {
-            // This case should ideally not happen if subclasses correctly initialize rawSocket.
-            // Or, if this base class was responsible for creating a default rawSocket.
-            logger.error("rawSocket is null in openSocketWith for session: {}. Cannot proceed.", session)
-            _status = SocketStatus.CLOSED // Mark as closed/failed
-            delegate?.get()?.didDisconnect(this) // Notify delegate
+        // Ensure _rawSocket is set before proceeding.
+        // It must be set by a secondary constructor or a subclass's init block/method.
+        val currentRawSocket = _rawSocket ?: run {
+            logger.error("Internal rawSocket is null in openSocketWith for session: {}. Cannot proceed.", session)
+            _status = com.example.nekit.Socket.SocketStatus.CLOSED
+            delegate?.get()?.didDisconnect(this)
             return
         }
 
         currentRawSocket.delegate = WeakReference(this) // AdapterSocket itself is the delegate for its rawSocket
-        _status = SocketStatus.CONNECTING
+        _status = com.example.nekit.Socket.SocketStatus.CONNECTING
         // The actual connection attempt (e.g., rawSocket.connectTo(...)) is the responsibility of the subclass's
         // override of openSocketWith, typically after calling super.openSocketWith().
     }
@@ -127,41 +124,39 @@ open class AdapterSocket(
         rawSocket?.readData()
     }
 
-    override fun write(data: ByteArray) {
+    override suspend fun write(data: ByteArray) { // Made suspend
         if (isCancelled) return
-        // TODO: Consider making RawTCPSocketProtocol.write suspend and call it in a coroutine.
-        // For now, direct call as per original SocketProtocol interface.
-        rawSocket?.write(data)
+        rawSocket?.write(data) ?: throw IOException("Raw socket not initialized or cancelled, cannot write.")
     }
 
     override fun disconnect(becauseOf: Throwable?) {
-        if (_status == SocketStatus.CLOSED || _status == SocketStatus.DISCONNECTING) return
+        if (_status == com.example.nekit.Socket.SocketStatus.CLOSED || _status == com.example.nekit.Socket.SocketStatus.DISCONNECTING) return
 
-        _status = SocketStatus.DISCONNECTING
+        _status = com.example.nekit.Socket.SocketStatus.DISCONNECTING
         _cancelled = true // Mark as cancelled by local action
-        if (::_session.isInitialized) { // Check if session was initialized
-            session.disconnected(becauseOf = becauseOf, by = EventSource.ADAPTER)
+        if (this::session.isInitialized) { // Check if session was initialized
+            session.disconnected(becauseOf = becauseOf, by = com.example.nekit.Messages.EventSource.ADAPTER)
         }
-        observer?.signal(AdapterSocketEvent.DisconnectCalled(this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.DisconnectCalled(this))
         rawSocket?.disconnect() // Graceful disconnect of underlying raw socket
     }
 
     override fun forceDisconnect(becauseOf: Throwable?) {
-         if (_status == SocketStatus.CLOSED && _cancelled) return // Already hard closed and cancelled
+         if (_status == com.example.nekit.Socket.SocketStatus.CLOSED && _cancelled) return // Already hard closed and cancelled
 
-        _status = SocketStatus.DISCONNECTING // Intermediate state before CLOSED
+        _status = com.example.nekit.Socket.SocketStatus.DISCONNECTING // Intermediate state before CLOSED
         _cancelled = true
-        if (::_session.isInitialized) {
-            session.disconnected(becauseOf = becauseOf, by = EventSource.ADAPTER)
+        if (this::session.isInitialized) {
+            session.disconnected(becauseOf = becauseOf, by = com.example.nekit.Messages.EventSource.ADAPTER)
         }
-        observer?.signal(AdapterSocketEvent.ForceDisconnectCalled(this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.ForceDisconnectCalled(this))
         rawSocket?.forceDisconnect()
         // If rawSocket?.forceDisconnect() does not synchronously call didDisconnectWith,
         // we might need to manually set status to .CLOSED and call delegate here.
         // However, usually forceDisconnect should lead to didDisconnectWith callback.
         // For safety, if it's truly immediate and might not callback if already somewhat disconnected:
-        if (rawSocket?.isConnected == false && _status != SocketStatus.CLOSED) {
-             _status = SocketStatus.CLOSED
+        if (rawSocket?.isConnected == false && _status != com.example.nekit.Socket.SocketStatus.CLOSED) {
+             _status = com.example.nekit.Socket.SocketStatus.CLOSED
              delegate?.get()?.didDisconnect(this)
         }
     }
@@ -169,38 +164,38 @@ open class AdapterSocket(
     // MARK: RawTCPSocketDelegate Implementation
     // These methods are called by the underlying rawSocket.
 
-    override fun didDisconnect(socket: RawTCPSocketProtocol) { // Renamed from didDisconnectWith for clarity
-        _status = SocketStatus.CLOSED
+    override fun didDisconnect(socket: com.example.nekit.RawSocket.RawTCPSocketProtocol) { // Renamed from didDisconnectWith for clarity
+        _status = com.example.nekit.Socket.SocketStatus.CLOSED
         _cancelled = true // Ensure cancelled is true if disconnected for any reason
-        observer?.signal(AdapterSocketEvent.Disconnected(this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.Disconnected(this))
         val currentDelegate = delegate?.get()
         delegate = null // Clear delegate to break potential cycles and prevent further calls
         currentDelegate?.didDisconnect(this) // Notify our own delegate
     }
 
-    override fun didRead(data: ByteArray, from: RawTCPSocketProtocol) {
+    override fun didRead(data: ByteArray, from: com.example.nekit.RawSocket.RawTCPSocketProtocol) {
         // Base AdapterSocket signals an event. Subclasses decide if/how to pass data to SocketDelegate.
-        observer?.signal(AdapterSocketEvent.ReadData(data, this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.ReadData(data, this))
         // Typically, a subclass would process this data (e.g., decrypt, parse protocol)
         // and then call `this.delegate?.didRead(processedData, this)`
     }
 
-    override fun didWrite(data: ByteArray?, by: RawTCPSocketProtocol) {
+    override fun didWrite(data: ByteArray?, by: com.example.nekit.RawSocket.RawTCPSocketProtocol) {
         // Base AdapterSocket signals an event. Subclasses decide if/how to notify SocketDelegate.
-        observer?.signal(AdapterSocketEvent.WroteData(data, this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.WroteData(data, this))
         // `this.delegate?.didWrite(data, this)` could be called here if appropriate for all adapters.
     }
 
-    override fun didConnect(socket: RawTCPSocketProtocol) { // Renamed from didConnectWith
-        _status = SocketStatus.ESTABLISHED
-        observer?.signal(AdapterSocketEvent.Connected(this))
+    override fun didConnect(socket: com.example.nekit.RawSocket.RawTCPSocketProtocol) { // Renamed from didConnectWith
+        _status = com.example.nekit.Socket.SocketStatus.ESTABLISHED
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.Connected(this))
         delegate?.get()?.didConnect(this) // Pass `self` (the AdapterSocket) not the raw socket
     }
 
-    override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
+    override fun didErrorOccur(error: Throwable, on: com.example.nekit.RawSocket.RawTCPSocketProtocol) {
         // Added to RawTCPSocketDelegate for better error propagation
         logger.error("Raw socket error on {}: {}", on, error.message, error)
-        observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this))
+        observer?.signal(com.example.nekit.Event.Event.AdapterSocketEvent.ErrorOccurred(error, this))
         // Decide if this error should lead to disconnection
         // this.delegate?.didErrorOccur(error, this) // If SocketDelegate also has didErrorOccur
         forceDisconnect(becauseOf = error) // Often, raw socket errors are fatal

@@ -1,11 +1,11 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory
 
-import Messages.ConnectSession
-import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.SpeedAdapter
-import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.AdapterSocket.SpeedAdapter
+import com.example.nekit.RawSocket.RawSocketFactory
 
 
 /**
@@ -26,7 +26,7 @@ open class SpeedAdapterFactory : AdapterFactory() {
      * Default constructor.
      * The `adapterFactories` list should be set before calling `getAdapterFor`.
      */
-    override constructor() : super()
+    constructor() : super()
 
     /**
      * Creates and returns a [SpeedAdapter].
@@ -72,7 +72,7 @@ open class SpeedAdapterFactory : AdapterFactory() {
     // This is a common pattern in Swift where `Type` objects are passed around.
     // In Kotlin, we pass the class directly or a lambda that constructs it.
     // Here, it's a factory method on the factory itself.
-    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+    open fun create(serverHost: String, serverPort: Int, auth: com.example.nekit.Utils.HTTPAuthentication?): com.example.nekit.Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory {
         return SpeedAdapterFactory()
     }
 }

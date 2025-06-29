@@ -9,6 +9,8 @@ import java.io.IOException // Added import for exception
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.Socket.SocketDelegate
 import com.example.nekit.Event.Event.AdapterSocketEvent
 
 /**
@@ -16,7 +18,7 @@ import com.example.nekit.Event.Event.AdapterSocketEvent
  * potentially with delays, and uses the first one that becomes ready for forwarding.
  * It then delegates communication to this chosen adapter.
  */
-class SpeedAdapter : AdapterSocket(initialRawSocket = null /* SpeedAdapter orchestrates, doesn't use its own rawSocket directly for I/O */), SocketDelegate {
+class SpeedAdapter : AdapterSocket(), SocketDelegate {
 
     private val speedAdapterLogger = LoggerFactory.getLogger(SpeedAdapter::class.java)
 

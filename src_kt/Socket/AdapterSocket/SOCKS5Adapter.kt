@@ -1,4 +1,4 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,15 +10,15 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory // Added import
 
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import RawSocket.RawSocketFactory // Corrected import
-import Messages.ConnectSession // Corrected import
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import Socket.SocketStatus // Corrected import
-import Event.Event.AdapterSocketEvent // Corrected import
-import Messages.EventSource // Corrected import
-import Event.ObserverFactory // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.Socket.SocketStatus // Corrected import
+import com.example.nekit.Event.Event.AdapterSocketEvent
+import com.example.nekit.Messages.EventSource
+import com.example.nekit.Event.ObserverFactory
 
 // --- SOCKS5 Constants ---
 private const val SOCKS_VERSION_5: Byte = 0x05

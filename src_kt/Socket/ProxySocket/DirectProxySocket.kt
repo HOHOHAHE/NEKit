@@ -1,12 +1,14 @@
-import org.slf4j.LoggerFactory // Added import
+package com.example.nekit.Socket.ProxySocket
 
-import Messages.ConnectSession // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Socket.SocketDelegate // Corrected import
-import Event.Event.ProxySocketEvent // Corrected import
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
+import org.slf4j.LoggerFactory
+
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.SocketDelegate
+import com.example.nekit.Event.Event.ProxySocketEvent
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 /**
  * This ProxySocket implementation forwards data directly.

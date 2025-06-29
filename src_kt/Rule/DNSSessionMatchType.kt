@@ -1,3 +1,5 @@
+package com.example.nekit.Rule
+
 /**
  * Specifies the type of information available for DNS session matching.
  * This helps determine the stage of matching, as IP information might only be

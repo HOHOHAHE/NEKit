@@ -1,9 +1,9 @@
-package Utils
+package com.example.nekit.Utils
 
-import Utils.IPAddress
-import Utils.IPInterval
-import Utils.IPMask
-import Utils.UInt128
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.IPInterval
+import com.example.nekit.Utils.IPMask
+import com.example.nekit.Utils.UInt128
 
 
 

@@ -1,16 +1,16 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory
 
-import Messages.ConnectSession
-import RawSocket.RawSocketFactory
-import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.Shadowsocks.ProtocolObfuscater
-import Socket.AdapterSocket.Shadowsocks.CryptoStreamProcessor
-import Socket.AdapterSocket.Shadowsocks.StreamObfuscater
-import Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested // Import the nested object
-import Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapter // Import the actual adapter
-import Crypto.CryptoAlgorithm // Assuming CryptoAlgorithm is in Crypto package
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ProtocolObfuscater
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.CryptoStreamProcessor
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.StreamObfuscater
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapter
+import com.example.nekit.Crypto.CryptoAlgorithm
 
 
 /**
@@ -33,12 +33,12 @@ open class ShadowsocksAdapterFactory(
      * @param session The connect session for which the adapter is being created.
      * @return A new [ShadowsocksAdapter] instance.
      */
-    override fun getAdapterFor(session: ConnectSession): AdapterSocket {
+    override fun getAdapterFor(session: com.example.nekit.Messages.ConnectSession): com.example.nekit.Socket.AdapterSocket.AdapterSocket {
         val protocolObfuscater = protocolObfuscaterFactory.build()
         val cryptor = cryptorFactory.build()
         val streamObfuscator = streamObfuscaterFactory.build(forSession = session) // Pass session if needed by factory
 
-        val rawSocket = RawSocketFactory.getRawSocket()
+        val rawSocket = com.example.nekit.RawSocket.RawSocketFactory.getRawSocket()
 
         return ShadowsocksAdapter(
             serverHost = this.serverHost,

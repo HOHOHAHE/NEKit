@@ -1,4 +1,4 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory // Added import
 
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory // Added import
 open class HTTPAuthenticationAdapterFactory(
     serverHost: String,
     serverPort: Int,
-    val auth: Utils.HTTPAuthentication? // Corrected import
+    val auth: com.example.nekit.Utils.HTTPAuthentication?
 ) : ServerAdapterFactory(serverHost, serverPort) {
 
     // The primary logic of this factory would be in an overridden `getAdapterFor` method,
@@ -68,7 +68,7 @@ open class HTTPAuthenticationAdapterFactory(
     // This is a common pattern in Swift where `Type` objects are passed around.
     // In Kotlin, we pass the class directly or a lambda that constructs it.
     // Here, it's a factory method on the factory itself.
-    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+    open fun create(serverHost: String, serverPort: Int, auth: com.example.nekit.Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
         return HTTPAuthenticationAdapterFactory(serverHost, serverPort, auth)
     }
 }

@@ -1,5 +1,7 @@
 
-import Messages.ConnectSession
+package com.example.nekit
+
+import com.example.nekit.Messages.ConnectSession
 
 /**
  * Factory object for creating or providing ResponseGenerator instances.

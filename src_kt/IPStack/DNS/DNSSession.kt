@@ -1,15 +1,15 @@
-package IPStack.DNS
+package com.example.nekit.IPStack.DNS
 
-import Messages.ConnectSession
+import com.example.nekit.Messages.ConnectSession
 import org.slf4j.LoggerFactory
-import IPStack.Packet.IPPacket
-import IPStack.Packet.UDPProtocolParser // For parsing UDP payload
-import Utils.IPAddress
-import Rule.Rule // For matchedRule
-import Rule.DNSSessionMatchResultType // For matchResult
-import IPStack.DNS.DNSEnums.DNSType
-import IPStack.DNS.DNSEnums.DNSMessage
-import IPStack.DNS.DNSEnums.DNSQuery
+import com.example.nekit.IPStack.Packet.IPPacket
+import com.example.nekit.IPStack.Packet.UDPProtocolParser
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Rule.Rule
+import com.example.nekit.Rule.DNSSessionMatchResultType
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSType
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessage
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSQuery
 
 /**
  * Represents a DNS session, encapsulating the request, response, and associated metadata.

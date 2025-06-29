@@ -1,13 +1,13 @@
-package IPStack
+package com.example.nekit.IPStack
 import kotlinx.coroutines.*
 import java.util.concurrent.ConcurrentHashMap // For thread-safe NAT table
 
 import org.slf4j.LoggerFactory
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import IPStack.Packet.IPMutablePacket // Corrected import
-import IPStack.Packet.TCPMutablePacket // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.IPStack.Packet.IPMutablePacket // Corrected import
+import com.example.nekit.IPStack.Packet.TCPMutablePacket // Corrected import
 // IPVersion.kt, TransportProtocol.kt are available.
 // TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
 

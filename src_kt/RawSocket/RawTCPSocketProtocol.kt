@@ -1,8 +1,8 @@
-package RawSocket
+package com.example.nekit.RawSocket
 import java.lang.ref.WeakReference
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 /**
  * Delegate protocol to handle events from a RawTCPSocketProtocol instance.

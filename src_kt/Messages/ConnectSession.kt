@@ -1,15 +1,15 @@
-package Messages
+package com.example.nekit.Messages
 
 import java.net.InetAddress
 import java.net.UnknownHostException
 
 import org.slf4j.LoggerFactory
 
-import Utils.IPAddress
-import Utils.Port
-import IPStack.DNS.DNSServer
-import Rule.Rule
-import GeoIP.GeoIP
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.IPStack.DNS.DNSServer
+import com.example.nekit.Rule.Rule
+import com.example.nekit.GeoIP.GeoIP
 
 // Enum for event source, as defined in Swift
 

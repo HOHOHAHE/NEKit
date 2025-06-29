@@ -1,18 +1,18 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import java.lang.ref.WeakReference
 
 import org.slf4j.LoggerFactory
 
-import Socket.SocketProtocol // Corrected import
-import Socket.SocketDelegate // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import RawSocket.RawTCPSocketDelegate // Corrected import
-import Messages.ConnectSession // Corrected import
-import Event.Observer // Corrected import
-import Event.ObserverFactory // Corrected import
-import Socket.SocketStatus // Corrected import
+import com.example.nekit.Socket.SocketProtocol // Corrected import
+import com.example.nekit.Socket.SocketDelegate // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawTCPSocketDelegate
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Event.Observer
+import com.example.nekit.Event.ObserverFactory
+import com.example.nekit.Socket.SocketStatus // Corrected import
 import Event.Event.AdapterSocketEvent // Corrected import
-import Messages.EventSource // Corrected import
+import com.example.nekit.Messages.EventSource
 
 // --- Ensure EventSource is available for ConnectSession.disconnected ---
 // enum class EventSource { PROXY, ADAPTER, TUNNEL } // From ConnectSession.kt context

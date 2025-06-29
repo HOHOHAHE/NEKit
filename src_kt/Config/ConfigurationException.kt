@@ -1,4 +1,4 @@
-package Config
+package com.example.nekit.Config
 
 import java.io.IOException
 

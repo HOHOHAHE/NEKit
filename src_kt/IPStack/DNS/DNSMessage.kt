@@ -1,3 +1,5 @@
+package com.example.nekit.IPStack.DNS
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.random.Random

@@ -1,4 +1,4 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
@@ -6,11 +6,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import org.slf4j.LoggerFactory
 import java.io.IOException // Added import for exception
 
-// Assuming AdapterSocket.kt, SocketDelegate.kt, RawTCPSocketProtocol.kt, ConnectSession.kt,
-// QueueFactory.kt (placeholders), IPAddress.kt, Port.kt, SocketStatus.kt, AdapterSocketEvent.kt are available.
-
-// Assuming AdapterSocket.kt, SocketDelegate.kt, RawTCPSocketProtocol.kt, ConnectSession.kt,
-// QueueFactory.kt (placeholders), IPAddress.kt, Port.kt, SocketStatus.kt, AdapterSocketEvent.kt are available.
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Event.Event.AdapterSocketEvent
 
 /**
  * Adapter that attempts to connect through multiple underlying [AdapterSocket]s,

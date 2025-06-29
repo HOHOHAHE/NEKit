@@ -1,14 +1,14 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import kotlinx.coroutines.*
 import kotlinx.coroutines.cancel // Added for managed scope
 import java.io.IOException // For creating an error object if needed
 import org.slf4j.LoggerFactory
 
-import Messages.ConnectSession // Corrected import
-import Tunnel.QueueFactory // Corrected import
-import Socket.SocketStatus // Corrected import
-import Event.Event.AdapterSocketEvent // Corrected import
-import Messages.EventSource // Corrected import
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Tunnel.QueueFactory
+import com.example.nekit.Socket.SocketStatus // Corrected import
+import com.example.nekit.Event.Event.AdapterSocketEvent
+import com.example.nekit.Messages.EventSource
 
 /**
  * Adapter that simulates a connection rejection after a specified delay.

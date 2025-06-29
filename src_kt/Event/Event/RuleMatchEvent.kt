@@ -1,10 +1,10 @@
-package Event.Event
-import Event.EventType // Corrected import
-import Messages.ConnectSession // Corrected import
-import Rule.Rule // Corrected import
-import IPStack.DNS.DNSSession // Corrected import
-import Rule.DNSSessionMatchType // Corrected import
-import Rule.DNSSessionMatchResult // Corrected import
+package com.example.nekit.Event.Event
+import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Rule.Rule
+import com.example.nekit.IPStack.DNS.DNSSession
+import com.example.nekit.Rule.DNSSessionMatchType
+import com.example.nekit.Rule.DNSSessionMatchResult
 
 
 sealed class RuleMatchEvent : EventType {

@@ -1,3 +1,5 @@
+package com.example.nekit.Socket.ProxySocket
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
@@ -11,13 +13,13 @@ import java.io.ByteArrayOutputStream // Added missing import
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
 
-import Messages.ConnectSession // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Socket.SocketDelegate // Corrected import
-import Event.Event.ProxySocketEvent // Corrected import
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.SocketDelegate
+import com.example.nekit.Event.Event.ProxySocketEvent
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 // Also IPAddress.kt, Port.kt (Utils).
 
 // --- SOCKS5 Constants (already defined in SOCKS5Adapter.kt, ensure consistency or move to common place) ---

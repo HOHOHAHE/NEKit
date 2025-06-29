@@ -1,5 +1,5 @@
-package Event
-import Event.EventType // Corrected import
+package com.example.nekit.Event
+import com.example.nekit.Event.EventType // Corrected import
 
 
 /**

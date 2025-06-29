@@ -1,7 +1,8 @@
-// Assuming Rule.kt, DNSSession.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available.
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
+package com.example.nekit.Rule
+
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
 
 // --- Ensure DNSSession placeholder has `realIP: IPAddress?` ---
 // From DNSServer.kt context, it should.

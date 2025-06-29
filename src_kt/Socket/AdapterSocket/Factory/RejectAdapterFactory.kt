@@ -1,4 +1,4 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,7 +99,7 @@ open class RejectAdapter(val delayMs: Int) : Socket.AdapterSocket.AdapterSocket(
  * @property delay The delay in milliseconds before the connection is "rejected".
  */
 open class RejectAdapterFactory(
-    val delay: Int = Opts.Opt.REJECT_ADAPTER_DEFAULT_DELAY // From Opt.kt
+    val delay: Int = com.example.nekit.Opt.REJECT_ADAPTER_DEFAULT_DELAY
 ) : AdapterFactory() {
 
     /**
@@ -109,7 +109,7 @@ open class RejectAdapterFactory(
      * @param session The connect session for which the adapter is being created.
      * @return A new [RejectAdapter] instance.
      */
-    override fun getAdapterFor(session: Messages.ConnectSession): Socket.AdapterSocket.AdapterSocket {
+    override fun getAdapterFor(session: com.example.nekit.Messages.ConnectSession): com.example.nekit.Socket.AdapterSocket.AdapterSocket {
         return RejectAdapter(delay)
     }
 
@@ -118,7 +118,7 @@ open class RejectAdapterFactory(
     // This is a common pattern in Swift where `Type` objects are passed around.
     // In Kotlin, we pass the class directly or a lambda that constructs it.
     // Here, it's a factory method on the factory itself.
-    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+    open fun create(serverHost: String, serverPort: Int, auth: com.example.nekit.Utils.HTTPAuthentication?): com.example.nekit.Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory {
         return RejectAdapterFactory(delay)
     }
 }

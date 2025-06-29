@@ -1,10 +1,10 @@
-package Messages
+package com.example.nekit.Messages
 
 import java.net.MalformedURLException
 import java.net.URI // Using URI for more robust path/host/port parsing than URL for arbitrary strings
 import java.nio.charset.StandardCharsets
 
-import Utils.HTTPURL // Corrected import
+import com.example.nekit.Utils.HTTPURL
 
 // --- HTTPHeaderException Definitions ---
 sealed class HTTPHeaderParseException(message: String) : Exception(message) {

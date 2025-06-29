@@ -1,16 +1,16 @@
-package Event
-import Event.Observer // Corrected import
-import Event.EventType // Corrected import
-import Tunnel.Tunnel // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Socket.ProxySocket.ProxySocket // Corrected import
-import ProxyServer.ProxyServer // Corrected import
-import Rule.RuleManager // Corrected import
-import Event.Event.TunnelEvent // Corrected import
-import Event.Event.AdapterSocketEvent // Corrected import
-import Event.Event.ProxySocketEvent // Corrected import
-import Event.Event.ProxyServerEvent // Corrected import
-import Event.Event.RuleMatchEvent // Corrected import
+package com.example.nekit.Event
+import com.example.nekit.Event.Observer // Corrected import
+import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Tunnel.Tunnel
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.ProxyServer.ProxyServer
+import com.example.nekit.Rule.RuleManager
+import com.example.nekit.Event.Event.TunnelEvent // Corrected import
+import com.example.nekit.Event.Event.AdapterSocketEvent // Corrected import
+import com.example.nekit.Event.Event.ProxySocketEvent // Corrected import
+import com.example.nekit.Event.Event.ProxyServerEvent // Corrected import
+import com.example.nekit.Event.Event.RuleMatchEvent // Corrected import
 
 
 /**

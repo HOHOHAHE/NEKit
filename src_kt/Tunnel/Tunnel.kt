@@ -1,3 +1,5 @@
+package com.example.nekit.Tunnel
+
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
@@ -5,18 +7,18 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.io.IOException // Added missing import
 import org.slf4j.LoggerFactory // Added import
 
-import Socket.SocketProtocol // Corrected import
-import Socket.SocketDelegate // Corrected import
-import Socket.ProxySocket.ProxySocket // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Messages.ConnectSession // Corrected import
-import Rule.RuleManager // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Event.Event.TunnelEvent // Corrected import
-import Event.Observer // Corrected import
-import Event.ObserverFactory // Corrected import
-import Tunnel.QueueFactory // Corrected import
-import Opts.Opt // Corrected import
+import com.example.nekit.Socket.SocketProtocol
+import com.example.nekit.Socket.SocketDelegate
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Rule.RuleManager
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import com.example.nekit.Event.Event.TunnelEvent
+import com.example.nekit.Event.Observer
+import com.example.nekit.Event.ObserverFactory
+import com.example.nekit.Tunnel.QueueFactory // Corrected import
+import com.example.nekit.Opt
 
 interface TunnelDelegate {
     fun tunnelDidClose(tunnel: Tunnel)

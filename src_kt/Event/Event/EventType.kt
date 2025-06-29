@@ -1,3 +1,5 @@
+package com.example.nekit.Event.Event
+
 /**
  * Base interface for all event types.
  *

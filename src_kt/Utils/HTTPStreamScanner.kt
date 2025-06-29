@@ -1,9 +1,9 @@
-package Utils
+package com.example.nekit.Utils
 
 import org.slf4j.LoggerFactory
-import Messages.HTTPHeader // Corrected import
-import Messages.HTTPHeaderParseException // Corrected import
-import Opt // Corrected import
+import com.example.nekit.Messages.HTTPHeader
+import com.example.nekit.Messages.HTTPHeaderParseException
+import com.example.nekit.Opt
 
 
 sealed class ReadAction {

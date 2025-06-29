@@ -1,4 +1,4 @@
-package ProxyServer
+package com.example.nekit.ProxyServer
 import kotlinx.coroutines.*
 // import kotlinx.coroutines.sync.Mutex // No longer needed if Netty handles thread safety for start/stop
 // import kotlinx.coroutines.sync.withLock // No longer needed
@@ -31,12 +31,12 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
 // Assuming RawTCPSocketProtocol.kt (from RawSocket module) is available for NettyAcceptedRawSocketAdapter.
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import Tunnel.QueueFactory // Corrected import
-import RawSocket.NettyAcceptedRawSocketAdapter // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import Socket.SocketProtocol.KotlinAcceptedSocketInterface // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.Tunnel.QueueFactory
+import com.example.nekit.RawSocket.NettyAcceptedRawSocketAdapter
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Socket.SocketProtocol.KotlinAcceptedSocketInterface
 
 /**
  * Base class for proxy servers that listen on a TCP port.

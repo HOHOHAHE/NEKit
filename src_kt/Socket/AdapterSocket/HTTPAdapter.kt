@@ -1,4 +1,4 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -8,16 +8,16 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import org.slf4j.LoggerFactory
 
-import Utils.HTTPConstants // Corrected import for HTTPConstants
-import RawSocket.RawTCPSocketProtocol // Assuming this is the correct import for RawTCPSocketProtocol
-import Messages.ConnectSession
-import Utils.HTTPAuthentication
-import RawSocket.RawSocketFactory
-import Socket.SocketStatus
-import Event.Event.AdapterSocketEvent
-import Messages.EventSource // Corrected import
-import Event.ObserverFactory // Corrected import
-import Utils.HTTPURL // Corrected import
+import com.example.nekit.Utils.HTTPConstants
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Utils.HTTPAuthentication
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Socket.SocketStatus
+import com.example.nekit.Event.Event.AdapterSocketEvent
+import com.example.nekit.Messages.EventSource
+import com.example.nekit.Event.ObserverFactory
+import com.example.nekit.Utils.HTTPURL
 
 /**
  * Adapter for connecting to a remote host through an HTTP proxy using the CONNECT method.

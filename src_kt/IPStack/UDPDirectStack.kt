@@ -1,4 +1,4 @@
-package IPStack
+package com.example.nekit.IPStack
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -10,12 +10,12 @@ import org.slf4j.LoggerFactory
 // Assuming KotlinUDPSocket.kt, KotlinUDPSocketDelegate.kt (from DNSResolver context) are available.
 // Assuming ConnectSession.kt (placeholder) is available.
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import RawSocket.RawUDPSocketProtocol // Corrected import
-import RawSocket.RawUDPSocketDelegate // Corrected import
-import RawSocket.NettyRawUDPSocket // Corrected import
-import Messages.ConnectSession // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.RawSocket.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.NettyRawUDPSocket
+import com.example.nekit.Messages.ConnectSession
 
 data class ConnectInfo(
     val sourceAddress: IPAddress,

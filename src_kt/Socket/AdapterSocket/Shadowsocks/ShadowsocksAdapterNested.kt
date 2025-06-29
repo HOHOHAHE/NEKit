@@ -1,8 +1,8 @@
-package Socket.AdapterSocket.Shadowsocks
+package com.example.nekit.Socket.AdapterSocket.Shadowsocks
 
 import org.slf4j.LoggerFactory
-import Messages.ConnectSession
-import Crypto.CryptoAlgorithm // Assuming this enum is correctly defined in Crypto package
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Crypto.CryptoAlgorithm
 
 /**
  * Companion object for ShadowsocksAdapter to hold nested factory interfaces (mimicking Swift's nested types).

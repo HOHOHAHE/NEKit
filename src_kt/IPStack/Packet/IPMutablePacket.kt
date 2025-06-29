@@ -1,10 +1,12 @@
+package com.example.nekit.IPStack.Packet
+
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 // Assuming IPAddress.kt from Utils is available and handles IPv4.
 
-import IPStack.Packet.IPVersion
-import IPStack.Packet.TransportProtocol
+import com.example.nekit.IPStack.Packet.IPVersion
+import com.example.nekit.IPStack.Packet.TransportProtocol
 
 // Enum for type of change affecting checksum
 internal enum class ChecksumChangeType {

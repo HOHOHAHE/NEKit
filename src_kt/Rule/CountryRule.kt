@@ -1,7 +1,8 @@
-// Assuming Rule.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available in this package.
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
+package com.example.nekit.Rule
+
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
 // Assuming DNSSession.kt placeholder will be updated or defined to include countryCode.
 
 // --- Refined Placeholder for DNSSession if not already updated ---

@@ -1,7 +1,7 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
-import Messages.ConnectSession
-import Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import org.slf4j.LoggerFactory // Added import
 
 /**

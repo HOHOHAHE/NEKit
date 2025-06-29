@@ -1,8 +1,8 @@
-package Event.Event
-import Event.EventType // Corrected import
-import Socket.ProxySocket.ProxySocket // Corrected import
-import ProxyServer.ProxyServer // Corrected import
-import Tunnel.Tunnel // Corrected import
+package com.example.nekit.Event.Event
+import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.ProxyServer.ProxyServer
+import com.example.nekit.Tunnel.Tunnel
 
 
 sealed class ProxyServerEvent : EventType {

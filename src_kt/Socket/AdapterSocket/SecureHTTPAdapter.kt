@@ -1,7 +1,7 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 import org.slf4j.LoggerFactory // Added import
 
-import Socket.AdapterSocket.HTTPAdapter // Corrected import
+import com.example.nekit.Socket.AdapterSocket.HTTPAdapter // Corrected import
 // Assuming HTTPAuthentication.kt (Utils) and RawSocketFactory.kt (RawSocket) are available
 // for the superclass constructor's default arguments if used.
 

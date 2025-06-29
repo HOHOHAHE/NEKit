@@ -1,3 +1,5 @@
+package com.example.nekit.IPStack.DNS
+
 /**
  * DNS Record Types (QTYPE values).
  * Reference: IANA DNS Parameters: https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml#dns-parameters-4

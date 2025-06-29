@@ -1,4 +1,4 @@
-package ProxyServer
+package com.example.nekit.ProxyServer
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch // Added missing import
@@ -7,11 +7,11 @@ import org.slf4j.LoggerFactory
 // Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import Socket.ProxySocket.HTTPProxySocket // Corrected import
-import Socket.SocketProtocol.KotlinAcceptedSocketInterface // Corrected import
-import Socket.SocketProtocol.ProxySocketInterface // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
+import com.example.nekit.Socket.SocketProtocol.KotlinAcceptedSocketInterface
+import com.example.nekit.Socket.SocketProtocol.ProxySocketInterface
 
 
 /**

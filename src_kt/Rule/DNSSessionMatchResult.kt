@@ -1,3 +1,5 @@
+package com.example.nekit.Rule
+
 /**
  * Represents the result of matching a DNS request against a rule.
  */

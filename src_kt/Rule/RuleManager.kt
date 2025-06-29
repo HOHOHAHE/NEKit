@@ -1,15 +1,15 @@
-package Rule
+package com.example.nekit.Rule
 
 // Assuming Rule.kt and all concrete rule implementations are available.
 // Assuming DNSSession.kt, ConnectSession.kt, AdapterFactory.kt, Observer.kt, RuleMatchEvent.kt, ObserverFactory.kt
 // and related enums (DNSSessionMatchType, DNSSessionMatchResult) are available.
 
-import IPStack.DNS.DNSSession // Corrected import
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Event.Observer // Corrected import
-import Event.Event.RuleMatchEvent // Corrected import
-import Event.ObserverFactory // Corrected import
+import com.example.nekit.IPStack.DNS.DNSSession
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import com.example.nekit.Event.Observer
+import com.example.nekit.Event.Event.RuleMatchEvent
+import com.example.nekit.Event.ObserverFactory
 
 
 /**

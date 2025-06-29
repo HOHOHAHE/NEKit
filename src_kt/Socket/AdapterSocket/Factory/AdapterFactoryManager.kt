@@ -1,4 +1,4 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 // Assuming AdapterFactory.kt and DirectAdapterFactory.kt are available.
 

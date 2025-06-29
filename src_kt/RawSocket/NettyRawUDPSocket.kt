@@ -1,4 +1,4 @@
-package RawSocket
+package com.example.nekit.RawSocket
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf

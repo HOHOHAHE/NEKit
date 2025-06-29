@@ -1,4 +1,4 @@
-package RawSocket
+package com.example.nekit.RawSocket
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.ByteBuf
@@ -15,8 +15,8 @@ import java.net.InetSocketAddress
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 /**
  * Netty-based implementation of RawTCPSocketProtocol for client-side TCP connections.

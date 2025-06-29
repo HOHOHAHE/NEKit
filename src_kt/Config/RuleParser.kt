@@ -1,28 +1,28 @@
-package Config
+package com.example.nekit.Config
 
 import java.io.File
 import java.io.IOException
 import com.fasterxml.jackson.databind.JsonNode
 import org.slf4j.LoggerFactory
-import Config.ConfigurationException
-import Config.ConfigurationException.RuleParsingException
-import Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Config.getOptString
-import Config.getOptInt
-import Config.getOptBool
-import Config.getReqString
-import Config.getStringOrIntString
-import Config.getReqStringOrIntString
-import Config.getReqBool
+import com.example.nekit.Config.ConfigurationException
+import com.example.nekit.Config.ConfigurationException.RuleParsingException
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import com.example.nekit.Config.getOptString
+import com.example.nekit.Config.getOptInt
+import com.example.nekit.Config.getOptBool
+import com.example.nekit.Config.getReqString
+import com.example.nekit.Config.getStringOrIntString
+import com.example.nekit.Config.getReqStringOrIntString
+import com.example.nekit.Config.getReqBool
 
-import Rule.Rule
-import Rule.RuleManager
-import Rule.CountryRule
-import Rule.AllRule
-import Rule.DomainListRule
-import Rule.IPRangeListRule
-import Rule.DNSFailRule
+import com.example.nekit.Rule.Rule
+import com.example.nekit.Rule.RuleManager
+import com.example.nekit.Rule.CountryRule
+import com.example.nekit.Rule.AllRule
+import com.example.nekit.Rule.DomainListRule
+import com.example.nekit.Rule.IPRangeListRule
+import com.example.nekit.Rule.DNSFailRule
 
 // Removed placeholder Rule types and RuleManager, as they are now imported from Rule package.
 

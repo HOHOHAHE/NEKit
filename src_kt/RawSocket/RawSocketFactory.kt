@@ -1,9 +1,9 @@
-package RawSocket
+package com.example.nekit.RawSocket
 // Assuming RawTCPSocketProtocol.kt and RawUDPSocketProtocol.kt are available.
 // NWTCPSocket.kt and GCDTCPSocket.kt placeholders will be effectively replaced by NettyRawTCPClientSocket.
-import RawSocket.NettyRawTCPClientSocket
-import RawSocket.NettyRawUDPSocket // Added import for UDP
-import RawSocket.RawUDPSocketProtocol // Added import for UDP
+import com.example.nekit.RawSocket.NettyRawTCPClientSocket
+import com.example.nekit.RawSocket.NettyRawUDPSocket // Added import for UDP
+import com.example.nekit.RawSocket.RawUDPSocketProtocol // Added import for UDP
 import org.slf4j.LoggerFactory
 
 /**

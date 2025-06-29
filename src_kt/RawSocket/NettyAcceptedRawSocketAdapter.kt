@@ -1,4 +1,4 @@
-package RawSocket
+package com.example.nekit.RawSocket
 
 import io.netty.channel.socket.SocketChannel
 import io.netty.buffer.Unpooled
@@ -11,8 +11,8 @@ import java.lang.ref.WeakReference
 import java.io.IOException
 import java.net.InetSocketAddress
 
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 
 /**

@@ -1,7 +1,9 @@
+package com.example.nekit.Rule
+
 // Assuming AllRule.kt is available in this package.
 // Assuming DirectAdapterFactory.kt (placeholder from Config) is available.
 
-import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
 
 /**
  * A rule that matches every request and directs it through a `DirectAdapterFactory`.

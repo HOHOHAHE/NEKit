@@ -1,7 +1,7 @@
-package Utils
+package com.example.nekit.Utils
 
-import Utils.IPAddress
-import Utils.IPRange
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.IPRange
 
 import org.slf4j.LoggerFactory
 

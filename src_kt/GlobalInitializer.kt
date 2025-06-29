@@ -1,6 +1,6 @@
 package com.example.nekit
 import org.slf4j.LoggerFactory
-import Tunnel.QueueFactory // Corrected import
+import com.example.nekit.Tunnel.QueueFactory
 
 // This object acts as a holder for the primary queue/dispatcher used by the Resolver concept in the original Swift.
 // In Kotlin, the QueueFactory.getProcessingDispatcher() returns a CoroutineDispatcher.

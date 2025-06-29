@@ -1,7 +1,9 @@
+package com.example.nekit.Socket
+
 import java.lang.ref.WeakReference
 
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import Messages.ConnectSession // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Messages.ConnectSession
 
 
 /**

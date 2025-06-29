@@ -1,4 +1,4 @@
-package IPStack.DNS
+package com.example.nekit.IPStack.DNS
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
@@ -7,25 +7,25 @@ import java.util.concurrent.ConcurrentHashMap
 
 import org.slf4j.LoggerFactory
 
-import Tunnel.QueueFactory // Corrected import for QueueFactory
-import IPStack.Packet.IPPacket // Corrected import for IPPacket
-import IPStack.Packet.TransportProtocol // Corrected import for TransportProtocol (replaces InternetProtocol)
-import IPStack.Packet.UDPProtocolParserImpl // Corrected import for UDPProtocolParserImpl
-import Utils.IPAddress
-import Utils.Port
-import Utils.IPPool
-import IPStack.IPStackProtocol
-import IPStack.Native.AddressFamily
-import Rule.RuleManager // Corrected import for RuleManager
-import Opts.Opt // Corrected import for Opt
-import IPStack.DNS.DNSEnums.DNSType
-import IPStack.DNS.DNSEnums.DNSMessage
-import IPStack.DNS.DNSEnums.DNSResource
-import IPStack.DNS.DNSEnums.DNSMessageType
-import IPStack.DNS.DNSEnums.DNSReturnCode
+import com.example.nekit.Tunnel.QueueFactory
+import com.example.nekit.IPStack.Packet.IPPacket
+import com.example.nekit.IPStack.Packet.TransportProtocol
+import com.example.nekit.IPStack.Packet.UDPProtocolParserImpl
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.Utils.IPPool
+import com.example.nekit.IPStack.IPStackProtocol
+import com.example.nekit.IPStack.Native.AddressFamily
+import com.example.nekit.Rule.RuleManager
+import com.example.nekit.Opt
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSType
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessage
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSResource
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSMessageType
+import com.example.nekit.IPStack.DNS.DNSEnums.DNSReturnCode
 
 // No longer a placeholder, as DNSSession.kt is now a separate file
-// import IPStack.DNS.DNSSession // This will be imported implicitly or directly if needed
+// import com.example.nekit.IPStack.DNS.DNSSession // This will be imported implicitly or directly if needed
 
 
 /**

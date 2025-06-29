@@ -1,4 +1,4 @@
-package RawSocket
+package com.example.nekit.RawSocket
 
 /**
  * Delegate interface for handling events from a [RawUDPSocketProtocol] instance.

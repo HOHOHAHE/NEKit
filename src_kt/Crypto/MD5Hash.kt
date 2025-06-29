@@ -1,4 +1,4 @@
-package Crypto
+package com.example.nekit.Crypto
 import java.security.MessageDigest
 import java.nio.charset.StandardCharsets
 

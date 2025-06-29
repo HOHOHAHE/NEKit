@@ -1,4 +1,4 @@
-package Socket.AdapterSocket
+package com.example.nekit.Socket.AdapterSocket
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -8,11 +8,11 @@ import kotlinx.coroutines.cancel
 import org.slf4j.LoggerFactory
 import java.io.IOException // For connection exceptions
 
-import Messages.ConnectSession
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import RawSocket.RawTCPSocketProtocol
-import RawSocket.RawSocketFactory
-import Socket.SocketStatus
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Socket.SocketStatus
 
 /**
  * Adapter for making a direct connection to a remote host.

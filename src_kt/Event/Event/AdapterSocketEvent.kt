@@ -1,7 +1,7 @@
-package Event.Event
-import Event.EventType // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Messages.ConnectSession // Corrected import
+package com.example.nekit.Event.Event
+import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Messages.ConnectSession
 
 sealed class AdapterSocketEvent : EventType {
     // Cases as data classes

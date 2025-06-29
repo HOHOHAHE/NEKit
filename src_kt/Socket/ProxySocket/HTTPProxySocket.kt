@@ -1,22 +1,24 @@
-import java.nio.charset.StandardCharsets // For CONNECT response
+package com.example.nekit.Socket.ProxySocket
+
+import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 import org.slf4j.LoggerFactory // Added import
 
-import Messages.HTTPHeader // Corrected import
-import Messages.HTTPHeaderParseException // Corrected import
-import Utils.HTTPStreamScanner // Corrected import
-import Utils.ReadAction // Corrected import
-import Utils.ProcessedData // Corrected import
-import Utils.HTTPConstants // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Socket.SocketDelegate // Corrected import
-import Event.Event.ProxySocketEvent // Corrected import
-import Opts.Opt // Corrected import
+import com.example.nekit.Messages.HTTPHeader
+import com.example.nekit.Messages.HTTPHeaderParseException
+import com.example.nekit.Utils.HTTPStreamScanner
+import com.example.nekit.Utils.ReadAction
+import com.example.nekit.Utils.ProcessedData
+import com.example.nekit.Utils.HTTPConstants
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.SocketDelegate
+import com.example.nekit.Event.Event.ProxySocketEvent
+import com.example.nekit.Opt
 
 // --- Placeholder for HTTP Data Constants ---
 // TODO: Move to a common HTTP utilities file if not already there.

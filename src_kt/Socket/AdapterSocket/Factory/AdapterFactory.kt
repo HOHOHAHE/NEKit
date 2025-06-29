@@ -1,11 +1,11 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory
 
-import Messages.ConnectSession
-import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.DirectAdapter
-import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.AdapterSocket.DirectAdapter
+import com.example.nekit.RawSocket.RawSocketFactory
 
 
 /**

@@ -1,10 +1,10 @@
-package Rule
+package com.example.nekit.Rule
 
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import IPStack.DNS.DNSSession // Corrected import
-import Rule.DNSSessionMatchType // Corrected import
-import Rule.DNSSessionMatchResult // Corrected import
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import com.example.nekit.IPStack.DNS.DNSSession
+import com.example.nekit.Rule.DNSSessionMatchType // Corrected import
+import com.example.nekit.Rule.DNSSessionMatchResult // Corrected import
 
 
 /**

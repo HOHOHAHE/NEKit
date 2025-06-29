@@ -1,4 +1,4 @@
-package Utils
+package com.example.nekit.Utils
 
 import org.slf4j.LoggerFactory
 import java.net.InetAddress
@@ -8,7 +8,7 @@ import java.net.UnknownHostException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Arrays // For Arrays.equals on byte arrays if not using contentEquals
-import Utils.UInt128.Companion.ZERO // Import ZERO
+import com.example.nekit.Utils.UInt128.Companion.ZERO // Import ZERO
 
 
 

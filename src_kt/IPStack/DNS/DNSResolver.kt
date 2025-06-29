@@ -1,15 +1,15 @@
-package IPStack.DNS
+package com.example.nekit.IPStack.DNS
 // Removed WeakReference as direct delegate will be used for RawUDPSocketDelegate
 // import java.lang.ref.WeakReference
 
 // Assuming IPAddress.kt, Port.kt, DNSSession.kt (placeholder) are available.
 // Assuming new RawSocket types are available.
-import com.example.project.RawSocket.NettyRawUDPSocket
-import com.example.project.RawSocket.RawUDPSocketProtocol
-import com.example.project.RawSocket.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.NettyRawUDPSocket
+import com.example.nekit.RawSocket.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.RawUDPSocketDelegate
 
 
-import IPStack.DNS.DNSSession // Replaced placeholder with actual import
+import com.example.nekit.IPStack.DNS.DNSSession // Replaced placeholder with actual import
 
 
 import org.slf4j.LoggerFactory

@@ -1,20 +1,20 @@
-package Config
+package com.example.nekit.Config
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import org.slf4j.LoggerFactory
-import Utils.HTTPAuthentication
-import Crypto.CryptoAlgorithm
-import Config.ConfigurationException.AdapterParsingException // Corrected import
-import Config.ConfigurationException // Import the base ConfigurationException
-import Config.getOptString
-import Config.getOptInt
-import Config.getOptBool
-import Config.getReqString
-import Config.getReqInt
-import Config.getStringOrIntString
-import Config.getReqStringOrIntString
-import Config.getOptStringArray
+import com.example.nekit.Utils.HTTPAuthentication
+import com.example.nekit.Crypto.CryptoAlgorithm
+import com.example.nekit.Config.ConfigurationException.AdapterParsingException // Corrected import
+import com.example.nekit.Config.ConfigurationException // Import the base ConfigurationException
+import com.example.nekit.Config.getOptString
+import com.example.nekit.Config.getOptInt
+import com.example.nekit.Config.getOptBool
+import com.example.nekit.Config.getReqString
+import com.example.nekit.Config.getReqInt
+import com.example.nekit.Config.getStringOrIntString
+import com.example.nekit.Config.getReqStringOrIntString
+import com.example.nekit.Config.getOptStringArray
 
 // No need for ObjectNode explicitly if using JsonNode as parameter type and then checking nodeType or using `get`
 
@@ -23,18 +23,18 @@ import Config.getOptStringArray
 // --- Placeholder for ConfigurationParserError ---
 // Moved to ConfigurationException.kt
 
-import Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
-import Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.HTTPAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.SecureHTTPAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.SOCKS5AdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.RejectAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.ShadowsocksAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.SpeedAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.ServerAdapterFactory // Corrected import
-import Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory // Corrected import
-import Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.HTTPAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.SecureHTTPAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.SOCKS5AdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.RejectAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.ShadowsocksAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.SpeedAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.ServerAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory // Corrected import
+import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested
 
 // --- Placeholders for AdapterFactory and related classes ---
 // Moved to Socket.AdapterSocket.Factory package.

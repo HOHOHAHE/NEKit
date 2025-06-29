@@ -1,4 +1,4 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory // Added import
 import kotlinx.coroutines.CoroutineScope // Added missing import
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch // Added missing import
 // --- End Placeholder for ServerAdapterFactory ---
 
 
-import Socket.AdapterSocket.SOCKS5Adapter // Corrected import
+import com.example.nekit.Socket.AdapterSocket.SOCKS5Adapter
 
 
 /**
@@ -44,9 +44,9 @@ open class SOCKS5AdapterFactory(
      * @param session The connect session for which the adapter is being created.
      * @return A new [SOCKS5Adapter] instance.
      */
-    override fun getAdapterFor(session: Messages.ConnectSession): Socket.AdapterSocket.AdapterSocket {
+    override fun getAdapterFor(session: com.example.nekit.Messages.ConnectSession): com.example.nekit.Socket.AdapterSocket.AdapterSocket {
         // serverHost and serverPort are properties of the superclass ServerAdapterFactory
-        val rawSocket = RawSocket.RawSocketFactory.getRawSocket() // Create a new raw socket
+        val rawSocket = com.example.nekit.RawSocket.RawSocketFactory.getRawSocket()
         // Pass the raw socket to the SOCKS5Adapter constructor
         return SOCKS5Adapter(this.serverHost, this.serverPort, rawSocket)
     }
@@ -56,7 +56,7 @@ open class SOCKS5AdapterFactory(
     // This is a common pattern in Swift where `Type` objects are passed around.
     // In Kotlin, we pass the class directly or a lambda that constructs it.
     // Here, it's a factory method on the factory itself.
-    open fun create(serverHost: String, serverPort: Int, auth: Utils.HTTPAuthentication?): HTTPAuthenticationAdapterFactory {
+    open fun create(serverHost: String, serverPort: Int, auth: com.example.nekit.Utils.HTTPAuthentication?): com.example.nekit.Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory {
         return SOCKS5AdapterFactory(serverHost, serverPort)
     }
 }

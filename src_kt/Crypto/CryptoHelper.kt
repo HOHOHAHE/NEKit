@@ -1,6 +1,6 @@
-package Crypto
+package com.example.nekit.Crypto
 
-import Crypto.CryptoAlgorithm.*
+import com.example.nekit.Crypto.CryptoAlgorithm.*
 import java.security.SecureRandom
 import java.security.MessageDigest
 import java.io.ByteArrayOutputStream

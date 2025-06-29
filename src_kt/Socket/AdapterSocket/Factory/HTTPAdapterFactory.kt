@@ -1,12 +1,12 @@
-package Socket.AdapterSocket.Factory
+package com.example.nekit.Socket.AdapterSocket.Factory
 
 import org.slf4j.LoggerFactory
 
-import Messages.ConnectSession
-import Socket.AdapterSocket.AdapterSocket
-import Socket.AdapterSocket.HTTPAdapter
-import RawSocket.RawSocketFactory // Assuming this is the correct import for RawSocketFactory
-import Utils.HTTPAuthentication // Assuming this is the correct import for HTTPAuthentication
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.AdapterSocket.HTTPAdapter
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Utils.HTTPAuthentication
 
 // Assuming HTTPAuthenticationAdapterFactory.kt is available.
 // It is the superclass, so its import is handled by the package structure.

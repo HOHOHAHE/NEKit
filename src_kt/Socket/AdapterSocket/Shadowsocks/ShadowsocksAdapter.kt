@@ -1,4 +1,4 @@
-package Socket.AdapterSocket.Shadowsocks
+package com.example.nekit.Socket.AdapterSocket.Shadowsocks
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -8,11 +8,11 @@ import kotlinx.coroutines.cancel
 import org.slf4j.LoggerFactory
 import java.io.IOException // For connection exceptions
 
-import Messages.ConnectSession
-import RawSocket.RawTCPSocketProtocol
-import RawSocket.RawSocketFactory
-import Socket.SocketStatus
-import Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.Socket.SocketStatus
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 
 /**
  * Adapter for connecting to a remote host through a Shadowsocks proxy.

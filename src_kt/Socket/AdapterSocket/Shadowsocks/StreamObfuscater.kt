@@ -1,6 +1,6 @@
-package Socket.AdapterSocket.Shadowsocks
+package com.example.nekit.Socket.AdapterSocket.Shadowsocks
 
-import Messages.ConnectSession // Assuming ConnectSession is in Messages package
+import com.example.nekit.Messages.ConnectSession
 
 /**
  * Interface for stream obfuscation, used in Shadowsocks to modify the data stream.

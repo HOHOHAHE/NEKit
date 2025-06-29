@@ -1,4 +1,4 @@
-package Utils
+package com.example.nekit.Utils
 
 import java.util.regex.PatternSyntaxException
 

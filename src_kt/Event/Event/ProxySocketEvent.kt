@@ -1,8 +1,8 @@
-package Event.Event
-import Event.EventType // Corrected import
-import Socket.ProxySocket.ProxySocket // Corrected import
-import Messages.ConnectSession // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
+package com.example.nekit.Event.Event
+import com.example.nekit.Event.EventType // Corrected import
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 
 sealed class ProxySocketEvent : EventType {
     data class SocketOpened(val socket: ProxySocket) : ProxySocketEvent()

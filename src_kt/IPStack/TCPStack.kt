@@ -1,4 +1,4 @@
-package IPStack
+package com.example.nekit.IPStack
 import kotlinx.coroutines.* // Ensure all necessary coroutine imports
 import java.lang.ref.WeakReference
 import org.slf4j.LoggerFactory
@@ -17,14 +17,14 @@ import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
 // import com.example.project.Socket.ProxySocket.DirectProxySocket // Adjust if package is different
 // import com.example.project.ProxyServer.ProxyServerInterface // Adjust if package is different
 
-import RawSocket.TUNTCPSocket // Corrected import
-import ProxyServer.ProxyServerInterface // Corrected import
-import Socket.ProxySocket.DirectProxySocket // Corrected import
-import Tunnel.QueueFactory // Corrected import
-import IPStack.Packet.IPPacket // Corrected import
-import IPStack.Packet.TransportProtocol // Corrected import
-import IPStack.IPStackProtocol // Corrected import
-import IPStack.Native.AddressFamily // Corrected import
+import com.example.nekit.RawSocket.TUNTCPSocket
+import com.example.nekit.ProxyServer.ProxyServerInterface
+import com.example.nekit.Socket.ProxySocket.DirectProxySocket
+import com.example.nekit.Tunnel.QueueFactory
+import com.example.nekit.IPStack.Packet.IPPacket // Corrected import
+import com.example.nekit.IPStack.Packet.TransportProtocol // Corrected import
+import com.example.nekit.IPStack.IPStackProtocol // Corrected import
+import com.example.nekit.IPStack.Native.AddressFamily // Corrected import
 
 
 /**

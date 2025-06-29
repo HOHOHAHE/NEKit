@@ -1,4 +1,4 @@
-package RawSocket
+package com.example.nekit.RawSocket
 
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
@@ -8,16 +8,16 @@ import kotlinx.coroutines.sync.Mutex // For writeMutex
 
 import org.slf4j.LoggerFactory
 
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import RawSocket.RawTCPSocketDelegate // Corrected import
-import Utils.IPAddress // Corrected import
-import Utils.Port // Corrected import
-import Utils.StreamScanner // Corrected import
-import Tunnel.QueueFactory // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Socket.SocketStatus // Corrected import
-import Event.Event.AdapterSocketEvent // Corrected import
-import Messages.EventSource // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketProtocol // Corrected import
+import com.example.nekit.RawSocket.RawTCPSocketDelegate // Corrected import
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
+import com.example.nekit.Utils.StreamScanner
+import com.example.nekit.Tunnel.QueueFactory
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Socket.SocketStatus
+import com.example.nekit.Event.Event.AdapterSocketEvent
+import com.example.nekit.Messages.EventSource
 // Import JNA related LibTun2Socks interfaces
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface

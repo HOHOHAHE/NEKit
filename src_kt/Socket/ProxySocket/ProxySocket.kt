@@ -1,18 +1,20 @@
+package com.example.nekit.Socket.ProxySocket
+
 import java.lang.ref.WeakReference
 import java.io.IOException
 import org.slf4j.LoggerFactory // Added import
 
-import Socket.SocketProtocol // Corrected import
-import Socket.SocketDelegate // Corrected import
-import RawSocket.RawTCPSocketProtocol // Corrected import
-import RawSocket.RawTCPSocketDelegate // Corrected import
-import Messages.ConnectSession // Corrected import
-import Event.Observer // Corrected import
-import Event.Event.ProxySocketEvent // Corrected import
-import Event.ObserverFactory // Corrected import
-import Socket.AdapterSocket.AdapterSocket // Corrected import
-import Messages.EventSource // Corrected import
-import Socket.SocketStatus // Corrected import
+import com.example.nekit.Socket.SocketProtocol
+import com.example.nekit.Socket.SocketDelegate
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawTCPSocketDelegate
+import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Event.Observer
+import com.example.nekit.Event.Event.ProxySocketEvent
+import com.example.nekit.Event.ObserverFactory
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.Messages.EventSource
+import com.example.nekit.Socket.SocketStatus
 
 /**
  * Base class for proxy sockets, representing the server-side of a connection that handles

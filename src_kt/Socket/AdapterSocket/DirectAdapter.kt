@@ -20,7 +20,7 @@ class DirectAdapter : AdapterSocket() {
         logger.info("Opening direct connection for session: ${session.host}:${session.port}")
         
         // Create a new raw socket for the direct connection.
-        _rawSocket = RawSocketFactory.getRawSocket()
+        _rawSocket = RawSocketFactory.currentFactory?.getRawTCPSocket(session)
         // The delegate is set to this AdapterSocket instance to receive callbacks from the raw socket.
         _rawSocket?.delegate = WeakReference(this)
 

@@ -81,7 +81,7 @@ abstract class AdapterSocket(
  
      init {
          if (observe) {
-             observer = ObserverFactory.currentFactory?.getObserverForAdapterSocket(this)
+             observer = ObserverFactory.getObserverForAdapterSocket(this)
          }
      }
  

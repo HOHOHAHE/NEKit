@@ -9,7 +9,7 @@ class ShadowsocksAdapterFactory(
     val serverPort: Int,
     val method: String,
     val key: ByteArray
-) : AdapterFactory() {
+) : AdapterFactory {
     override fun getAdapter(session: ConnectSession): AdapterSocket {
         return ShadowsocksAdapter(
             serverHost = serverHost,

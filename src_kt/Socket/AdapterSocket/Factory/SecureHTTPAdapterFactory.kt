@@ -9,12 +9,12 @@ class SecureHTTPAdapterFactory(
     val serverHost: String,
     val serverPort: Int,
     val auth: HTTPAuthentication?
-) : AdapterFactory() {
+) : AdapterFactory {
     override fun getAdapter(session: ConnectSession): AdapterSocket {
         return SecureHTTPAdapter(
             serverHost = serverHost,
             serverPort = serverPort,
-            auth = { _ -> auth?.credentials ?: Pair("", "") }
+            auth = { _ -> auth?.let { Pair(it.username, it.password) } ?: Pair("", "") }
         )
     }
 }

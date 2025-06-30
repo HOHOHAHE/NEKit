@@ -7,7 +7,7 @@ import com.example.nekit.Socket.AdapterSocket.SpeedAdapter
 class SpeedAdapterFactory(
     val factories: List<AdapterFactory>,
     val testUrl: String
-) : AdapterFactory() {
+) : AdapterFactory {
     override fun getAdapter(session: ConnectSession): AdapterSocket {
         return SpeedAdapter(
             factories = factories,

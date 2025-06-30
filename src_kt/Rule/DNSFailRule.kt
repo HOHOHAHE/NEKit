@@ -4,14 +4,15 @@ import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.IPStack.DNS.DNSSessionMatchType
-import com.example.nekit.IPStack.DNS.DNSSessionMatchResult
+import com.example.nekit.Rule.DNSSessionMatchType
+import com.example.nekit.Rule.DNSSessionMatchResult
 
 class DNSFailRule(
     private val adapterFactory: AdapterFactory
 ) : Rule() {
     override fun match(session: ConnectSession): AdapterFactory? {
-        return if (IPAddress.isIPv4(session.host) || IPAddress.isIPv6(session.host)) {
+        val ip = IPAddress.parse(session.host)
+        return if (ip != null && (ip.isIPv4 || ip.isIPv6)) {
             adapterFactory
         } else {
             null

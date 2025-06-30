@@ -7,7 +7,7 @@ import com.example.nekit.Socket.AdapterSocket.SOCKS5Adapter
 class SOCKS5AdapterFactory(
     val serverHost: String,
     val serverPort: Int
-) : AdapterFactory() {
+) : AdapterFactory {
     override fun getAdapter(session: ConnectSession): AdapterSocket {
         return SOCKS5Adapter(
             serverHost = serverHost,

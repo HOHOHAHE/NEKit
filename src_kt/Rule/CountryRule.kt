@@ -24,7 +24,7 @@ open class CountryRule(
             return DNSSessionMatchResult.UNKNOWN
         }
 
-        val sessionCountry = session.countryCode
+        val sessionCountry = session.realIP?.toString()?.let { GeoIP.lookUp(it) } ?: ""
         val countryConditionMet = (sessionCountry.equals(this.countryCode, ignoreCase = true)) == this.match
 
         return if (countryConditionMet) {
@@ -40,7 +40,7 @@ open class CountryRule(
 
     override fun match(session: ConnectSession): AdapterFactory? {
         val ip = IPAddress.parse(session.host)
-        val sessionCountry = ip?.let { GeoIP.lookup(it) } ?: ""
+        val sessionCountry = ip?.toString()?.let { GeoIP.lookUp(it) } ?: ""
 
         val countryConditionMet = (sessionCountry.equals(this.countryCode, ignoreCase = true)) == this.match
 

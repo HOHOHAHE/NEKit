@@ -6,7 +6,7 @@ import com.example.nekit.Socket.AdapterSocket.RejectAdapter
 
 class RejectAdapterFactory(
     val delay: Int
-) : AdapterFactory() {
+) : AdapterFactory {
     override fun getAdapter(session: ConnectSession): AdapterSocket {
         return RejectAdapter(delay)
     }

@@ -31,25 +31,25 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
 // Assuming RawTCPSocketProtocol.kt (from RawSocket module) is available for NettyAcceptedRawSocketAdapter.
 
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.NettyAcceptedRawSocketAdapter
+import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
-import com.example.nekit.Tunnel.QueueFactory
-import com.example.nekit.RawSocket.NettyAcceptedRawSocketAdapter
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.io.IOException
+import java.net.InetSocketAddress
+import java.nio.channels.AsynchronousCloseException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * Base class for proxy servers that listen on a TCP port.
- * This version is refactored to use Netty for handling network connections.
- * Subclasses should override `handleNewAcceptedSocket` to process new connections.
- */
-open class GCDProxyServer(
-    address: IPAddress?,
-    port: Port,
-    // mainDispatcher might still be useful for dispatching CPU-bound tasks off Netty's IO threads,
-    // but Netty's own event loops handle I/O events.
-    private val mainDispatcher: CoroutineDispatcher = QueueFactory.executionScope.coroutineContext[CoroutineDispatcher] ?: Dispatchers.Default
-) : ProxyServer(address, port) { // No longer implements KotlinServerSocketDelegate
+abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(address, port) {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
 

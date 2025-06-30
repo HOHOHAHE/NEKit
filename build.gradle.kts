@@ -17,7 +17,7 @@ dependencies {
     implementation(kotlin("stdlib")) // Or specific variant like stdlib-jdk8
 
     // Kotlin Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3") // Check for latest stable version
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1") // Upgraded to latest stable version
 
     // YAML Parsing (Jackson with YAML Dataformat and Kotlin Module)
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2") // Check for latest

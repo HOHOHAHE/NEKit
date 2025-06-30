@@ -1,26 +1,11 @@
 package com.example.nekit.Event
-import com.example.nekit.Event.Event.EventType // Corrected import
 
+import com.example.nekit.Event.Event.Event
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import com.example.nekit.ProxyServer.ProxyServer
+import com.example.nekit.Socket.ProxySocket.ProxySocket
+import com.example.nekit.Tunnel.Tunnel
 
-/**
- * A generic observer class that can receive signals (events).
- *
- * @param T The type of event this observer can handle. Must conform to [EventType].
- */
-open class Observer<T : EventType> {
-    /**
-     * Default constructor.
-     */
-    constructor()
-
-    /**
-     * Called to signal an event to the observer.
-     * Subclasses should override this method to handle specific events.
-     * The base implementation does nothing.
-     *
-     * @param event The event of type [T] that occurred.
-     */
-    open fun signal(event: T) {
-        // Base implementation does nothing. Meant to be overridden.
-    }
+interface Observer<T : Event> {
+    fun signal(event: T)
 }

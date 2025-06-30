@@ -1,30 +1,27 @@
 package com.example.nekit.IPStack
-import kotlinx.coroutines.* // Ensure all necessary coroutine imports
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.lang.ref.WeakReference
 import org.slf4j.LoggerFactory
 
-// Import JNA related interfaces and implementation
 import com.example.nekit.IPStack.Native.JnaLibTun2Socks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
 
-// Assuming IPStackProtocol.kt, IPPacket.kt, QueueFactory.kt are available.
-// Assuming actual TUNTCPSocket.kt will be used.
-// Assuming ProxyServerInterface and DirectProxySocket placeholders are defined elsewhere or actual implementations are available.
-// For this refactor, ensure these are resolvable:
-// import com.example.project.RawSocket.TUNTCPSocket // Adjust if package is different
-// import com.example.project.Socket.ProxySocket.DirectProxySocket // Adjust if package is different
-// import com.example.project.ProxyServer.ProxyServerInterface // Adjust if package is different
-
 import com.example.nekit.RawSocket.TUNTCPSocket
-import com.example.nekit.ProxyServer.ProxyServerInterface
+import com.example.nekit.ProxyServer.ProxyServer
 import com.example.nekit.Socket.ProxySocket.DirectProxySocket
 import com.example.nekit.Tunnel.QueueFactory
-import com.example.nekit.IPStack.Packet.IPPacket // Corrected import
-import com.example.nekit.IPStack.Packet.TransportProtocol // Corrected import
-import com.example.nekit.IPStack.IPStackProtocol // Corrected import
-import com.example.nekit.IPStack.Native.AddressFamily // Corrected import
+import com.example.nekit.IPStack.Packet.IPPacket
+import com.example.nekit.IPStack.IPStackProtocol
+import com.example.nekit.IPStack.AddressFamily
+
 
 
 /**
@@ -38,8 +35,8 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
     private val activeSocketsMutex = Mutex() // To protect activeSockets map
 
     // Using WeakReference for proxyServer to avoid potential retain cycles.
-    private var _proxyServerRef: WeakReference<ProxyServerInterface?> = WeakReference(null) // ProxyServerInterface needs to be defined/imported
-    var proxyServer: ProxyServerInterface?
+    private var _proxyServerRef: WeakReference<ProxyServer?> = WeakReference(null)
+    var proxyServer: ProxyServer?
         get() = _proxyServerRef.get()
         set(value) {
             _proxyServerRef = WeakReference(value)
@@ -47,7 +44,7 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
         }
 
     // This is called by TUNInterface when it has IP packets for this stack.
-    override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
+    override var outputFunc: ((packets: List<ByteArray>, versions: List<AddressFamily>) -> Unit)? = null
 
 
     init {
@@ -117,7 +114,7 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
         // The protocol here might be an IP version or transport protocol.
         // For TUN output, it's typically IP version (AddressFamily.AF_INET/AF_INET6).
         // For now, assume 'protocol' can be used as 'version'.
-        outputFunc?.invoke(listOf(actualPacket), listOf(protocol))
+        outputFunc?.invoke(listOf(actualPacket), listOf(AddressFamily.fromInt(protocol)))
         return actualPacket.size // Return number of bytes "written" (passed to outputFunc)
     }
 
@@ -136,8 +133,10 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
             }
         }
 
-        proxyServer?.didAcceptNewSocket(DirectProxySocket(newTunSocket)) // Assuming DirectProxySocket wraps TUNTCPSocket
-            ?: logger.warn("No proxyServer delegate set in TCPStack to handle new TCP socketId: {}", socketId)
+        tunnelScope.launch { // Launch a coroutine to call suspend function
+            proxyServer?.didAcceptNewSocket(DirectProxySocket(newTunSocket))
+                ?: logger.warn("No proxyServer delegate set in TCPStack to handle new TCP socketId: {}", socketId)
+        }
 
         return newTunSocket // TUNTCPSocket implements LibTun2SocksSocketCallbacks
     }

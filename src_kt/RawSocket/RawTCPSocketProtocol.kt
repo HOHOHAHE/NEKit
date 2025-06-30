@@ -114,13 +114,13 @@ interface RawTCPSocketProtocol {
      * Initiates a graceful disconnect. The socket attempts to send any queued write data
      * before closing the connection. `didDisconnect` will be called on the delegate eventually.
      */
-    fun disconnect()
+    fun disconnect(becauseOf: Throwable? = null)
 
     /**
      * Forces an immediate disconnect. Any unsent data may be lost.
      * `didDisconnect` will be called on the delegate.
      */
-    fun forceDisconnect()
+    fun forceDisconnect(becauseOf: Throwable? = null)
 
     /**
      * Writes data to the socket. This is a suspending function.
@@ -143,7 +143,7 @@ interface RawTCPSocketProtocol {
      * Warning: Original Swift comments imply a one-at-a-time read model: only call after the
      * previous `didReadData` (didRead) delegate callback.
      */
-    fun readData()
+    suspend fun readData()
 
     /**
      * Initiates an asynchronous read for a specific number of bytes.
@@ -152,7 +152,7 @@ interface RawTCPSocketProtocol {
      * @param length The exact number of bytes to read.
      * Warning: See one-at-a-time read model warning in `readData()`.
      */
-    fun readDataTo(length: Int)
+    suspend fun readDataTo(length: Int)
 
     /**
      * Initiates an asynchronous read until a specific delimiter pattern is encountered.
@@ -161,7 +161,7 @@ interface RawTCPSocketProtocol {
      * @param delimiter The ByteArray representing the delimiter pattern.
      * Warning: See one-at-a-time read model warning in `readData()`.
      */
-    fun readDataTo(delimiter: ByteArray)
+    suspend fun readDataTo(delimiter: ByteArray)
 
     /**
      * Initiates an asynchronous read until a specific delimiter pattern is encountered,
@@ -173,5 +173,5 @@ interface RawTCPSocketProtocol {
      * @param maxLength The maximum number of bytes to read while searching for the delimiter.
      * Warning: See one-at-a-time read model warning in `readData()`.
      */
-    fun readDataTo(delimiter: ByteArray, maxLength: Int)
+    suspend fun readDataTo(delimiter: ByteArray, maxLength: Int)
 }

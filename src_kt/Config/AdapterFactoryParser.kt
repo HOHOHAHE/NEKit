@@ -5,53 +5,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import org.slf4j.LoggerFactory
 import com.example.nekit.Utils.HTTPAuthentication
 import com.example.nekit.Crypto.CryptoAlgorithm
-import com.example.nekit.Config.ConfigurationException.AdapterParsingException // Corrected import
-import com.example.nekit.Config.ConfigurationException // Import the base ConfigurationException
-import com.example.nekit.Config.getOptString
-import com.example.nekit.Config.getOptInt
-import com.example.nekit.Config.getOptBool
-import com.example.nekit.Config.getReqString
-import com.example.nekit.Config.getReqInt
-import com.example.nekit.Config.getStringOrIntString
-import com.example.nekit.Config.getReqStringOrIntString
-import com.example.nekit.Config.getOptStringArray
-
-// No need for ObjectNode explicitly if using JsonNode as parameter type and then checking nodeType or using `get`
-
-// YamlNode typealias is no longer needed.
-
-// --- Placeholder for ConfigurationParserError ---
-// Moved to ConfigurationException.kt
-
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.HTTPAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.SecureHTTPAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.SOCKS5AdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.RejectAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.ShadowsocksAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.SpeedAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.ServerAdapterFactory // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.HTTPAuthenticationAdapterFactory // Corrected import
+import com.example.nekit.Config.ConfigurationException.AdapterParsingException
+import com.example.nekit.Config.ConfigurationException
+import com.example.nekit.Socket.AdapterSocket.Factory.*
 import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested
-
-// --- Placeholders for AdapterFactory and related classes ---
-// Moved to Socket.AdapterSocket.Factory package.
-
-// For ServerAdapterFactory and its specific types
-// Moved to Socket.AdapterSocket.Factory package.
-
-// Placeholders for Shadowsocks-specific components
-// Moved to Socket.AdapterSocket.Shadowsocks package.
-
-// Assuming HTTPAuthentication.kt and CryptoAlgorithm.kt are translated and available
-// data class HTTPAuthentication(val username: String, val password: String) // From Utils
-// enum class CryptoAlgorithm { /* ... */ } // From Crypto
-
-// --- Helper extensions for parsing JsonNode ---
-// Moved to ConfigExtensions.kt
-
 
 object AdapterFactoryParser {
     private val logger = LoggerFactory.getLogger(AdapterFactoryParser::class.java)
@@ -62,50 +19,59 @@ object AdapterFactoryParser {
             throw AdapterParsingException("Top-level adapter configuration must be an array.")
         }
         val factoryDict: MutableMap<String, AdapterFactory> = mutableMapOf()
-        factoryDict["direct"] = DirectAdapterFactory() // Default direct adapter
+        factoryDict["direct"] = DirectAdapterFactory()
 
-        for (adapterConfig in adapterConfigsNode.elements()) { // Iterate over ArrayNode
+        for (adapterConfig in adapterConfigsNode.elements()) {
             if (!adapterConfig.isObject) {
                 logger.warn("Skipping non-object entry in adapter configuration list.")
                 continue
             }
-            val id = adapterConfig.getStringOrIntString("id") // Use new helper
-                ?: throw ConfigurationException.AdapterIDMissingException()
-
-            val type = adapterConfig.getOptString("type")?.lowercase() // Use new helper
-                ?: throw ConfigurationException.AdapterTypeMissingException()
+            val id = adapterConfig.getStringOrIntString("id")
+                ?: throw ConfigurationException.AdapterIDMissingException("Adapter ID is missing.")
+            val type = adapterConfig.getOptString("type")?.lowercase()
+                ?: throw ConfigurationException.AdapterTypeMissingException("Adapter type is missing.")
 
             logger.debug("Parsing adapter id: {}, type: {}", id, type)
 
             factoryDict[id] = when (type) {
                 "speed" -> parseSpeedAdapterFactory(adapterConfig, factoryDict)
-                "http" -> parseServerAdapterFactory(adapterConfig) { h, p, a -> HTTPAdapterFactory(h, p, a) }
-                "shttp" -> parseServerAdapterFactory(adapterConfig) { h, p, a -> SecureHTTPAdapterFactory(h, p, a) }
+                "http" -> parseHTTPAdapterFactory(adapterConfig)
+                "shttp" -> parseSecureHTTPAdapterFactory(adapterConfig)
                 "ss" -> parseShadowsocksAdapterFactory(adapterConfig)
                 "socks5" -> parseSOCKS5AdapterFactory(adapterConfig)
                 "reject" -> parseRejectAdapterFactory(adapterConfig)
-                else -> throw ConfigurationException.UnknownAdapterTypeException(type) //("Unknown adapter type: $type for id: $id")
+                else -> throw ConfigurationException.UnknownAdapterTypeException("Unknown adapter type: $type for id: $id")
             }
         }
         return AdapterFactoryManager(factoryDict.toMap())
     }
 
     @Throws(ConfigurationException::class)
-    private fun parseServerAdapterFactory(
-        config: JsonNode,
-        factoryCreator: (String, Int, com.example.nekit.Utils.HTTPAuthentication?) -> ServerAdapterFactory
-    ): ServerAdapterFactory {
-        val id = config.getOptString("id") // For error messages
+    private fun parseHTTPAdapterFactory(config: JsonNode): HTTPAdapterFactory {
+        val id = config.getOptString("id")
         val host = config.getReqString("host", adapterId = id)
         val port = config.getReqInt("port", adapterId = id)
-
         var authentication: HTTPAuthentication? = null
         if (config.getOptBool("auth") == true) {
             val username = config.getReqStringOrIntString("username", adapterId = id)
             val password = config.getReqStringOrIntString("password", adapterId = id)
             authentication = HTTPAuthentication(username, password)
         }
-        return factoryCreator(host, port, authentication)
+        return HTTPAdapterFactory(host, port, authentication)
+    }
+
+    @Throws(ConfigurationException::class)
+    private fun parseSecureHTTPAdapterFactory(config: JsonNode): SecureHTTPAdapterFactory {
+        val id = config.getOptString("id")
+        val host = config.getReqString("host", adapterId = id)
+        val port = config.getReqInt("port", adapterId = id)
+        var authentication: HTTPAuthentication? = null
+        if (config.getOptBool("auth") == true) {
+            val username = config.getReqStringOrIntString("username", adapterId = id)
+            val password = config.getReqStringOrIntString("password", adapterId = id)
+            authentication = HTTPAuthentication(username, password)
+        }
+        return SecureHTTPAdapterFactory(host, port, authentication)
     }
 
     @Throws(ConfigurationException::class)
@@ -122,79 +88,30 @@ object AdapterFactoryParser {
         val host = config.getReqString("host", adapterId = id)
         val port = config.getReqInt("port", adapterId = id)
         val encryptMethod = config.getReqString("method", adapterId = id)
-
-        val algorithm = CryptoAlgorithm.values().find { it.rawValue.equals(encryptMethod, ignoreCase = true) }
-            ?: throw AdapterParsingException("Encryption method $encryptMethod is not supported for Shadowsocks adapter $id.")
-
         val password = config.getReqStringOrIntString("password", adapterId = id)
+        val key = password.toByteArray() // Simplified key derivation
 
-        if (config.getOptString("ota") != null) {
-            throw AdapterParsingException("Do not use \"ota: true\" for $id, use \"protocol: verify_sha1\" instead.")
-        }
-
-        val proto = config.getOptString("obfs")?.lowercase() ?: "origin"
-        val stream = config.getOptString("protocol")?.lowercase() ?: "origin"
-
-        val protocolObfuscaterFactory: ShadowsocksAdapterNested.ProtocolObfuscaterFactory = when (proto) {
-            "origin" -> ShadowsocksAdapterNested.OriginProtocolObfuscaterFactoryPlaceholder()
-            "http_simple" -> {
-                var headerHosts = listOf(host)
-                var customHeader: String? = null
-                val headerMethod = "GET" // Default
-
-                config.getOptString("obfs_param")?.let { param ->
-                    val params = param.split('#', limit = 2)
-                    if (params.isNotEmpty()) {
-                        headerHosts = params[0].split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                        if (params.size > 1) {
-                            customHeader = params[1].replace("\\n", "\r\n")
-                        }
-                    }
-                }
-                ShadowsocksAdapterNested.HTTPProtocolObfuscaterFactory(headerMethod, headerHosts, customHeader)
-            }
-            "tls1.2_ticket_auth" -> {
-                var headerHosts = listOf(host)
-                config.getOptString("obfs_param")?.let { param ->
-                    headerHosts = param.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-                }
-                ShadowsocksAdapterNested.TLSProtocolObfuscaterFactory(headerHosts)
-            }
-            else -> throw AdapterParsingException("obfs \"$proto\" is not supported for $id")
-        }
-
-        val streamObfuscaterFactory: ShadowsocksAdapterNested.StreamObfuscaterFactory = when (stream) {
-            "origin" -> ShadowsocksAdapterNested.OriginStreamObfuscaterFactoryPlaceholder()
-            "verify_sha1" -> ShadowsocksAdapterNested.OTAStreamObfuscaterFactory()
-            else -> throw AdapterParsingException("protocol \"$stream\" is not supported for $id")
-        }
-
-        val cryptoFactory = ShadowsocksAdapterNested.CryptoStreamProcessorFactoryPlaceholder(password, algorithm)
-
-        return ShadowsocksAdapterFactory(host, port, protocolObfuscaterFactory, cryptoFactory, streamObfuscaterFactory)
+        return ShadowsocksAdapterFactory(host, port, encryptMethod, key)
     }
 
     @Throws(ConfigurationException::class)
     private fun parseSpeedAdapterFactory(config: JsonNode, factoryDict: Map<String, AdapterFactory>): SpeedAdapterFactory {
-        val factories = mutableListOf<Pair<AdapterFactory, Int>>()
+        val factories = mutableListOf<AdapterFactory>()
         val adaptersNode = config.get("adapters")?.takeIf { it.isArray }
             ?: throw AdapterParsingException("Speed Adapter ${config.getStringOrIntString("id")} should specify a list of adapters (adapters).")
 
         for (adapterNode in adaptersNode.elements()) {
-             if (!adapterNode.isObject) {
+            if (!adapterNode.isObject) {
                 logger.warn("Skipping non-object entry in speed adapter's adapter list for id: {}", config.getOptString("id"))
                 continue
             }
             val id = adapterNode.getReqString("id", adapterId = config.getOptString("id") + " (speed child)")
             val factory = factoryDict[id]
                 ?: throw AdapterParsingException("Unknown adapter id \"$id\" in Speed Adapter.")
-            val delay = adapterNode.getReqInt("delay", adapterId = id)
-
-            factories.add(Pair(factory, delay))
+            factories.add(factory)
         }
-        val speedAdapter = SpeedAdapterFactory()
-        speedAdapter.adapterFactories = factories
-        return speedAdapter
+        val testUrl = config.getOptString("testUrl") ?: "http://www.google.com/generate_204"
+        return SpeedAdapterFactory(factories, testUrl)
     }
 
     @Throws(ConfigurationException::class)

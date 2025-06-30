@@ -6,6 +6,10 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import kotlinx.coroutines.suspendCancellableCoroutine // Added missing import
+import kotlinx.coroutines.CancellationException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 import java.io.IOException
@@ -76,23 +80,23 @@ class NettyAcceptedRawSocketAdapter(
 
     override val sourceIPAddress: IPAddress?
         get() = (channel.remoteAddress() as? InetSocketAddress)?.address?.hostAddress?.let {
-            // Simplified IPAddress creation. Real one might need more robust parsing/byte handling.
-            IPAddress(it)
+            // Use IPAddress.parse() as constructor is private
+            IPAddress.parse(it)
         }
 
     override val sourcePort: Port?
-        get() = (channel.remoteAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it) }
+        get() = (channel.remoteAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it.toInt()) }
 
     override val destinationIPAddress: IPAddress?
         get() = (channel.localAddress() as? InetSocketAddress)?.address?.hostAddress?.let {
-            IPAddress(it)
+            IPAddress.parse(it)
         }
 
     override val destinationPort: Port?
-        get() = (channel.localAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it) }
+        get() = (channel.localAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it.toInt()) }
 
 
-    override fun connectTo(host: String, port: Int, enableTLS: Boolean, tlsSettings: Map<String, Any>?) {
+    override suspend fun connectTo(host: String, port: Int, enableTLS: Boolean, tlsSettings: Map<String, Any>?) {
         // This method is for initiating an outbound connection.
         // An accepted socket is already connected. Calling this is likely an error.
         logger.error("connectTo called on an already accepted Netty socket. This is unexpected.")
@@ -101,60 +105,70 @@ class NettyAcceptedRawSocketAdapter(
         // forceDisconnect()
     }
 
-    override fun write(data: ByteArray) {
+    override suspend fun write(data: ByteArray) {
         if (!channel.isActive) {
             logger.warn("write called on inactive Netty channel. Data not sent.")
-            // Delegate could be notified of an error or disconnect here.
-            // For now, just log. This might lead to data loss if not handled by caller.
+            delegate?.get()?.didErrorOccur(IOException("Channel is inactive, write failed."), this)
             return
         }
         logger.debug("Writing {} bytes to Netty channel: {}", data.size, channel)
-        channel.writeAndFlush(Unpooled.wrappedBuffer(data)).addListener { future ->
-            if (future.isSuccess) {
-                logger.trace("Successfully wrote {} bytes to Netty channel {}", data.size, channel)
-                delegate?.get()?.didWrite(data, this)
-            } else {
-                logger.error("Failed to write {} bytes to Netty channel {}: {}", data.size, channel, future.cause().message, future.cause())
-                delegate?.get()?.didErrorOccur(future.cause(), this)
-                // Consider closing the channel on write failure depending on policy
-                // forceDisconnect(future.cause())
+        return suspendCancellableCoroutine { continuation ->
+            channel.writeAndFlush(Unpooled.wrappedBuffer(data)).addListener { future ->
+                if (future.isSuccess) {
+                    logger.trace("Successfully wrote {} bytes to Netty channel {}", data.size, channel)
+                    delegate?.get()?.didWrite(data, this)
+                    continuation.resume(Unit)
+                } else {
+                    logger.error("Failed to write {} bytes to Netty channel {}: {}", data.size, channel, future.cause().message, future.cause())
+                    delegate?.get()?.didErrorOccur(future.cause(), this)
+                    continuation.resumeWith(Result.failure(future.cause()))
+                }
             }
         }
     }
 
-    override fun readData() {
-        // Netty is event-driven. Reads are initiated by remote sending data, which triggers
-        // channelRead in the pipeline's handler. That handler should call delegate.didRead.
-        // So, this method might be a no-op or could be used to manage backpressure if needed.
-        logger.debug("readData() called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. Ensure pipeline is configured.")
-        // If using auto-read=false, channel.read() would be needed here to request more data.
-        // For now, assuming auto-read=true.
+    override suspend fun readData() {
+        logger.warn("readData() called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. This method should suspend until data is available.")
+        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
+        // or similar mechanism to be resumed by channelRead.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun readDataTo(delimiter: ByteArray, maxLength: Int) {
+    override suspend fun readDataTo(delimiter: ByteArray) {
         logger.warn("readDataTo(delimiter) not yet fully implemented for NettyAcceptedRawSocketAdapter. Relies on pipeline processing.")
         // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
         // For now, acts like readData() - relies on handler to push data.
-        readData()
+        // This should be a suspending function that waits for the delimiter.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    }
+    // New readDataTo(delimiter, maxLength) implementation
+    override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
+        logger.warn("readDataTo(delimiter, maxLength) not yet fully implemented for NettyAcceptedRawSocketAdapter. Relies on pipeline processing.")
+        // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun readDataTo(length: Int) {
+    override suspend fun readDataTo(length: Int) {
         logger.warn("readDataTo(length) not yet fully implemented for NettyAcceptedRawSocketAdapter. Relies on pipeline processing.")
         // TODO: Implement this using Netty's FixedLengthFrameDecoder or custom logic in pipeline.
         // For now, acts like readData() - relies on handler to push data.
-        readData()
+        // This should be a suspending function that waits for the specified length of data.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun disconnect() {
-        logger.info("disconnect() called for Netty channel: {}. Closing channel gracefully.", channel)
+    override fun disconnect(becauseOf: Throwable?) {
+        logger.info("disconnect() called for Netty channel: {}. Closing channel gracefully. Cause: {}", channel, becauseOf?.message)
         if (channel.isOpen) {
             // Graceful shutdown: waits for pending writes to flush before closing.
             channel.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE)
         }
     }
 
-    override fun forceDisconnect() {
-        logger.info("forceDisconnect() called for Netty channel: {}. Closing channel immediately.", channel)
+    override fun forceDisconnect(becauseOf: Throwable?) {
+        logger.info("forceDisconnect() called for Netty channel: {}. Closing channel immediately. Cause: {}", channel, becauseOf?.message)
         if (channel.isOpen) {
             channel.close() // Immediate close
         }

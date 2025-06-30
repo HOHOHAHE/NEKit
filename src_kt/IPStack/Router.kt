@@ -6,9 +6,8 @@ import org.slf4j.LoggerFactory
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
-import com.example.nekit.IPStack.Packet.IPMutablePacket // Corrected import
-import com.example.nekit.IPStack.Packet.TCPMutablePacket // Corrected import
-// IPVersion.kt, TransportProtocol.kt are available.
+import com.example.nekit.IPStack.Packet.IPMutablePacket
+import com.example.nekit.IPStack.Packet.TCPMutablePacket
 // TODO: Replace CocoaLumberjack with a Kotlin logging solution. (Being done now)
 
 // --- Placeholder for NetworkInterface.TunnelProvider.packetFlow ---
@@ -89,7 +88,7 @@ class Router(
         ?: throw IllegalArgumentException("Invalid fake source IP: $fakeSourceIpString")
     private val proxyServerIP: IPAddress = IPAddress.parse(proxyServerIpString)
         ?: throw IllegalArgumentException("Invalid proxy server IP: $proxyServerIpString")
-    private val proxyServerPort: Port = Port(proxyServerPortValue)
+    private val proxyServerPort: Port = Port(proxyServerPortValue.toInt())
     private val logger = LoggerFactory.getLogger(Router::class.java)
 
 
@@ -208,13 +207,13 @@ class Router(
                         try {
                             // Attempt to parse as IPMutablePacket (which expects IPv4) then TCPMutablePacket
                             val ipMutablePacket = IPMutablePacket(data.copyOf()) // Use copy to avoid modifying original read buffer
-                            if (ipMutablePacket.version == IPVersion.IPv4 && ipMutablePacket.protocol == TransportProtocol.TCP) {
+                            if (ipMutablePacket.version == IPVersion.IPV4 && ipMutablePacket.protocol == TransportProtocol.TCP) {
                                 val tcpPacket = TCPMutablePacket(ipMutablePacket.getPacketData()) // Pass the same ByteArray
 
                                 logger.debug("Received TCPv4 packet: {}:{} -> {}:{}", tcpPacket.sourceAddress, tcpPacket.sourcePort, tcpPacket.destinationAddress, tcpPacket.destinationPort)
                                 rewritePacket(tcpPacket)?.let { rewrittenPacket ->
                                     outputPacketsData.add(rewrittenPacket.getPacketData())
-                                    outputProtocols.add(AddressFamily.AF_INET) // Assuming AF_INET from context
+                                    outputProtocols.add(AddressFamily.AF_INET.value) // Assuming AF_INET from context
                                 } ?: logger.debug("Packet dropped or not rewritten: {}:{}", tcpPacket.sourceAddress, tcpPacket.sourcePort)
                             } else {
                                 logger.debug("Skipping non-TCP/IPv4 packet. Version: {}, Proto: {}", ipMutablePacket.version, ipMutablePacket.protocol)

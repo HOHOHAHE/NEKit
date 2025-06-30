@@ -18,6 +18,9 @@ class IPAddress private constructor(private val inetAddress: InetAddress) : Comp
     val family: Family
         get() = if (inetAddress is java.net.Inet4Address) Family.IPv4 else Family.IPv6
 
+    val addressBytes: ByteArray
+        get() = inetAddress.address
+
     val presentation: String
         get() = inetAddress.hostAddress
 

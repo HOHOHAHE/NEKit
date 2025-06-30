@@ -8,15 +8,9 @@ import org.slf4j.LoggerFactory
 import com.example.nekit.IPStack.Native.JnaTunDevice
 import com.example.nekit.IPStack.Native.TunDeviceInterface
 import java.io.IOException // For potential IO errors from TUN device
+import com.example.nekit.Tunnel.QueueFactory
 
-// Assuming IPStackProtocol.kt and other necessary interfaces/classes are available.
-// Assuming QueueFactory.kt provides CoroutineScope/Dispatchers.
-// Assuming AddressFamily.AF_INET is defined somewhere (e.g. in a common utility file or object)
-
-
-
-// --- Removed NativePacketFlowInterface and PlaceholderNativePacketFlow ---
-
+@OptIn(kotlin.ExperimentalStdlibApi::class)
 /**
  * TUNInterface provides a mechanism to register IP Stacks (implementing IPStackProtocol)
  * to process IP packets from a virtual TUN interface, now using JnaTunDevice.
@@ -34,7 +28,7 @@ open class TUNInterface {
     private val stacksMutex = Mutex() // To protect access to the 'stacks' list
 
     // Coroutine scope for the packet reading loop and other async operations within TUNInterface
-    private val interfaceScope = CoroutineScope(SupervisorJob() + (QueueFactory.getIOScope().coroutineContext[CoroutineDispatcher] ?: Dispatchers.Default))
+    private val interfaceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 
     /**
@@ -175,7 +169,7 @@ open class TUNInterface {
                             var accepted = false
                             val currentStacks = stacksMutex.withLock { ArrayList(stacks) } // Iterate a copy
                             for (stack in currentStacks) {
-                                if (stack.input(packet, version)) {
+                                if (stack.input(packet, version?.value)) {
                                     accepted = true
                                     break
                                 }

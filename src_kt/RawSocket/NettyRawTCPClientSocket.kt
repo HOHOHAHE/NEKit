@@ -183,28 +183,36 @@ class NettyRawTCPClientSocket(
     }
 
 
-    override fun readData() {
-        logger.debug("readData() called. Netty reads are event-driven via ClientSocketHandler. Ensure auto-read is enabled or channel.read() is managed by handler if needed.")
-        // For Netty, if auto-read is true (default), data is read automatically.
-        // If auto-read is false, channel.read() would be called here to request data.
-        // The ClientSocketHandler will receive it via channelRead.
+    override suspend fun readData() {
+        logger.warn("readData() called on NettyRawTCPClientSocket. Netty reads are event-driven. This method should suspend until data is available.")
+        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
+        // or similar mechanism to be resumed by channelRead.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun readDataTo(delimiter: ByteArray, maxLength: Int) {
-        logger.warn("readDataTo(delimiter, maxLength) not fully implemented. Relies on pipeline processing (e.g. DelimiterBasedFrameDecoder).")
-        // TODO: Potentially add DelimiterBasedFrameDecoder dynamically to pipeline if not already present.
-        // For now, behavior is same as readData().
-        readData()
+    override suspend fun readDataTo(delimiter: ByteArray) {
+        logger.warn("readDataTo(delimiter) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
+        // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun readDataTo(length: Int) {
-        logger.warn("readDataTo(length) not fully implemented. Relies on pipeline processing (e.g. FixedLengthFrameDecoder).")
-        // TODO: Potentially add FixedLengthFrameDecoder dynamically.
-        readData()
+    override suspend fun readDataTo(length: Int) {
+        logger.warn("readDataTo(length) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
+        // TODO: Implement this using Netty's FixedLengthFrameDecoder or custom logic in pipeline.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override fun disconnect() {
-        logger.info("disconnect() called for Netty channel: {}. Closing gracefully.", channel)
+    override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
+        logger.warn("readDataTo(delimiter, maxLength) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
+        // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
+        // For now, just a placeholder.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    }
+
+    override fun disconnect(becauseOf: Throwable?) {
+        logger.info("disconnect() called for Netty channel: {}. Closing gracefully. Cause: {}", channel, becauseOf?.message)
         if (channel?.isOpen == true) {
             channel?.writeAndFlush(Unpooled.EMPTY_BUFFER)?.addListener(ChannelFutureListener.CLOSE)
         } else {
@@ -212,8 +220,8 @@ class NettyRawTCPClientSocket(
         }
     }
 
-    override fun forceDisconnect() {
-        logger.info("forceDisconnect() called for Netty channel: {}. Closing immediately.", channel)
+    override fun forceDisconnect(becauseOf: Throwable?) {
+        logger.info("forceDisconnect() called for Netty channel: {}. Closing immediately. Cause: {}", channel, becauseOf?.message)
         if (channel?.isOpen == true) {
             channel?.close()
         } else {
@@ -226,14 +234,14 @@ class NettyRawTCPClientSocket(
         get() = channel?.isActive ?: false
 
     override val sourceIPAddress: IPAddress?
-        get() = (channel?.localAddress() as? InetSocketAddress)?.address?.hostAddress?.let { IPAddress(it) }
+        get() = (channel?.localAddress() as? InetSocketAddress)?.address?.hostAddress?.let { IPAddress.parse(it) }
 
     override val sourcePort: Port?
-        get() = (channel?.localAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it) }
+        get() = (channel?.localAddress() as? InetSocketAddress)?.port?.toUShort()?.let { Port(it.toInt()) }
 
     override val destinationIPAddress: IPAddress?
-        get() = connectedHost?.let { IPAddress(it) } // Return host passed to connectTo
+        get() = connectedHost?.let { IPAddress.parse(it) } // Return host passed to connectTo
 
     override val destinationPort: Port?
-        get() = if (connectedPort != 0) Port(connectedPort.toUShort()) else null
+        get() = if (connectedPort != 0) Port(connectedPort.toUShort().toInt()) else null
 }

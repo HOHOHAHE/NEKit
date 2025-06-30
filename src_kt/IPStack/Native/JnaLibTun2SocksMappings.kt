@@ -133,16 +133,64 @@ class JnaLibTun2Socks : LibTun2SocksStackInterface {
         return buffer
     }
 
+    class WritePacketCallbackImpl(private val callback: (Pointer?, Int) -> Int) : WritePacketCallback {
+        override fun invoke(packet: Pointer?, len: Int): Int {
+            return callback(packet, len)
+        }
+    }
+
+    class OnTcpSocketCreatedCallbackImpl(private val callback: (Int, Pointer?) -> Unit) : OnTcpSocketCreatedCallback {
+        override fun invoke(socketId: Int, context: Pointer?) {
+            callback(socketId, context)
+        }
+    }
+
+    class OnUdpSocketCreatedCallbackImpl(private val callback: (Int, Pointer?) -> Unit) : OnUdpSocketCreatedCallback {
+        override fun invoke(socketId: Int, context: Pointer?) {
+            callback(socketId, context)
+        }
+    }
+
+    class OnConnectedCallbackImpl(private val callback: (Int) -> Unit) : OnConnectedCallback {
+        override fun invoke(socketId: Int) {
+            callback(socketId)
+        }
+    }
+
+    class OnDataReceivedCallbackImpl(private val callback: (Int, Pointer?, Int) -> Unit) : OnDataReceivedCallback {
+        override fun invoke(socketId: Int, data: Pointer?, len: Int) {
+            callback(socketId, data, len)
+        }
+    }
+
+    class OnRemoteClosedCallbackImpl(private val callback: (Int) -> Unit) : OnRemoteClosedCallback {
+        override fun invoke(socketId: Int) {
+            callback(socketId)
+        }
+    }
+
+    class OnWritePossibleCallbackImpl(private val callback: (Int) -> Unit) : OnWritePossibleCallback {
+        override fun invoke(socketId: Int) {
+            callback(socketId)
+        }
+    }
+
+    class OnSocketErrorCallbackImpl(private val callback: (Int, Int) -> Unit) : OnSocketErrorCallback {
+        override fun invoke(socketId: Int, errorCode: Int) {
+            callback(socketId, errorCode)
+        }
+    }
+
     override fun init(callbacks: LibTun2SocksStackCallbacks) {
         this.kotlinStackCallbacks = callbacks
 
-        this.jnaWritePacketCallback = WritePacketCallback { packetPtr, len ->
+        this.jnaWritePacketCallback = WritePacketCallbackImpl { packetPtr, len ->
             val data = copyJnaPointerToByteArray(packetPtr, len)
             // Assuming protocol is embedded or not needed for this specific writePacket
             this.kotlinStackCallbacks?.writePacket(0 /* protocol placeholder */, data, len) ?: -1
         }
 
-        this.jnaOnTcpSocketCreatedCallback = OnTcpSocketCreatedCallback { socketId, _ ->
+        this.jnaOnTcpSocketCreatedCallback = OnTcpSocketCreatedCallbackImpl { socketId, _ ->
             logger.debug("Native tun2socks: TCP socket {} created.", socketId)
             val kotlinSocketCallbacks = this.kotlinStackCallbacks?.onTcpSocketCreated(socketId, null)
             if (kotlinSocketCallbacks != null) {
@@ -153,7 +201,7 @@ class JnaLibTun2Socks : LibTun2SocksStackInterface {
             }
         }
 
-        this.jnaOnUdpSocketCreatedCallback = OnUdpSocketCreatedCallback { socketId, _ ->
+        this.jnaOnUdpSocketCreatedCallback = OnUdpSocketCreatedCallbackImpl { socketId, _ ->
             logger.debug("Native tun2socks: UDP socket {} created.", socketId)
             val kotlinSocketCallbacks = this.kotlinStackCallbacks?.onUdpSocketCreated(socketId, null)
             if (kotlinSocketCallbacks != null) {
@@ -177,13 +225,13 @@ class JnaLibTun2Socks : LibTun2SocksStackInterface {
     }
 
     private fun registerJnaSocketCallbacks(socketId: Int, kotlinCallbacks: LibTun2SocksSocketCallbacks) {
-        val onConnectedJna = OnConnectedCallback { sid -> if (sid == socketId) kotlinCallbacks.onConnected(sid) }
-        val onDataReceivedJna = OnDataReceivedCallback { sid, dataPtr, len ->
+        val onConnectedJna = OnConnectedCallbackImpl { sid -> if (sid == socketId) kotlinCallbacks.onConnected(sid) }
+        val onDataReceivedJna = OnDataReceivedCallbackImpl { sid, dataPtr, len ->
             if (sid == socketId) kotlinCallbacks.onDataReceived(sid, copyJnaPointerToByteArray(dataPtr, len), len)
         }
-        val onRemoteClosedJna = OnRemoteClosedCallback { sid -> if (sid == socketId) kotlinCallbacks.onRemoteClosed(sid) }
-        val onWritePossibleJna = OnWritePossibleCallback { sid -> if (sid == socketId) kotlinCallbacks.onWritePossible(sid) }
-        val onErrorJna = OnSocketErrorCallback { sid, errCode -> if (sid == socketId) kotlinCallbacks.onError(sid, errCode) }
+        val onRemoteClosedJna = OnRemoteClosedCallbackImpl { sid -> if (sid == socketId) kotlinCallbacks.onRemoteClosed(sid) }
+        val onWritePossibleJna = OnWritePossibleCallbackImpl { sid -> if (sid == socketId) kotlinCallbacks.onWritePossible(sid) }
+        val onErrorJna = OnSocketErrorCallbackImpl { sid, errCode -> if (sid == socketId) kotlinCallbacks.onError(sid, errCode) }
 
         val jnaCallbacks = SocketJnaCallbacks(
             onConnected = onConnectedJna,

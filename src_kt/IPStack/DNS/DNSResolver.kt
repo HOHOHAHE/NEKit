@@ -1,14 +1,12 @@
 package com.example.nekit.IPStack.DNS
-// Removed WeakReference as direct delegate will be used for RawUDPSocketDelegate
+import java.lang.ref.WeakReference
 
 
-// Assuming IPAddress.kt, Port.kt, DNSSession.kt (placeholder) are available.
-// Assuming new RawSocket types are available.
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 import com.example.nekit.RawSocket.NettyRawUDPSocket
 import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.RawSocket.RawUDPSocketDelegate
-
-
 import com.example.nekit.IPStack.DNS.DNSSession // Replaced placeholder with actual import
 
 
@@ -34,12 +32,13 @@ open class UDPDNSResolver(
 ) : DNSResolverProtocol, RawUDPSocketDelegate {
 
     private val logger = LoggerFactory.getLogger(UDPDNSResolver::class.java)
-    private val socket: RawUDPSocketProtocol = NettyRawUDPSocket() // Use Netty-based UDP socket
+    // Instantiate NettyRawUDPSocket with host and port
+    private val socket: RawUDPSocketProtocol = NettyRawUDPSocket(remoteAddress.presentation, remotePort.hostOrderValue)
 
     override var delegate: DNSResolverDelegate? = null
 
     init {
-        socket.delegate = this // Set this resolver as the delegate for socket events
+        socket.delegate = WeakReference(this) // Set this resolver as the delegate for socket events
         try {
             // Bind to an ephemeral port on all local interfaces.
             // DNS client usually doesn't need a fixed local port.
@@ -60,11 +59,11 @@ open class UDPDNSResolver(
                     session.requestMessage.queries.firstOrNull()?.name ?: "N/A",
                     payload.size,
                     remoteAddress.presentation,
-                    remotePort.value)
+                    remotePort.hostOrderValue)
                 socket.send(
                     data = payload,
                     destinationHost = remoteAddress.presentation,
-                    destinationPort = remotePort.value.toInt()
+                    destinationPort = remotePort.hostOrderValue
                 )
             } catch (e: Exception) {
                 logger.error("Failed to send DNS query for session {}: {}", session, e.message, e)
@@ -82,14 +81,17 @@ open class UDPDNSResolver(
     }
 
     // Implementation of RawUDPSocketDelegate
-    override fun didReceive(data: ByteArray, fromHost: String, fromPort: Int, onSocket: RawUDPSocketProtocol) {
+    override fun didReceive(data: ByteArray, from: RawUDPSocketProtocol) {
         // Check if the response is from the expected DNS server
-        if (fromHost == remoteAddress.presentation && fromPort == remotePort.value.toInt()) {
+        // fromHost and fromPort are properties of the 'from' socket, not global
+        val fromHost = from.sourceIPAddress?.presentation ?: "unknown"
+        val fromPort = from.sourcePort?.hostOrderValue ?: -1
+        if (fromHost == remoteAddress.presentation && fromPort == remotePort.hostOrderValue) {
             logger.debug("Received {} bytes DNS response from {}:{}", data.size, fromHost, fromPort)
             delegate?.didReceive(rawResponse = data)
         } else {
             logger.warn("Received UDP packet from unexpected source {}:{}. Expected {}:{}. Ignoring.",
-                fromHost, fromPort, remoteAddress.presentation, remotePort.value)
+                fromHost, fromPort, remoteAddress.presentation, remotePort.hostOrderValue)
         }
     }
 
@@ -98,5 +100,10 @@ open class UDPDNSResolver(
         // This might indicate a problem with the socket that could affect future resolutions.
         // Depending on the error, might need to re-initialize the socket or signal failure for pending queries.
         // For now, just logging. If it's a fatal socket error, new sends might fail.
+    }
+
+    override fun didCancel(socket: RawUDPSocketProtocol) {
+        logger.info("UDPDNSResolver socket cancelled: {}", socket)
+        // Handle cancellation, potentially clean up resources
     }
 }

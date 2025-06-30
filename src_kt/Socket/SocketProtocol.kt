@@ -3,7 +3,8 @@ package com.example.nekit.Socket
 import java.lang.ref.WeakReference
 
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 
 
 /**
@@ -22,61 +23,7 @@ enum class SocketStatus {
     CLOSED
 }
 
-/**
- * Delegate interface for handling events from a [SocketProtocol] instance.
- * Callbacks are expected to be invoked on a specific dispatcher context,
- * as defined by the [SocketProtocol] implementation.
- */
-interface SocketDelegate {
-    /**
-     * Called when an adapter socket successfully connects to its remote destination.
-     * @param adapterSocket The [AdapterSocket] that connected.
-     */
-    fun didConnect(adapterSocket: AdapterSocket)
 
-    /**
-     * Called when any socket (adapter or proxy) disconnects.
-     * This is the final event for a socket instance.
-     * @param socket The [SocketProtocol] instance that disconnected.
-     */
-    fun didDisconnect(socket: SocketProtocol)
-
-    /**
-     * Called when data has been read from the socket.
-     * @param data The [ByteArray] containing the data read.
-     * @param from The [SocketProtocol] instance from which data was read.
-     */
-    fun didRead(data: ByteArray, from: SocketProtocol)
-
-    /**
-     * Called when data written to the socket has been successfully sent.
-     * @param data The [ByteArray] that was written (may be null if not provided by implementation).
-     * @param by The [SocketProtocol] instance through which data was written.
-     */
-    fun didWrite(data: ByteArray?, by: SocketProtocol)
-
-    /**
-     * Called when the socket is ready to forward data in both directions.
-     * This is particularly relevant for proxy setups after initial handshakes or connections.
-     * @param socket The [SocketProtocol] instance that is ready.
-     */
-    fun didBecomeReadyToForward(socket: SocketProtocol)
-
-    /**
-     * Called by a [ProxySocket] when it has received enough information from a client
-     * to establish a new outgoing connection (represented by a [ConnectSession]).
-     * @param session The [ConnectSession] containing details for the outgoing connection.
-     * @param from The [ProxySocket] that received the client request.
-     */
-    fun didReceive(session: ConnectSession, from: ProxySocket)
-
-    /**
-     * Called when an [AdapterSocket] decides it needs to be replaced by a new one,
-     * for example, due to a change in routing or protocol for a connection.
-     * @param newAdapter The new [AdapterSocket] that should take over.
-     */
-    fun updateAdapter(newAdapter: AdapterSocket)
-}
 
 
 /**
@@ -88,16 +35,15 @@ interface SocketDelegate {
  */
 interface SocketProtocol {
     /**
+     * The delegate to handle socket events. Use WeakReference to avoid retain cycles.
+     */
+    var delegate: WeakReference<SocketDelegate?>?
+
+    /**
      * The underlying raw TCP socket that transmits data.
      * This should be non-null after the socket is properly initialized or connected.
      */
-    val rawSocket: RawTCPSocketProtocol? // Nullable if it can be detached or not always present
-
-    /**
-     * The delegate to handle socket events. Use [WeakReference] to avoid retain cycles
-     * if the delegate might also hold a strong reference to this socket.
-     */
-    var delegate: WeakReference<SocketDelegate?>?
+    val rawSocket: RawTCPSocketProtocol?
 
     /**
      * The current connection status of the socket.
@@ -105,10 +51,35 @@ interface SocketProtocol {
     val status: SocketStatus
 
     /**
+     * True if the socket is currently connected.
+     */
+    val isConnected: Boolean
+
+    /**
      * Indicates if the socket is disconnected (i.e., in [SocketStatus.CLOSED] or [SocketStatus.INVALID] state).
      */
     val isDisconnected: Boolean
         get() = (status == SocketStatus.CLOSED || status == SocketStatus.INVALID)
+
+    /**
+     * The source IP address of the socket.
+     */
+    val sourceIPAddress: IPAddress?
+
+    /**
+     * The source port of the socket.
+     */
+    val sourcePort: Port?
+
+    /**
+     * The destination (remote) IP address.
+     */
+    val destinationIPAddress: IPAddress?
+
+    /**
+     * The destination (remote) port.
+     */
+    val destinationPort: Port?
 
     /**
      * A string representation of the concrete socket type (class name).
@@ -130,31 +101,39 @@ interface SocketProtocol {
 
     /**
      * Initiates an asynchronous read operation. Data will be delivered via [SocketDelegate.didRead].
-     * Implementations should respect the one-at-a-time read model if underlying raw socket requires it.
      */
-    fun readData()
+    suspend fun readData()
 
     /**
-     * Writes data to the socket. This operation may be asynchronous.
-     * Completion (or failure) will be signaled via [SocketDelegate.didWrite] or error callbacks.
+     * Initiates an asynchronous read for a specific number of bytes.
+     */
+    suspend fun readDataTo(length: Int)
+
+    /**
+     * Initiates an asynchronous read until a specific delimiter pattern is encountered.
+     */
+    suspend fun readDataTo(delimiter: ByteArray)
+
+    /**
+     * Initiates an asynchronous read until a specific delimiter pattern is encountered,
+     * up to a maximum number of bytes scanned.
+     */
+    suspend fun readDataTo(delimiter: ByteArray, maxLength: Int)
+
+    /**
+     * Writes data to the socket. This operation is suspending.
      *
      * @param data The [ByteArray] to send.
      */
-    fun write(data: ByteArray) // Could be suspend fun if implementations are suspending
+    suspend fun write(data: ByteArray)
 
     /**
-     * Initiates a graceful disconnect. The socket attempts to send any queued write data
-     * before closing. [SocketDelegate.didDisconnect] will be called eventually.
-     *
-     * @param becauseOf An optional [Throwable] indicating the reason for disconnection.
+     * Initiates a graceful disconnect.
      */
     fun disconnect(becauseOf: Throwable? = null)
 
     /**
-     * Forces an immediate disconnect. Any unsent data may be lost.
-     * [SocketDelegate.didDisconnect] will be called.
-     *
-     * @param becauseOf An optional [Throwable] indicating the reason for disconnection.
+     * Forces an immediate disconnect.
      */
     fun forceDisconnect(becauseOf: Throwable? = null)
 }

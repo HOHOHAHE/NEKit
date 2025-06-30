@@ -1,10 +1,12 @@
 package com.example.nekit.Event
 
+import com.example.nekit.Event.Event.Event
+
 /**
  * A generic interface for objects that can emit events.
  * @param T The type of event that this source can emit.
  */
-interface EventSource<T> {
+interface EventSource<T : Event> {
     /**
      * Registers an observer to receive events from this source.
      * @param observer The observer to register.

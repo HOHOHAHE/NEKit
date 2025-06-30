@@ -1,17 +1,13 @@
 package com.example.nekit.Config
 
-import java.io.IOException
-
-// --- ConfigurationException Definitions ---
-sealed class ConfigurationException(message: String) : Exception(message) {
-    class InvalidYamlFileException(message: String = "Invalid YAML file content.") : ConfigurationException(message)
-    class NoRuleDefinedException(message: String = "No rule defined in configuration.") : ConfigurationException(message)
-    class RuleTypeMissingException(message: String = "Rule type is missing.") : ConfigurationException(message)
-    class UnknownRuleTypeException(typeName: String) : ConfigurationException("Unknown rule type: $typeName")
-    class RuleParsingException(errorInfo: String) : ConfigurationException("Rule parsing error: $errorInfo")
-    class NoAdapterDefinedException(message: String = "No adapter defined in configuration.") : ConfigurationException(message)
-    class AdapterIDMissingException(message: String = "Adapter ID is missing.") : ConfigurationException(message)
-    class AdapterTypeMissingException(message: String = "Adapter type is missing.") : ConfigurationException(message)
-    class UnknownAdapterTypeException(typeName: String) : ConfigurationException("Unknown adapter type: $typeName")
-    class AdapterParsingException(errorInfo: String) : ConfigurationException("Adapter parsing error: $errorInfo")
+open class ConfigurationException(message: String) : Exception(message) {
+    open class RuleParsingException(message: String) : ConfigurationException(message)
+    open class AdapterParsingException(message: String) : ConfigurationException(message)
+    class AdapterIDMissingException(message: String) : AdapterParsingException(message)
+    class AdapterTypeMissingException(message: String) : AdapterParsingException(message)
+    class UnknownAdapterTypeException(message: String) : AdapterParsingException(message)
+    class InvalidYamlFileException(message: String) : ConfigurationException(message)
+    class NoAdapterDefinedException(message: String) : ConfigurationException(message)
+    class RuleTypeMissingException(message: String) : RuleParsingException(message)
+    class UnknownRuleTypeException(message: String) : RuleParsingException(message)
 }

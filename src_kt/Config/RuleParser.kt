@@ -23,7 +23,7 @@ import com.example.nekit.Rule.AllRule
 import com.example.nekit.Rule.DomainListRule
 import com.example.nekit.Rule.IPRangeListRule
 import com.example.nekit.Rule.DNSFailRule
-import com.example.nekit.Rule.DomainListRule.MatchCriterion
+import com.example.nekit.Rule.MatchCriterion
 
 // Removed placeholder Rule types and RuleManager, as they are now imported from Rule package.
 
@@ -74,7 +74,7 @@ object RuleParser {
     @Throws(ConfigurationException::class)
     private fun parseRule(config: JsonNode, adapterFactoryManager: AdapterFactoryManager): Rule {
         val type = config.getOptString("type")?.lowercase()
-            ?: throw ConfigurationException.RuleTypeMissingException()
+            ?: throw ConfigurationException.RuleTypeMissingException("Rule type is missing.")
 
         return when (type) {
             "country" -> parseCountryRule(config, adapterFactoryManager)
@@ -82,7 +82,7 @@ object RuleParser {
             "list", "domainlist" -> parseDomainListRule(config, adapterFactoryManager)
             "iplist" -> parseIPRangeListRule(config, adapterFactoryManager)
             "dnsfail" -> parseDNSFailRule(config, adapterFactoryManager)
-            else -> throw ConfigurationException.UnknownRuleTypeException(type)
+            else -> throw ConfigurationException.UnknownRuleTypeException("Unknown rule type: $type")
         }
     }
 
@@ -116,10 +116,10 @@ object RuleParser {
         try {
             val content = File(filepath).readText(Charsets.UTF_8)
             val lines = content.lines()
-            val criteria = mutableListOf<DomainListRule.MatchCriterion>()
+            val criteria = mutableListOf<MatchCriterion>()
             for (line in lines) {
                 if (line.isNotBlank() && !line.startsWith("#")) {
-                    criteria.add(DomainListRule.MatchCriterion.RegexCriterion(Regex(line, RegexOption.IGNORE_CASE)))
+                    criteria.add(MatchCriterion.RegexCriterion(Regex(line, RegexOption.IGNORE_CASE)))
                 }
             }
             return DomainListRule(adapter, criteria)
@@ -142,7 +142,8 @@ object RuleParser {
         try {
             val content = File(filepath).readText(Charsets.UTF_8)
             val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") }
-            return IPRangeListRule(adapter, lines)
+            val ranges = lines.map { com.example.nekit.Utils.IPRange.fromString(it) }
+            return IPRangeListRule(ranges, adapter)
         } catch (e: IOException) {
             throw ConfigurationException.RuleParsingException("Error reading IP range list file '$filepath': ${e.message}")
         } catch (e: Exception) {

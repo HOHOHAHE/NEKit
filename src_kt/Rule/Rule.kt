@@ -1,51 +1,13 @@
 package com.example.nekit.Rule
 
+import com.example.nekit.Config.ConfigurationException
+import com.example.nekit.IPStack.DNS.DNSSession
+import com.example.nekit.Rule.DNSSessionMatchResult
+import com.example.nekit.Rule.DNSSessionMatchType
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
-import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.IPStack.DNS.DNSSessionMatchType
-import com.example.nekit.IPStack.DNS.DNSSessionMatchResult
 
-
-/**
- * Base class for rules that define actions for DNS requests and connect sessions.
- * Subclasses should override [matchDNS] and/or [match] to implement specific rule logic.
- */
-open class Rule {
-
-    /**
-     * Default constructor.
-     */
-    constructor()
-
-    /**
-     * Provides a string representation of the rule.
-     * Subclasses might override this for more specific descriptions.
-     */
-    override fun toString(): String {
-        return "<${this::class.simpleName ?: "Rule"}>" // Use actual class name if available
-    }
-
-    /**
-     * Matches a DNS request against this rule.
-     * The base implementation always returns [DNSSessionMatchResult.REAL].
-     *
-     * @param session The DNS session to match.
-     * @param type The type of information available for matching (e.g., domain name, IP address).
-     * @return The result of the match.
-     */
-    open fun matchDNS(session: DNSSession, type: DNSSessionMatchType): DNSSessionMatchResult {
-        return DNSSessionMatchResult.REAL // Base behavior: consider it a real request, no specific action by this rule.
-    }
-
-    /**
-     * Matches a connection session against this rule.
-     * The base implementation never matches (returns null).
-     *
-     * @param session The connect session to match.
-     * @return The [AdapterFactory] to be used if the rule matches, or null if it does not match.
-     */
-    open fun match(session: ConnectSession): AdapterFactory? {
-        return null // Base behavior: rule does not match.
-    }
+abstract class Rule {
+    abstract fun match(session: ConnectSession): AdapterFactory?
+    abstract fun matchDNS(session: DNSSession, type: DNSSessionMatchType): DNSSessionMatchResult
 }

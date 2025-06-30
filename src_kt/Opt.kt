@@ -1,4 +1,6 @@
 
+package com.example.nekit
+
 /**
  * Object holding global constants and configuration values for the application.
  */

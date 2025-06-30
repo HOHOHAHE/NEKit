@@ -1,5 +1,7 @@
 
-class MatchCriterion {
+package com.example.nekit.Rule
+
+abstract class MatchCriterion {
     /**
      * Abstract method to check if the given domain string matches this criterion.
      * @param domain The domain string to test.

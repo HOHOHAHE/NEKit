@@ -1,70 +1,7 @@
-package com.example.nekit
-
-import java.security.Security
-import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.slf4j.LoggerFactory
-import com.example.nekit.Tunnel.QueueFactory
-
-object Resolver {
-    var queue: kotlinx.coroutines.CoroutineDispatcher? = null
-}
+package com.example.nekit.GlobalInitializer
 
 object GlobalInitializer {
-    private val logger = LoggerFactory.getLogger(GlobalInitializer::class.java)
-
-    /**
-     * A flag that becomes true after the first-time initialization logic is executed.
-     * Accessing this property triggers the initialization block if it hasn't run yet.
-     */
-    private val initialized: Boolean by lazy {
-        logger.info("Performing one-time initialization...")
-        var success = true
-        try {
-            // Register BouncyCastle provider
-            if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
-                Security.addProvider(BouncyCastleProvider())
-                logger.info("BouncyCastle provider registered successfully.")
-            } else {
-                logger.info("BouncyCastle provider already registered.")
-            }
-        } catch (e: Exception) {
-            logger.error("Failed to register BouncyCastle provider: {}", e.message, e)
-            success = false // Mark initialization as failed if BC provider registration fails
-        }
-
-        // Original Swift code: Resolver.queue = QueueFactory.getQueue()
-        try {
-            // Original Swift code: Resolver.queue = QueueFactory.getQueue()
-            Resolver.queue = QueueFactory.getProcessingDispatcher()
-            logger.info("Resolver.queue has been set.")
-        } catch (e: Exception) {
-            logger.error("Failed during Resolver.queue initialization: {}", e.message, e)
-            success = false // Mark initialization as failed
-        }
-
-        success // Return overall success status
-    }
-
-    /**
-     * Explicitly triggers the one-time global initialization block if it hasn't run yet.
-     * Call this method early in the application lifecycle if explicit initialization timing is needed.
-     *
-     * @return True if initialization was successful (or already completed successfully),
-     *         false if initialization failed.
-     */
-    fun initialize(): Boolean {
-        // Accessing the 'initialized' property triggers the lazy block.
-        // The return value of this function will be the result of the lazy block (true/false).
-        return initialized
-    }
-
-    /**
-     * Checks if the global initialization has been performed.
-     * Note: This will also trigger initialization if it hasn't happened yet.
-     *
-     * @return True if initialization was successful, false otherwise or if it failed.
-     */
-    fun isInitialized(): Boolean {
-        return initialized
+    fun initialize() {
+        // Placeholder
     }
 }

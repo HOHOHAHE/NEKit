@@ -22,37 +22,35 @@ import com.example.nekit.Event.Event.RuleMatchEvent // Corrected import
 // --- End Placeholders ---
 
 
-open class DebugObserverFactory : ObserverFactory() {
+object DebugObserverFactory {
     // public override init() {} // Kotlin provides default constructor if no primary is defined
 
-    override fun getObserverForTunnel(tunnel: Tunnel): Observer<TunnelEvent>? {
+    fun getObserverForTunnel(tunnel: Tunnel): Observer<TunnelEvent>? {
         return DebugTunnelObserver()
     }
 
-    override fun getObserverForProxyServer(server: ProxyServer): Observer<ProxyServerEvent>? {
+    fun getObserverForProxyServer(server: ProxyServer): Observer<ProxyServerEvent>? {
         return DebugProxyServerObserver()
     }
 
-    override fun getObserverForProxySocket(socket: ProxySocket): Observer<ProxySocketEvent>? {
+    fun getObserverForProxySocket(socket: ProxySocket): Observer<ProxySocketEvent>? {
         return DebugProxySocketObserver()
     }
 
-    override fun getObserverForAdapterSocket(socket: AdapterSocket): Observer<AdapterSocketEvent>? {
+    fun getObserverForAdapterSocket(socket: AdapterSocket): Observer<AdapterSocketEvent>? {
         return DebugAdapterSocketObserver()
     }
 
-    override fun getObserverForRuleManager(manager: RuleManager): Observer<RuleMatchEvent>? {
-        return DebugRuleManagerObserver()
-    }
+    fun getObserverForRuleManager(manager: RuleManager): Observer<RuleMatchEvent> = DebugRuleManagerObserver()
 }
 
-open class DebugTunnelObserver : Observer<TunnelEvent>() {
+open class DebugTunnelObserver : Observer<TunnelEvent> {
     private val logger = LoggerFactory.getLogger(DebugTunnelObserver::class.java)
     override fun signal(event: TunnelEvent) {
         val message = event.toString() // logger will handle formatting
         when (event) {
             is TunnelEvent.ReceivedRequest,
-            is TunnelEvent.Closed ->
+            is TunnelEvent.TunnelClosed ->
                 logger.info(message)
             is TunnelEvent.Opened,
             is TunnelEvent.ConnectedToRemote,
@@ -64,7 +62,7 @@ open class DebugTunnelObserver : Observer<TunnelEvent>() {
     }
 }
 
-open class DebugProxySocketObserver : Observer<ProxySocketEvent>() {
+open class DebugProxySocketObserver : Observer<ProxySocketEvent> {
     private val logger = LoggerFactory.getLogger(DebugProxySocketObserver::class.java)
     override fun signal(event: ProxySocketEvent) {
         val message = event.toString()
@@ -84,7 +82,7 @@ open class DebugProxySocketObserver : Observer<ProxySocketEvent>() {
     }
 }
 
-open class DebugAdapterSocketObserver : Observer<AdapterSocketEvent>() {
+open class DebugAdapterSocketObserver : Observer<AdapterSocketEvent> {
     private val logger = LoggerFactory.getLogger(DebugAdapterSocketObserver::class.java)
     override fun signal(event: AdapterSocketEvent) {
         val message = event.toString()
@@ -103,7 +101,7 @@ open class DebugAdapterSocketObserver : Observer<AdapterSocketEvent>() {
     }
 }
 
-open class DebugProxyServerObserver : Observer<ProxyServerEvent>() {
+open class DebugProxyServerObserver : Observer<ProxyServerEvent> {
     private val logger = LoggerFactory.getLogger(DebugProxyServerObserver::class.java)
     override fun signal(event: ProxyServerEvent) {
         val message = event.toString()
@@ -120,7 +118,7 @@ open class DebugProxyServerObserver : Observer<ProxyServerEvent>() {
     }
 }
 
-open class DebugRuleManagerObserver : Observer<RuleMatchEvent>() {
+open class DebugRuleManagerObserver : Observer<RuleMatchEvent> {
     private val logger = LoggerFactory.getLogger(DebugRuleManagerObserver::class.java)
     override fun signal(event: RuleMatchEvent) {
         val message = event.toString()

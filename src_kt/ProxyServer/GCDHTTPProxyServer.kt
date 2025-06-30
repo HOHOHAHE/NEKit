@@ -1,5 +1,6 @@
 package com.example.nekit.ProxyServer
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope // Added missing import
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch // Added missing import
 import org.slf4j.LoggerFactory
@@ -11,7 +12,7 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.Socket.ProxySocket
+// import com.example.nekit.Socket.ProxySocket // Removed as it's a package, not a class to import directly
 
 
 /**
@@ -33,9 +34,8 @@ class GCDHTTPProxyServer : GCDProxyServer {
      */
     constructor(
         address: IPAddress?,
-        port: Port,
-        mainDispatcher: CoroutineDispatcher = Dispatchers.Default // Keep consistent with GCDProxyServer's constructor if it adds this
-    ) : super(address, port, mainDispatcher)
+        port: Port
+    ) : super(address, port)
 
     /**
      * Handles a newly accepted socket from the listening server socket by wrapping it
@@ -43,9 +43,9 @@ class GCDHTTPProxyServer : GCDProxyServer {
      *
      * @param acceptedSocket The newly accepted socket (e.g., KotlinTCPSocketWrapper).
      */
-    override fun handleNewAcceptedSocket(acceptedSocket: KotlinAcceptedSocketInterface) {
-        httpLogger.info("New socket accepted, wrapping as HTTPProxySocket: {}", acceptedSocket)
-        val httpProxySocket = HTTPProxySocket(acceptedSocket)
+    override fun handleNewAcceptedSocket(socket: RawTCPSocketProtocol) {
+        httpLogger.info("New socket accepted, wrapping as HTTPProxySocket: {}", socket)
+        val httpProxySocket = HTTPProxySocket(socket, com.example.nekit.Messages.ConnectSession("", 0))
 
         // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.
@@ -54,16 +54,16 @@ class GCDHTTPProxyServer : GCDProxyServer {
         // Using mainDispatcher passed to GCDProxyServer, or a default one.
         // Note: ProxyServer.didAcceptNewSocket itself launches Tunnel.openTunnel, which might be async.
         // This launch here is for the call to didAcceptNewSocket itself.
-        val scope = CoroutineScope(mainDispatcher) // Or use a dedicated scope from GCDProxyServer if available
+        val scope = CoroutineScope(Dispatchers.Default) // Or use a dedicated scope from GCDProxyServer if available
         scope.launch {
             try {
                 super.didAcceptNewSocket(httpProxySocket)
             } catch (e: Exception) {
-                httpLogger.error("Error processing newly accepted HTTP socket {}: {}", acceptedSocket, e.message, e)
+                httpLogger.error("Error processing newly accepted HTTP socket {}: {}", socket, e.message, e)
                 try {
-                    acceptedSocket.close() // Close the raw socket if super.didAcceptNewSocket fails
+                    socket.forceDisconnect(e) // Close the raw socket if super.didAcceptNewSocket fails
                 } catch (ioe: Exception) {
-                    httpLogger.error("Exception closing socket {} after error: {}", acceptedSocket, ioe.message, ioe)
+                    httpLogger.error("Exception closing socket {} after error: {}", socket, ioe.message, ioe)
                 }
             }
         }

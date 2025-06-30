@@ -3,12 +3,9 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap // Alternative to Mutex for map
+import java.lang.ref.WeakReference // Import WeakReference
 
 import org.slf4j.LoggerFactory
-
-// Assuming IPStackProtocol.kt, IPPacket.kt, UDPProtocolParser.kt, IPAddress.kt, Port.kt are available.
-// Assuming KotlinUDPSocket.kt, KotlinUDPSocketDelegate.kt (from DNSResolver context) are available.
-// Assuming ConnectSession.kt (placeholder) is available.
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -16,6 +13,9 @@ import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.RawSocket.RawUDPSocketDelegate
 import com.example.nekit.RawSocket.NettyRawUDPSocket
 import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.IPStack.Packet.IPPacket
+import com.example.nekit.IPStack.Packet.UDPProtocolParser
+import com.example.nekit.IPStack.Packet.IPPacketImpl // Import IPPacketImpl
 
 data class ConnectInfo(
     val sourceAddress: IPAddress,
@@ -30,11 +30,11 @@ data class ConnectInfo(
  * This stack transmits UDP packets directly, acting like a transparent UDP forwarder.
  * It maintains a mapping of client connections to remote UDP sockets.
  */
-class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
+class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
 
     private val logger = LoggerFactory.getLogger(UDPDirectStack::class.java)
-    private val activeSockets: MutableMap<ConnectInfo, KotlinUDPSocket> = ConcurrentHashMap()
-    override var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)? = null
+    private val activeSockets: MutableMap<ConnectInfo, RawUDPSocketProtocol> = ConcurrentHashMap()
+    override var outputFunc: ((packets: List<ByteArray>, versions: List<AddressFamily>) -> Unit)? = null
 
     // Scope for managing socket operations and cleanup tasks if they become suspending.
     // Using a dedicated dispatcher or Dispatchers.IO for socket operations.
@@ -49,13 +49,13 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
     }
 
     override fun input(packet: ByteArray, version: Int?): Boolean {
-        if (version != null && version != AddressFamily.AF_INET) {
+        if (version != null && version != AddressFamily.AF_INET.value) { // Compare Int with Int value
             // println("VERBOSE: UDPDirectStack: Ignoring non-IPv4 packet (version: $version).")
             return false
         }
         // TODO: Use a more robust IPPacket.peekProtocol if available and performant.
         // For now, assume it's correctly identifying UDP.
-        if (IPPacket.peekProtocol(packet) == TransportProtocol.UDP) {
+        if (IPPacket.Companion.peekProtocol(packet) == TransportProtocol.UDP) {
             // Launch processing in a separate coroutine to free up the caller (e.g., TUN read loop)
             stackScope.launch {
                 processUdpPacket(packet)
@@ -67,7 +67,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
 
     private fun processUdpPacket(packetData: ByteArray) {
         val ipPacket: IPPacket = try {
-            IPPacket(packetData) // Parses IP and UDP headers
+            IPPacketImpl(packetData) // Parses IP and UDP headers
         } catch (e: Exception) {
             logger.error("Failed to parse IPPacket: {}", e.message, e)
             return
@@ -83,7 +83,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
             return
         }
 
-        val (_, socket) = findOrCreateSocketForPacket(ipPacket, udpParser)
+        val socket = findOrCreateSocketForPacket(ipPacket, udpParser)
 
         socket.write(data = payload)
     }
@@ -91,7 +91,7 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
     private fun findOrCreateSocketForPacket(
         packet: IPPacket,
         udpParser: UDPProtocolParser // Pass parsed UDP info
-    ): Pair<ConnectInfo, KotlinUDPSocket> {
+    ): RawUDPSocketProtocol {
         // Ensure source and destination addresses/ports are available from IPPacket and UDPParser
         val srcAddr = packet.sourceAddress ?: throw IllegalStateException("Packet source address missing")
         val srcPort = udpParser.sourcePort ?: throw IllegalStateException("Packet source port missing")
@@ -102,27 +102,18 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
 
         // ConcurrentHashMap.get is thread-safe.
         // For complex logic (check-then-put), use computeIfAbsent for atomicity.
-        return activeSockets.computeIfAbsent(connectInfo) { keyInfo ->
-            logger.info("Creating new UDP socket for {}", keyInfo)
-            // The Swift code uses ConnectSession to derive host/port for NWUDPSocket.
-            // If destinationAddress is always an IP, ConnectSession just wraps it.
-            val sessionForSocket = ConnectSession(keyInfo.destinationAddress, keyInfo.destinationPort)
-
-            // TODO: Replace PlaceholderUDPSocket with actual UDP socket implementation.
-            // The actual socket should be configured to send to keyInfo.destinationAddress:keyInfo.destinationPort
-            // and receive responses. For a client-like UDP socket, this might mean connect() or just sendTo().
-            // For this model, each "connection" gets its own socket.
-            val newUdpSocket = PlaceholderUDPSocket(sessionForSocket.host, sessionForSocket.port)
-            newUdpSocket.delegate = this@UDPDirectStack
-            // If the socket needs explicit connection or binding:
-            // newUdpSocket.connect()
-            newUdpSocket // This is the value returned to computeIfAbsent
-        } to activeSockets[connectInfo]!! // Return the pair (keyInfo, createdOrExistingSocket)
+        val socket = activeSockets.computeIfAbsent(connectInfo) {
+            logger.info("Creating new UDP socket for {}", it)
+            val newUdpSocket = NettyRawUDPSocket(it.destinationAddress.presentation, it.destinationPort.hostOrderValue)
+            newUdpSocket.delegate = WeakReference(this@UDPDirectStack)
+            newUdpSocket
+        }
+        return socket
     }
 
 
     // Implementation of KotlinUDPSocketDelegate
-    override fun didReceive(data: ByteArray, from: KotlinUDPSocket) {
+    override fun didReceive(data: ByteArray, from: RawUDPSocketProtocol) {
         // Find which ConnectInfo this socket belongs to.
         // This requires iterating if `from` is the only info.
         val entry = activeSockets.entries.find { it.value === from } // Find by socket instance
@@ -133,12 +124,12 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         val connectInfo = entry.key
 
         // Construct reply IP packet
-        val replyIpPacket = IPPacket() // For building
+        val replyIpPacket = IPPacketImpl() // For building
         replyIpPacket.sourceAddress = connectInfo.destinationAddress // Original dest is now src
         replyIpPacket.destinationAddress = connectInfo.sourceAddress   // Original src is now dest
         replyIpPacket.transportProtocol = TransportProtocol.UDP
 
-        val replyUdpParser = UDPProtocolParser() // Using placeholder Impl for now
+        val replyUdpParser = com.example.nekit.IPStack.Packet.UDPProtocolParserImpl() // Using placeholder Impl for now
         replyUdpParser.sourcePort = connectInfo.destinationPort // Original dest port is now src
         replyUdpParser.destinationPort = connectInfo.sourcePort   // Original src port is now dest
         replyUdpParser.payloadData = data
@@ -153,12 +144,12 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         }
 
         replyIpPacket.packetData?.let { builtPacketData ->
-            val version = if (replyIpPacket.version == IPVersion.IPv4) AddressFamily.AF_INET else AddressFamily.AF_INET6
+            val version = if (replyIpPacket.version == com.example.nekit.IPStack.IPVersion.IPV4) AddressFamily.AF_INET else AddressFamily.AF_INET6 // Use IPv4
             outputFunc?.invoke(listOf(builtPacketData), listOf(version))
         } ?: logger.error("Built reply packet data is null for {}.", connectInfo)
     }
 
-    override fun didCancel(socket: KotlinUDPSocket) {
+    override fun didCancel(socket: RawUDPSocketProtocol) {
         // Called when a socket is closed (e.g., by remote, error, or explicit disconnect)
         val entry = activeSockets.entries.find { it.value === socket }
         if (entry != null) {
@@ -187,5 +178,14 @@ class UDPDirectStack : IPStackProtocol, KotlinUDPSocketDelegate {
         }
         stackScope.cancel("UDPDirectStack stopped") // Cancel any ongoing tasks in this scope
         logger.info("UDPDirectStack stopped. All active sockets signaled to disconnect.")
+    }
+    override fun didErrorOccur(error: Throwable, onSocket: RawUDPSocketProtocol) {
+        logger.error("Error occurred on UDP socket: {}", error.message, error)
+        // Handle error, e.g., remove the socket from activeSockets if it's a fatal error
+        val entry = activeSockets.entries.find { it.value === onSocket }
+        if (entry != null) {
+            activeSockets.remove(entry.key)
+            logger.info("Removed active socket for {} due to error.", entry.key)
+        }
     }
 }

@@ -24,7 +24,7 @@ interface IPStackProtocol {
      * In Kotlin, it's nullable and must be set before use.
      * Implementations should ensure thread safety if this function can be called from multiple threads.
      */
-    var outputFunc: ((packets: List<ByteArray>, versions: List<Int>) -> Unit)?
+    var outputFunc: ((packets: List<ByteArray>, versions: List<AddressFamily>) -> Unit)?
 
     /**
      * Starts the IP stack.
@@ -44,11 +44,11 @@ interface IPStackProtocol {
     }
 }
 
-// For AF_INET, AF_INET6 style constants, if needed by 'version' parameter.
-// These are just examples; actual values might depend on JNI/JNA layer or specific OS constants.
-object AddressFamily {
-    const val AF_INET: Int = 2  // Commonly used value for IPv4
-    const val AF_INET6: Int = 30 // Or 10 on some systems like macOS for PF_INET6
-                               // Java's StandardProtocolFamily.INET/INET6 are enums, not simple Ints.
-                               // The actual integer passed might be platform-specific from TUN.
+enum class AddressFamily(val value: Int) {
+    AF_INET(2), // Commonly used value for IPv4
+    AF_INET6(30); // Or 10 on some systems like macOS for PF_INET6
+
+    companion object {
+        fun fromInt(value: Int) = values().first { it.value == value }
+    }
 }

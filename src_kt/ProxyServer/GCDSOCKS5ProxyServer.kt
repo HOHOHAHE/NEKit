@@ -12,7 +12,6 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
 
 
 /**
@@ -32,9 +31,8 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
      */
     constructor(
         address: IPAddress?,
-        port: Port,
-        mainDispatcher: CoroutineDispatcher = Dispatchers.Default // Keep consistent with GCDProxyServer's constructor
-    ) : super(address, port, mainDispatcher)
+        port: Port
+    ) : super(address, port)
 
     /**
      * Handles a newly accepted socket from the listening server socket by wrapping it
@@ -42,22 +40,22 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
      *
      * @param acceptedSocket The newly accepted socket (e.g., KotlinTCPSocketWrapper).
      */
-    override fun handleNewAcceptedSocket(acceptedSocket: KotlinAcceptedSocketInterface) {
-        socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", acceptedSocket)
-        val socks5ProxySocket = SOCKS5ProxySocket(acceptedSocket)
+    override fun handleNewAcceptedSocket(socket: RawTCPSocketProtocol) {
+        socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", socket)
+        val socks5ProxySocket = SOCKS5ProxySocket(socket, com.example.nekit.Messages.ConnectSession("", 0))
 
         // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.
-        val scope = CoroutineScope(mainDispatcher) // Or use a dedicated scope from GCDProxyServer
+        val scope = CoroutineScope(Dispatchers.Default) // Or use a dedicated scope from GCDProxyServer
         scope.launch {
             try {
                 super.didAcceptNewSocket(socks5ProxySocket)
             } catch (e: Exception) {
-                socks5Logger.error("Error processing newly accepted SOCKS5 socket {}: {}", acceptedSocket, e.message, e)
+                socks5Logger.error("Error processing newly accepted SOCKS5 socket {}: {}", socket, e.message, e)
                 try {
-                    acceptedSocket.close() // Close the raw socket if super.didAcceptNewSocket fails
+                    socket.forceDisconnect(e) // Close the raw socket if super.didAcceptNewSocket fails
                 } catch (ioe: Exception) {
-                    socks5Logger.error("Exception closing socket {} after error: {}", acceptedSocket, ioe.message, ioe)
+                    socks5Logger.error("Exception closing socket {} after error: {}", socket, ioe.message, ioe)
                 }
             }
         }

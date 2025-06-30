@@ -190,26 +190,7 @@ class NettyRawTCPClientSocket(
         return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    override suspend fun readDataTo(delimiter: ByteArray) {
-        logger.warn("readDataTo(delimiter) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
-        // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
-        // For now, just a placeholder.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
-    }
-
-    override suspend fun readDataTo(length: Int) {
-        logger.warn("readDataTo(length) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
-        // TODO: Implement this using Netty's FixedLengthFrameDecoder or custom logic in pipeline.
-        // For now, just a placeholder.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
-    }
-
-    override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
-        logger.warn("readDataTo(delimiter, maxLength) not yet fully implemented for NettyRawTCPClientSocket. Relies on pipeline processing.")
-        // TODO: Implement this using Netty's DelimiterBasedFrameDecoder or custom logic in pipeline.
-        // For now, just a placeholder.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
-    }
+    // Removed readDataTo methods - complex reading logic should be handled at application layer
 
     override fun disconnect(becauseOf: Throwable?) {
         logger.info("disconnect() called for Netty channel: {}. Closing gracefully. Cause: {}", channel, becauseOf?.message)

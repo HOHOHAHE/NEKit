@@ -39,6 +39,10 @@ dependencies {
     // Netty is a good choice for implementing custom TCP/UDP clients and servers,
     // and for TUN/TAP JNI integration if building that part.
     implementation("io.netty:netty-all:4.1.100.Final") // Check for latest stable version
+    
+    // Ktor Sockets for coroutine-based networking
+    implementation("io.ktor:ktor-network:2.3.7")
+    implementation("io.ktor:ktor-network-tls:2.3.7")
 
     // JNA for JNI access to native libraries (TUN/TAP, Libsodium, tun2socks)
     implementation("net.java.dev.jna:jna:5.13.0")

@@ -107,24 +107,11 @@ abstract class AdapterSocket(
     }
  
      override suspend fun readData() {
-         if (isCancelled) return
-         rawSocket?.readData()
-     }
- 
-     override suspend fun readDataTo(length: Int) {
-         if (isCancelled) return
-         rawSocket?.readDataTo(length)
-     }
- 
-     override suspend fun readDataTo(delimiter: ByteArray) {
-         if (isCancelled) return
-         rawSocket?.readDataTo(delimiter)
-     }
- 
-     override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
-         if (isCancelled) return
-         rawSocket?.readDataTo(delimiter, maxLength)
-     }
+        if (isCancelled) return
+        rawSocket?.readData()
+    }
+    
+    // Removed readDataTo methods - complex reading logic should be handled at application layer
  
      override suspend fun write(data: ByteArray) {
          if (isCancelled) throw java.io.IOException("Socket is cancelled.")

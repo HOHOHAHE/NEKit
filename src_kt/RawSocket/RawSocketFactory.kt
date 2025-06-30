@@ -16,8 +16,8 @@ object RawSocketFactory {
         // Here, we'll use a placeholder condition. Replace with your actual logic.
 
 
-        // Fallback to a direct Netty-based TCP socket if TUN is not required
-        return NettyRawTCPClientSocket()
+        // Fallback to a direct Ktor-based TCP socket if TUN is not required
+        return KtorRawTCPClientSocket()
     }
 
 

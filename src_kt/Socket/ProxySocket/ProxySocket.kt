@@ -113,20 +113,7 @@ abstract class ProxySocket(
         rawSocket.readData()
     }
  
-    override suspend fun readDataTo(length: Int) {
-        if (isCancelled) return
-        rawSocket.readDataTo(length)
-    }
- 
-    override suspend fun readDataTo(delimiter: ByteArray) {
-        if (isCancelled) return
-        rawSocket.readDataTo(delimiter)
-    }
- 
-    override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
-        if (isCancelled) return
-        rawSocket.readDataTo(delimiter, maxLength)
-    }
+    // Removed readDataTo methods - complex reading logic should be handled at application layer
  
     override suspend fun write(data: ByteArray) {
         if (isCancelled) throw IOException("Socket is cancelled.")

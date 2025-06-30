@@ -14,18 +14,9 @@ import org.slf4j.LoggerFactory
 // import java.nio.channels.SelectionKey
 
 
-// Netty imports
-import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.Channel
-import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.channel.ChannelInitializer
-import io.netty.channel.ChannelOption
-import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
-import io.netty.channel.socket.SocketChannel as NettySocketChannel // Alias to avoid conflict with java.nio
-import io.netty.channel.socket.nio.NioServerSocketChannel
+// Ktor imports
+import io.ktor.network.selector.*
+import io.ktor.network.sockets.*
 
 
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
@@ -33,7 +24,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel
 
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import com.example.nekit.RawSocket.RawTCPSocketDelegate
-import com.example.nekit.RawSocket.NettyAcceptedRawSocketAdapter
+import com.example.nekit.RawSocket.KtorAcceptedRawSocketAdapter
 import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -53,103 +44,96 @@ abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
 
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    private var bossGroup: EventLoopGroup? = null
-    private var workerGroup: EventLoopGroup? = null
-    private var serverChannel: Channel? = null
+    private var serverSocket: ServerSocket? = null
+    private var selectorManager: SelectorManager? = null
+    private var serverJob: Job? = null
 
     @Throws(Exception::class)
     override suspend fun start() {
-        if (bossGroup != null || workerGroup != null || serverChannel != null) {
+        if (serverSocket != null || selectorManager != null || serverJob != null) {
             logger.warn("Server already started or starting.")
             return
         }
 
-        logger.info("Attempting to start Netty server...")
-        bossGroup = NioEventLoopGroup(1)
-        workerGroup = NioEventLoopGroup()
-
+        logger.info("Attempting to start Ktor server...")
+        
         try {
-            val bootstrap = ServerBootstrap()
-            bootstrap.group(bossGroup, workerGroup)
-                .channel(NioServerSocketChannel::class.java)
-                .option(ChannelOption.SO_BACKLOG, 128)
-                .childOption(ChannelOption.SO_KEEPALIVE, true)
-                .childHandler(object : ChannelInitializer<NettySocketChannel>() {
-                    override fun initChannel(ch: NettySocketChannel) {
-                        // This is called on an IO thread from Netty.
-                        // We need to dispatch the handling to a coroutine if handleNettyClientConnection is suspend
-                        // or if handleNewAcceptedSocket (called by it) performs blocking operations or
-                        // requires a specific dispatcher context (like mainDispatcher or tunnelScope).
-                        // For now, direct call, assuming subsequent logic handles dispatching if needed.
-                        handleNettyClientConnection(ch)
-                    }
-                })
-
+            selectorManager = SelectorManager(Dispatchers.IO)
+            
             val bindAddress = address?.presentation ?: "0.0.0.0"
             val bindPort = port.hostOrderValue.toInt()
-
-            logger.info("Binding Netty server to {}:{}", bindAddress, bindPort)
-            val future: ChannelFuture = bootstrap.bind(bindAddress, bindPort).sync()
-
-            if (future.isSuccess) {
-                serverChannel = future.channel()
-                super.start() // Call ProxyServer's start for its logic (e.g., observer signals)
-                logger.info("Netty server successfully started and listening on {}:{}", bindAddress, bindPort)
-            } else {
-                logger.error("Failed to bind Netty server to {}:{}: {}", bindAddress, bindPort, future.cause().message, future.cause())
-                workerGroup?.shutdownGracefully()?.sync()
-                bossGroup?.shutdownGracefully()?.sync()
-                bossGroup = null
-                workerGroup = null
-                throw IOException("Failed to bind Netty server", future.cause())
+            
+            logger.info("Binding Ktor server to {}:{}", bindAddress, bindPort)
+            
+            serverSocket = aSocket(selectorManager!!).tcp().bind(bindAddress, bindPort)
+            
+            super.start() // Call ProxyServer's start for its logic (e.g., observer signals)
+            
+            // Start accepting connections in a coroutine
+            serverJob = GlobalScope.launch(Dispatchers.IO) {
+                try {
+                    while (true) {
+                        val clientSocket = serverSocket!!.accept()
+                        logger.info("Ktor accepted new client connection: {}", clientSocket)
+                        
+                        // Handle each client connection in a separate coroutine
+                        launch {
+                            handleKtorClientConnection(clientSocket)
+                        }
+                    }
+                } catch (e: Exception) {
+                    if (e !is kotlinx.coroutines.CancellationException) {
+                        logger.error("Error accepting connections: {}", e.message, e)
+                    }
+                }
             }
+            
+            logger.info("Ktor server successfully started and listening on {}:{}", bindAddress, bindPort)
         } catch (e: Exception) {
-            logger.error("Netty server failed to start: {}", e.message, e)
-            workerGroup?.shutdownGracefully()?.sync()
-            bossGroup?.shutdownGracefully()?.sync()
-            bossGroup = null
-            workerGroup = null
-            serverChannel = null
+            logger.error("Ktor server failed to start: {}", e.message, e)
+            selectorManager?.close()
+            selectorManager = null
+            serverSocket = null
+            serverJob?.cancel()
+            serverJob = null
             throw e // Re-throw to indicate failure
         }
     }
 
     override suspend fun stop() {
-        logger.info("Attempting to stop Netty server...")
+        logger.info("Attempting to stop Ktor server...")
 
-        serverChannel?.close()?.syncUninterruptibly() // Wait for server socket to close
-        logger.info("Netty server channel closed.")
+        // Cancel the server job first to stop accepting new connections
+        serverJob?.cancel()
+        serverJob?.join() // Wait for the job to complete
+        serverJob = null
+        logger.info("Ktor server job cancelled.")
 
-        // Shutdown event loop groups
-        // Using syncUninterruptibly to wait for completion. Consider timeout versions for production.
-        bossGroup?.shutdownGracefully()?.syncUninterruptibly()
-        workerGroup?.shutdownGracefully()?.syncUninterruptibly()
-        logger.info("Netty boss and worker groups shut down.")
+        // Close the server socket
+        serverSocket?.close()
+        serverSocket = null
+        logger.info("Ktor server socket closed.")
 
-        bossGroup = null
-        workerGroup = null
-        serverChannel = null
+        // Close the selector manager
+        selectorManager?.close()
+        selectorManager = null
+        logger.info("Ktor selector manager closed.")
 
         super.stop() // Call ProxyServer's stop for its logic
-        logger.info("Netty server stopped.")
+        logger.info("Ktor server stopped.")
     }
 
-    private fun handleNettyClientConnection(clientChannel: NettySocketChannel) {
-        logger.info("Netty accepted new client connection: {}", clientChannel)
-        val acceptedRawSocket = NettyAcceptedRawSocketAdapter(clientChannel)
+    private suspend fun handleKtorClientConnection(clientSocket: Socket) {
+        logger.info("Ktor handling new client connection: {}", clientSocket)
+        val acceptedRawSocket = KtorAcceptedRawSocketAdapter(clientSocket)
 
         // The `handleNewAcceptedSocket` method is overridden by subclasses (GCDHTTPProxyServer, GCDSOCKS5ProxyServer)
         // to create their specific ProxySocket types (HTTPProxySocket, SOCKS5ProxySocket).
-        // Those ProxySocket types now need to accept a RawTCPSocketProtocol (which NettyAcceptedRawSocketAdapter is).
+        // Those ProxySocket types now need to accept a RawTCPSocketProtocol (which KtorAcceptedRawSocketAdapter is).
         // This call dispatches to the appropriate overridden version.
-        // It's important that `handleNewAcceptedSocket` and the ProxySocket constructors
-        // correctly use the `mainDispatcher` or another appropriate context if they launch coroutines
-        // or perform long-running tasks, to avoid blocking Netty's IO threads.
-        // For example, ProxyServer.didAcceptNewSocket (called by handleNewAcceptedSocket's overrides)
-        // is a suspend function and uses a Mutex, so it should be fine if called from here.
-        // However, the methods within handleNewAcceptedSocket (HTTP/SOCKS5 specific parsing) should be non-blocking
-        // or be dispatched. ProxySocket.openSocket() is called by those, which in turn starts reading.
-        // The actual read/write operations in NettyAcceptedRawSocketAdapter will be async via Netty pipeline.
+        // With Ktor, we have native coroutine support, so suspend functions work naturally.
+        // ProxyServer.didAcceptNewSocket (called by handleNewAcceptedSocket's overrides)
+        // is a suspend function and uses a Mutex, which works well with Ktor's coroutine model.
         handleNewAcceptedSocket(acceptedRawSocket)
     }
 

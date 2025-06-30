@@ -22,8 +22,7 @@ interface RawTCPSocketDelegate {
 
     /**
      * Called when data has been successfully read from the socket.
-     * This is typically called in response to a previous `readData()`, `readDataTo(length:)`,
-     * or `readDataTo(delimiter:)` call.
+     * This is typically called in response to a previous `readData()` call.
      *
      * @param data The ByteArray containing the data read from the socket.
      * @param from The socket from which the data was read.
@@ -139,39 +138,13 @@ interface RawTCPSocketProtocol {
 
     /**
      * Initiates an asynchronous read operation. Data read will be delivered via `delegate.didRead`.
+     * 
+     * This simplified approach reads available data from the socket without complex parsing.
+     * Application layer should handle delimiter-based parsing, fixed-length reading, etc.
+     * This eliminates concurrency issues and simplifies the socket implementation.
      *
      * Warning: Original Swift comments imply a one-at-a-time read model: only call after the
      * previous `didReadData` (didRead) delegate callback.
      */
     suspend fun readData()
-
-    /**
-     * Initiates an asynchronous read for a specific number of bytes.
-     * Data read will be delivered via `delegate.didRead`.
-     *
-     * @param length The exact number of bytes to read.
-     * Warning: See one-at-a-time read model warning in `readData()`.
-     */
-    suspend fun readDataTo(length: Int)
-
-    /**
-     * Initiates an asynchronous read until a specific delimiter pattern is encountered.
-     * The read data, including the delimiter, will be delivered via `delegate.didRead`.
-     *
-     * @param delimiter The ByteArray representing the delimiter pattern.
-     * Warning: See one-at-a-time read model warning in `readData()`.
-     */
-    suspend fun readDataTo(delimiter: ByteArray)
-
-    /**
-     * Initiates an asynchronous read until a specific delimiter pattern is encountered,
-     * up to a maximum number of bytes scanned.
-     * The read data, including the delimiter if found within `maxLength`, will be delivered via `delegate.didRead`.
-     * If `maxLength` is reached before finding the delimiter, the data read up to that point is delivered.
-     *
-     * @param delimiter The ByteArray representing the delimiter pattern.
-     * @param maxLength The maximum number of bytes to read while searching for the delimiter.
-     * Warning: See one-at-a-time read model warning in `readData()`.
-     */
-    suspend fun readDataTo(delimiter: ByteArray, maxLength: Int)
 }

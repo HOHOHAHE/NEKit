@@ -101,24 +101,12 @@ interface SocketProtocol {
 
     /**
      * Initiates an asynchronous read operation. Data will be delivered via [SocketDelegate.didRead].
+     * 
+     * This simplified approach reads available data from the socket without complex parsing.
+     * Application layer should handle delimiter-based parsing, fixed-length reading, etc.
+     * This eliminates concurrency issues and simplifies the socket implementation.
      */
     suspend fun readData()
-
-    /**
-     * Initiates an asynchronous read for a specific number of bytes.
-     */
-    suspend fun readDataTo(length: Int)
-
-    /**
-     * Initiates an asynchronous read until a specific delimiter pattern is encountered.
-     */
-    suspend fun readDataTo(delimiter: ByteArray)
-
-    /**
-     * Initiates an asynchronous read until a specific delimiter pattern is encountered,
-     * up to a maximum number of bytes scanned.
-     */
-    suspend fun readDataTo(delimiter: ByteArray, maxLength: Int)
 
     /**
      * Writes data to the socket. This operation is suspending.

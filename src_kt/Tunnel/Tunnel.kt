@@ -21,7 +21,18 @@ open class Tunnel(
 
     private val logger = LoggerFactory.getLogger(this::class.java)
     private var adapterSocket: AdapterSocket? = null
-    private var isClosed = false
+    private var _cancelled = false
+    private var readySignal = 0
+    
+    private var _status: TunnelStatus = TunnelStatus.INVALID
+    val status: TunnelStatus
+        get() = _status
+        
+    val isCancelled: Boolean
+        get() = _cancelled
+        
+    val isClosed: Boolean
+        get() = proxySocket.isDisconnected && (adapterSocket?.isDisconnected ?: true)
 
     var delegate: TunnelDelegate? = null
 
@@ -30,27 +41,59 @@ open class Tunnel(
     }
 
     fun openTunnel() {
+        if (_cancelled) return
+        
         proxySocket.openSocket()
+        _status = TunnelStatus.READING_REQUEST
+        logger.info("Tunnel opened with status: {}", _status)
     }
 
+    fun close() {
+        if (_cancelled) return
+        
+        _cancelled = true
+        _status = TunnelStatus.CLOSING
+        
+        if (!proxySocket.isDisconnected) {
+            proxySocket.disconnect()
+        }
+        adapterSocket?.let { adapter ->
+            if (!adapter.isDisconnected) {
+                adapter.disconnect()
+            }
+        }
+    }
+    
     fun forceClose() {
-        isClosed = true
-        adapterSocket?.forceDisconnect()
-        proxySocket.forceDisconnect()
-        delegate?.tunnelDidClose(this)
+        if (_cancelled) return
+        
+        _cancelled = true
+        _status = TunnelStatus.CLOSING
+        
+        if (!proxySocket.isDisconnected) {
+            proxySocket.forceDisconnect()
+        }
+        adapterSocket?.let { adapter ->
+            if (!adapter.isDisconnected) {
+                adapter.forceDisconnect()
+            }
+        }
     }
 
     // SocketDelegate methods
     override fun didConnect(socket: SocketProtocol) {
+        if (_cancelled) return
+        
         logger.info("Tunnel: Adapter socket connected: {}", socket)
         proxySocket.respondTo(socket as AdapterSocket)
     }
 
     override fun didDisconnect(socket: SocketProtocol) {
         logger.info("Tunnel: Socket disconnected: {}", socket)
-        if (!isClosed) {
-            forceClose()
+        if (!_cancelled) {
+            close()
         }
+        checkStatus()
     }
 
     override fun didRead(data: ByteArray, from: SocketProtocol) {
@@ -74,19 +117,30 @@ open class Tunnel(
     }
 
     override fun didBecomeReadyToForward(socket: SocketProtocol) {
-        logger.info("Tunnel: Socket ready to forward: {}", socket)
-        GlobalScope.launch(Dispatchers.IO) {
-            if (socket == proxySocket) {
-                adapterSocket?.readData()
-            } else if (socket == adapterSocket) {
+        if (_cancelled) return
+        
+        readySignal++
+        logger.info("Tunnel: Socket ready to forward: {}, readySignal: {}", socket, readySignal)
+        
+        if (socket is AdapterSocket) {
+            proxySocket.respondTo(socket)
+        }
+        
+        if (readySignal == 2) {
+            _status = TunnelStatus.FORWARDING
+            GlobalScope.launch(Dispatchers.IO) {
                 proxySocket.readData()
+                adapterSocket?.readData()
             }
         }
     }
 
     override fun didReceive(session: ConnectSession, from: ProxySocket) {
-        logger.info("Tunnel: Received session: {} from {}", session, from)
-        from.updateStatus(com.example.nekit.Socket.SocketStatus.CONNECTING)
+        if (_cancelled) return
+        
+        _status = TunnelStatus.WAITING_TO_BE_READY
+        logger.info("Tunnel: Received session: {} from {}, status: {}", session, from, _status)
+        
         val manager = RuleManager.currentManager
         val factory = manager?.match(session)
         val adapter = factory?.getAdapter(session)
@@ -106,6 +160,14 @@ open class Tunnel(
     override fun didErrorOccur(error: Throwable, on: SocketProtocol) {
         logger.error("Tunnel: Error on socket {}: {}", on, error.message)
         forceClose()
+    }
+    
+    private fun checkStatus() {
+        if (isClosed) {
+            _status = TunnelStatus.CLOSED
+            logger.info("Tunnel status changed to CLOSED")
+            delegate?.tunnelDidClose(this)
+        }
     }
 }
 

@@ -183,31 +183,7 @@ class TUNTCPSocket(
         checkAndProcessPendingReadData()
     }
 
-    override suspend fun readDataTo(length: Int) {
-        if (length <= 0) {
-            val error = IllegalArgumentException("Length must be positive for readDataTo.")
-            logger.error("TUNTCPSocket {} readDataTo(length): invalid length {}.", socketId, length, error)
-            delegate?.get()?.didErrorOccur(error, this)
-            return
-        }
-        logger.debug("TUNTCPSocket {} readDataTo(length: {}) called.", socketId, length)
-        reading = true
-        readLengthTarget = length
-        scanner = null
-        checkAndProcessPendingReadData()
-    }
-
-    override suspend fun readDataTo(delimiter: ByteArray) {
-        readDataTo(delimiter, 0)
-    }
-
-    override suspend fun readDataTo(delimiter: ByteArray, maxLength: Int) {
-        logger.debug("TUNTCPSocket {} readDataTo(delimiter, maxLength: {}) called.", socketId, maxLength)
-        reading = true
-        readLengthTarget = null
-        scanner = StreamScanner(delimiter, maxLength)
-        checkAndProcessPendingReadData()
-    }
+    // Removed readDataTo methods - complex reading logic should be handled at application layer
 
     // --- Internal Logic for Read Buffer Processing ---
     private suspend fun checkAndProcessPendingReadData() {

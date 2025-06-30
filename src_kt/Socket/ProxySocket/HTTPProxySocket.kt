@@ -53,6 +53,6 @@ class HTTPProxySocket(
         super.respondTo(adapter)
         val response = "HTTP/1.1 200 Connection Established\r\n\r\n"
         GlobalScope.launch { write(response.toByteArray()) }
-        delegate?.get()?.didBecomeReadyToForward(this)
+        // 移除重複的didBecomeReadyToForward調用，由Tunnel統一管理
     }
 }

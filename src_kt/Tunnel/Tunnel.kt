@@ -13,6 +13,7 @@ import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import org.slf4j.LoggerFactory
 
 open class Tunnel(
@@ -85,7 +86,7 @@ open class Tunnel(
         if (_cancelled) return
         
         logger.info("Tunnel: Adapter socket connected: {}", socket)
-        proxySocket.respondTo(socket as AdapterSocket)
+        // 不在這裡調用respondTo，讓didBecomeReadyToForward處理
     }
 
     override fun didDisconnect(socket: SocketProtocol) {
@@ -97,20 +98,45 @@ open class Tunnel(
     }
 
     override fun didRead(data: ByteArray, from: SocketProtocol) {
-        GlobalScope.launch(Dispatchers.IO) {
-            if (from == proxySocket) {
+        if (from == proxySocket) {
+            // observer?.signal(.proxySocketReadData(data, from: socket, on: self))
+            logger.trace("ProxySocket read {} bytes", data.size)
+            
+            if (_cancelled) {
+                return
+            }
+            GlobalScope.launch(Dispatchers.IO) {
                 adapterSocket?.write(data)
-            } else if (from == adapterSocket) {
+            }
+        } else if (from == adapterSocket) {
+            // observer?.signal(.adapterSocketReadData(data, from: socket, on: self))
+            logger.trace("AdapterSocket read {} bytes", data.size)
+            
+            if (_cancelled) {
+                return
+            }
+            GlobalScope.launch(Dispatchers.IO) {
                 proxySocket.write(data)
             }
         }
     }
 
     override fun didWrite(data: ByteArray?, by: SocketProtocol) {
-        GlobalScope.launch(Dispatchers.IO) {
-            if (by == proxySocket) {
+        if (_cancelled) return
+        
+        if (by == proxySocket) {
+            logger.trace("ProxySocket wrote {} bytes, triggering AdapterSocket read", data?.size ?: 0)
+            // 對應Swift版本的延遲讀取，避免過快的數據轉發
+            GlobalScope.launch(Dispatchers.IO) {
+                // 使用與Swift版本相同的50微秒延遲
+                // Kotlin協程最小延遲為1毫秒，使用yield()來實現更小的延遲
+                yield()
                 adapterSocket?.readData()
-            } else if (by == adapterSocket) {
+            }
+        } else if (by == adapterSocket) {
+            logger.trace("AdapterSocket wrote {} bytes, triggering ProxySocket read", data?.size ?: 0)
+            // ProxySocket端立即讀取
+            GlobalScope.launch(Dispatchers.IO) {
                 proxySocket.readData()
             }
         }
@@ -122,16 +148,19 @@ open class Tunnel(
         readySignal++
         logger.info("Tunnel: Socket ready to forward: {}, readySignal: {}", socket, readySignal)
         
-        if (socket is AdapterSocket) {
-            proxySocket.respondTo(socket)
-        }
-        
+        // 先處理readySignal邏輯
         if (readySignal == 2) {
             _status = TunnelStatus.FORWARDING
             GlobalScope.launch(Dispatchers.IO) {
                 proxySocket.readData()
                 adapterSocket?.readData()
             }
+        }
+        
+        // 模擬Swift的defer行為：在方法結束時執行respondTo
+        // 只有當socket是AdapterSocket時才調用respondTo
+        if (socket is AdapterSocket) {
+            proxySocket.respondTo(socket)
         }
     }
 

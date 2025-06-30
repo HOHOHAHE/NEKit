@@ -190,7 +190,26 @@ class NettyRawTCPClientSocket(
         return suspendCancellableCoroutine { } // Never resumes, effectively blocks
     }
 
-    // Removed readDataTo methods - complex reading logic should be handled at application layer
+    override suspend fun readDataTo(length: Int) {
+        logger.warn("readDataTo(length={}) called on NettyRawTCPClientSocket. Netty reads are event-driven. This method should suspend until data is available.", length)
+        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
+        // or similar mechanism to be resumed by channelRead.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    }
+
+    override suspend fun readDataTo(data: ByteArray) {
+        logger.warn("readDataTo(data.size={}) called on NettyRawTCPClientSocket. Netty reads are event-driven. This method should suspend until data is available.", data.size)
+        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
+        // or similar mechanism to be resumed by channelRead.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    }
+
+    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
+        logger.warn("readDataTo(data.size={}, maxLength={}) called on NettyRawTCPClientSocket. Netty reads are event-driven. This method should suspend until data is available.", data.size, maxLength)
+        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
+        // or similar mechanism to be resumed by channelRead.
+        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    }
 
     override fun disconnect(becauseOf: Throwable?) {
         logger.info("disconnect() called for Netty channel: {}. Closing gracefully. Cause: {}", channel, becauseOf?.message)

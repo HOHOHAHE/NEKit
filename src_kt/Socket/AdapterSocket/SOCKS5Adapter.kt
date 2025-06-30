@@ -21,9 +21,9 @@ class SOCKS5Adapter(
         val rawSocket = RawSocketFactory.getRawSocket(session!!)
         _rawSocket = rawSocket!!
 
-        socks5ProxySocket = SOCKS5ProxySocket(rawSocket, session)
+        socks5ProxySocket = SOCKS5ProxySocket(rawSocket)
+        socks5ProxySocket?.session = session
         
-
         // The SOCKS5ProxySocket will handle the connection to the proxy server
         // and the subsequent SOCKS5 handshake.
         socks5ProxySocket?.openSocket()

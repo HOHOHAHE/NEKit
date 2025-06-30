@@ -183,7 +183,32 @@ class TUNTCPSocket(
         checkAndProcessPendingReadData()
     }
 
-    // Removed readDataTo methods - complex reading logic should be handled at application layer
+    override suspend fun readDataTo(length: Int) {
+        logger.debug("TUNTCPSocket {} readDataTo(length={}) called by delegate.", socketId, length)
+        reading = true
+        readLengthTarget = length
+        scanner = null
+        checkAndProcessPendingReadData()
+    }
+
+    override suspend fun readDataTo(data: ByteArray) {
+        logger.debug("TUNTCPSocket {} readDataTo(data.size={}) called by delegate.", socketId, data.size)
+        reading = true
+        readLengthTarget = data.size
+        scanner = null
+        checkAndProcessPendingReadData()
+    }
+
+    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
+        val actualLength = minOf(maxLength, data.size)
+        logger.debug("TUNTCPSocket {} readDataTo(data.size={}, maxLength={}, actual={}) called by delegate.", socketId, data.size, maxLength, actualLength)
+        reading = true
+        readLengthTarget = actualLength
+        scanner = null
+        checkAndProcessPendingReadData()
+    }
+
+
 
     // --- Internal Logic for Read Buffer Processing ---
     private suspend fun checkAndProcessPendingReadData() {

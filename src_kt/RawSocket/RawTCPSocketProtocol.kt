@@ -147,4 +147,32 @@ interface RawTCPSocketProtocol {
      * previous `didReadData` (didRead) delegate callback.
      */
     suspend fun readData()
+
+    /**
+     * Read specific length of data from the socket.
+     * Data read will be delivered via `delegate.didRead`.
+     *
+     * @param length The exact number of bytes to read.
+     * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
+     */
+    suspend fun readDataTo(length: Int)
+
+    /**
+     * Read data until a specific pattern (including the pattern).
+     * Data read will be delivered via `delegate.didRead`.
+     *
+     * @param data The pattern to search for.
+     * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
+     */
+    suspend fun readDataTo(data: ByteArray)
+
+    /**
+     * Read data until a specific pattern (including the pattern).
+     * Data read will be delivered via `delegate.didRead`.
+     *
+     * @param data The pattern to search for.
+     * @param maxLength The maximum length of data to scan for the pattern.
+     * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
+     */
+    suspend fun readDataTo(data: ByteArray, maxLength: Int)
 }

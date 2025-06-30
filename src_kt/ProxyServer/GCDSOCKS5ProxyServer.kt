@@ -42,11 +42,11 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
      */
     override fun handleNewAcceptedSocket(socket: RawTCPSocketProtocol) {
         socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", socket)
-        val socks5ProxySocket = SOCKS5ProxySocket(socket, com.example.nekit.Messages.ConnectSession("", 0))
-
-        // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
+        val socks5ProxySocket = SOCKS5ProxySocket(socket)
+        
+        // Launch the call to super.didAcceptNewSocket in a coroutine scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.
-        val scope = CoroutineScope(Dispatchers.Default) // Or use a dedicated scope from GCDProxyServer
+        val scope = CoroutineScope(Dispatchers.Default)
         scope.launch {
             try {
                 super.didAcceptNewSocket(socks5ProxySocket)

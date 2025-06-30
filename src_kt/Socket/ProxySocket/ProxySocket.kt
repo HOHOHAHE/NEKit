@@ -98,6 +98,9 @@ abstract class ProxySocket(
         }
         logger.info("respondTo called with adapter {} for session {}. Client should be notified of success.", adapter, session)
         observer?.signal(ProxySocketEvent.AskedToResponseTo(adapter, this))
+        
+        // 在基類中統一處理ProxySocket的ready信號
+        delegate?.get()?.didBecomeReadyToForward(this)
     }
 
     fun updateStatus(newStatus: SocketStatus) {

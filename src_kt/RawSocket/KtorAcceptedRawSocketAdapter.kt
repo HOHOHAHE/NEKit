@@ -5,7 +5,8 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-// Removed Mutex imports - no longer needed for simplified reading
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CancellationException
 import java.io.IOException
@@ -31,14 +32,15 @@ class KtorAcceptedRawSocketAdapter(
     
     private val readChannel: ByteReadChannel = socket.openReadChannel()
     private val writeChannel: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
-    // Removed readMutex - no longer needed for simplified reading
+    private val writeMutex = Mutex() // 防止並發寫入
+    private val readMutex = Mutex() // 防止並發讀取
 
     init {
         logger.info("KtorAcceptedRawSocketAdapter created for socket: {}", socket)
     }
 
     override val isConnected: Boolean
-        get() = !socket.isClosed
+        get() = !socket.isClosed && !readChannel.isClosedForRead && !writeChannel.isClosedForWrite
 
     // For an accepted socket, source/destination are relative to the server.
     // socket.localAddress() is server's listening address.
@@ -98,27 +100,45 @@ class KtorAcceptedRawSocketAdapter(
             return
         }
 
-        try {
-            logger.debug("Writing {} bytes to socket", data.size)
-            writeChannel.writeFully(data)
-            writeChannel.flush()
-            logger.trace("Successfully wrote {} bytes to socket", data.size)
-            delegate?.get()?.didWrite(data, this)
-        } catch (e: Exception) {
-            logger.error("Failed to write {} bytes to socket: {}", data.size, e.message, e)
-            delegate?.get()?.didErrorOccur(e, this)
-            throw e
+        writeMutex.withLock {
+            try {
+                // 检查写入通道是否仍然可用
+                if (writeChannel.isClosedForWrite) {
+                    logger.warn("Write channel is closed, cannot write {} bytes", data.size)
+                    delegate?.get()?.didErrorOccur(IOException("Write channel is closed"), this)
+                    return@withLock
+                }
+                
+                logger.debug("Writing {} bytes to socket", data.size)
+                writeChannel.writeFully(data)
+                writeChannel.flush()
+                logger.trace("Successfully wrote {} bytes to socket", data.size)
+                delegate?.get()?.didWrite(data, this)
+            } catch (e: Exception) {
+                // 改进错误信息处理，避免乱码
+                val errorMsg = when {
+                    e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                    e.message?.contains("Broken pipe") == true -> "Broken pipe - connection closed"
+                    e.message?.contains("closed") == true -> "Connection closed"
+                    e is IOException -> "IO error during write operation"
+                    else -> "Write operation failed: ${e.javaClass.simpleName}"
+                }
+                logger.error("Failed to write {} bytes to socket: {}", data.size, errorMsg, e)
+                delegate?.get()?.didErrorOccur(e, this)
+                // 不要重新拋出異常，讓上層決定如何處理
+            }
         }
     }
 
     override suspend fun readData() {
-        if (socket.isClosed) {
-            logger.warn("readData called on closed socket.")
+        if (socket.isClosed || readChannel.isClosedForRead) {
+            logger.warn("readData called on closed socket or read channel.")
             return
         }
 
-        try {
-            while (!readChannel.isClosedForRead && !socket.isClosed) {
+        readMutex.withLock {
+            try {
+                // 只讀取一次可用數據，不要持續循環
                 val buffer = ByteArray(8192) // 8KB buffer
                 val bytesRead = readChannel.readAvailable(buffer)
                 
@@ -129,22 +149,143 @@ class KtorAcceptedRawSocketAdapter(
                 } else if (bytesRead == -1) {
                     // End of stream
                     logger.info("Socket reached end of stream")
-                    break
+                    delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
+                    return@withLock
+                } else if (bytesRead == 0) {
+                    // No data available right now, wait for one byte to arrive
+                    logger.trace("No data available, waiting for data...")
+                    try {
+                        val firstByte = readChannel.readByte()
+                        val remainingBuffer = ByteArray(8191) // 8KB - 1 byte
+                        val remainingBytes = readChannel.readAvailable(remainingBuffer)
+                        
+                        val totalData = if (remainingBytes > 0) {
+                            byteArrayOf(firstByte) + remainingBuffer.copyOf(remainingBytes)
+                        } else {
+                            byteArrayOf(firstByte)
+                        }
+                        
+                        logger.trace("Read {} bytes from socket (after waiting)", totalData.size)
+                        delegate?.get()?.didRead(totalData, this@KtorAcceptedRawSocketAdapter)
+                    } catch (e: Exception) {
+                        if (e !is CancellationException) {
+                            logger.debug("Exception while waiting for data: {}", e.message)
+                            // 不要重新拋出異常，讓上層決定如何處理
+                            delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                        }
+                        return@withLock
+                    }
                 }
-            }
-        } catch (e: Exception) {
-            if (e !is CancellationException) {
-                logger.error("Error reading from socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
-            }
-        } finally {
-            if (socket.isClosed) {
-                delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    val errorMsg = when {
+                        e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                        e.message?.contains("closed") == true -> "Connection closed during read"
+                        e is IOException -> "IO error during read operation"
+                        else -> "Read operation failed: ${e.javaClass.simpleName}"
+                    }
+                    logger.error("Error reading from socket: {}", errorMsg, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                }
+            } finally {
+                if (socket.isClosed || readChannel.isClosedForRead) {
+                    delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
+                }
             }
         }
     }
 
-    // Removed readDataTo methods and findDelimiterIndex - complex reading logic should be handled at application layer
+    override suspend fun readDataTo(length: Int) {
+        if (socket.isClosed || readChannel.isClosedForRead) {
+            logger.warn("readDataTo called on closed socket or read channel.")
+            return
+        }
+
+        readMutex.withLock {
+            try {
+                val buffer = ByteArray(length)
+                readChannel.readFully(buffer, 0, length)
+                logger.trace("Read exactly {} bytes from socket", length)
+                delegate?.get()?.didRead(buffer, this@KtorAcceptedRawSocketAdapter)
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    val errorMsg = when {
+                        e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                        e.message?.contains("closed") == true -> "Connection closed during read"
+                        e is IOException -> "IO error during read operation"
+                        else -> "Read operation failed: ${e.javaClass.simpleName}"
+                    }
+                    logger.error("Error reading {} bytes from socket: {}", length, errorMsg, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                } else {
+                    // CancellationException - do nothing
+                }
+            }
+        }
+    }
+
+    override suspend fun readDataTo(data: ByteArray) {
+        if (socket.isClosed || readChannel.isClosedForRead) {
+            logger.warn("readDataTo called on closed socket or read channel.")
+            return
+        }
+
+        readMutex.withLock {
+            try {
+                readChannel.readFully(data, 0, data.size)
+                logger.trace("Read exactly {} bytes into provided buffer", data.size)
+                delegate?.get()?.didRead(data, this@KtorAcceptedRawSocketAdapter)
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    val errorMsg = when {
+                        e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                        e.message?.contains("closed") == true -> "Connection closed during read"
+                        e is IOException -> "IO error during read operation"
+                        else -> "Read operation failed: ${e.javaClass.simpleName}"
+                    }
+                    logger.error("Error reading {} bytes into buffer: {}", data.size, errorMsg, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                } else {
+                    // CancellationException - do nothing
+                }
+            }
+        }
+    }
+
+    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
+        if (socket.isClosed || readChannel.isClosedForRead) {
+            logger.warn("readDataTo called on closed socket or read channel.")
+            return
+        }
+
+        val actualLength = minOf(maxLength, data.size)
+        readMutex.withLock {
+            try {
+                readChannel.readFully(data, 0, actualLength)
+                logger.trace("Read exactly {} bytes into provided buffer (max: {})", actualLength, maxLength)
+                // Only return the actually read portion
+                val result = if (actualLength < data.size) {
+                    data.copyOf(actualLength)
+                } else {
+                    data
+                }
+                delegate?.get()?.didRead(result, this@KtorAcceptedRawSocketAdapter)
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    val errorMsg = when {
+                        e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                        e.message?.contains("closed") == true -> "Connection closed during read"
+                        e is IOException -> "IO error during read operation"
+                        else -> "Read operation failed: ${e.javaClass.simpleName}"
+                    }
+                    logger.error("Error reading {} bytes into buffer: {}", actualLength, errorMsg, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                } else {
+                    // CancellationException - do nothing
+                }
+            }
+        }
+    }
 
     override fun disconnect(becauseOf: Throwable?) {
         logger.info("disconnect() called. Closing socket gracefully. Cause: {}", becauseOf?.message)

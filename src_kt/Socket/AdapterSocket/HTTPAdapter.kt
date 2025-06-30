@@ -9,7 +9,7 @@ import java.lang.ref.WeakReference
 class HTTPAdapter(
     val serverHost: String,
     val serverPort: Int,
-    val auth: ((HTTPAdapter) -> (String, String))? = null
+    val auth: ((HTTPAdapter) -> Pair<String, String>)? = null
 ) : AdapterSocket() {
 
     private val logger = LoggerFactory.getLogger(HTTPAdapter::class.java)
@@ -19,11 +19,11 @@ class HTTPAdapter(
         super.openSocketWith(session)
         logger.info("Opening HTTP proxy connection for session: ${session.host}:${session.port}")
 
-        val rawSocket = RawSocketFactory.getRawSocket()
+        val rawSocket = RawSocketFactory.currentFactory.getRawTCPSocket(session!!)
         _rawSocket = rawSocket
 
         httpProxySocket = HTTPProxySocket(rawSocket, session)
-        httpProxySocket?.delegate = WeakReference(this)
+        
         
         // The HTTPProxySocket will handle the connection to the proxy server
         // and the subsequent CONNECT request.

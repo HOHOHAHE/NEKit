@@ -77,7 +77,7 @@ abstract class ProxySocket(
         this.rawSocket.delegate = WeakReference(this)
  
         if (observe) {
-            observer = ObserverFactory.currentFactory?.getObserverForProxySocket(this)
+            // observer = ObserverFactory.currentFactory?.getObserverForProxySocket(this)
         }
         logger.info("Created with rawSocket: {}. Initial status: {}", rawSocket, _status)
     }

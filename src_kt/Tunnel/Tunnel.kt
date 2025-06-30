@@ -10,6 +10,9 @@ import com.example.nekit.Event.ObserverFactory
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Rule.RuleManager
 import java.lang.ref.WeakReference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 open class Tunnel(
@@ -24,7 +27,6 @@ open class Tunnel(
 
     init {
         proxySocket.delegate = WeakReference(this)
-        ObserverFactory.currentFactory?.getObserverForTunnel(this)
     }
 
     fun openTunnel() {
@@ -52,38 +54,44 @@ open class Tunnel(
     }
 
     override fun didRead(data: ByteArray, from: SocketProtocol) {
-        if (from == proxySocket) {
-            adapterSocket?.write(data)
-        } else if (from == adapterSocket) {
-            proxySocket.write(data)
+        GlobalScope.launch(Dispatchers.IO) {
+            if (from == proxySocket) {
+                adapterSocket?.write(data)
+            } else if (from == adapterSocket) {
+                proxySocket.write(data)
+            }
         }
     }
 
     override fun didWrite(data: ByteArray?, by: SocketProtocol) {
-        if (by == proxySocket) {
-            adapterSocket?.readData()
-        } else if (by == adapterSocket) {
-            proxySocket.readData()
+        GlobalScope.launch(Dispatchers.IO) {
+            if (by == proxySocket) {
+                adapterSocket?.readData()
+            } else if (by == adapterSocket) {
+                proxySocket.readData()
+            }
         }
     }
 
     override fun didBecomeReadyToForward(socket: SocketProtocol) {
         logger.info("Tunnel: Socket ready to forward: {}", socket)
-        if (socket == proxySocket) {
-            adapterSocket?.readData()
-        } else if (socket == adapterSocket) {
-            proxySocket.readData()
+        GlobalScope.launch(Dispatchers.IO) {
+            if (socket == proxySocket) {
+                adapterSocket?.readData()
+            } else if (socket == adapterSocket) {
+                proxySocket.readData()
+            }
         }
     }
 
     override fun didReceive(session: ConnectSession, from: ProxySocket) {
         logger.info("Tunnel: Received session: {} from {}", session, from)
         val manager = RuleManager.currentManager
-        val factory = manager.match(session)
-        val adapter = factory.getAdapter(session)
+        val factory = manager?.match(session)
+        val adapter = factory?.getAdapter(session)
         this.adapterSocket = adapter
-        adapter.delegate = WeakReference(this)
-        adapter.openSocketWith(session)
+        adapter?.delegate = WeakReference(this)
+        adapter?.openSocketWith(session)
     }
 
     override fun updateAdapter(newAdapter: AdapterSocket) {

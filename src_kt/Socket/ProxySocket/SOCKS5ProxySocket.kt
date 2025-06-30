@@ -3,14 +3,18 @@ package com.example.nekit.Socket.ProxySocket
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.ByteBuffer
 
 class SOCKS5ProxySocket(
     rawSocket: RawTCPSocketProtocol,
-    private val session: ConnectSession
+    session: ConnectSession
 ) : ProxySocket(rawSocket) {
+
+    override var session: ConnectSession? = session
 
     private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
     private var state = State.INITIAL
@@ -25,7 +29,7 @@ class SOCKS5ProxySocket(
     override fun openSocket() {
         super.openSocket()
         state = State.GREETING
-        readData()
+        GlobalScope.launch { readData() }
     }
 
     override fun didRead(data: ByteArray, from: RawTCPSocketProtocol) {
@@ -45,9 +49,9 @@ class SOCKS5ProxySocket(
         }
         // For simplicity, we only support NO AUTHENTICATION REQUIRED (0x00)
         val response = byteArrayOf(0x05, 0x00)
-        write(response)
+        GlobalScope.launch { write(response) }
         state = State.CONNECTING
-        readData()
+        GlobalScope.launch { readData() }
     }
 
     private fun handleConnect(data: ByteArray) {
@@ -93,14 +97,14 @@ class SOCKS5ProxySocket(
         }
         port = buffer.short
 
-        return ConnectSession(host = host, port = port)
+        return ConnectSession(host = host, port = port.toInt())
     }
 
     override fun respondTo(adapter: AdapterSocket) {
         super.respondTo(adapter)
         // SOCKS5 success reply: VER | REP | RSV | ATYP | BND.ADDR | BND.PORT
         val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
-        write(response)
+        GlobalScope.launch { write(response) }
         state = State.FORWARDING
         delegate?.get()?.didBecomeReadyToForward(this)
     }

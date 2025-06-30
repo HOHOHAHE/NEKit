@@ -14,7 +14,7 @@ import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
 
-import com.example.nekit.RawSocket.TUNTCPSocket
+// import com.example.nekit.RawSocket.TUNTCPSocket
 import com.example.nekit.ProxyServer.ProxyServer
 import com.example.nekit.Socket.ProxySocket.DirectProxySocket
 import com.example.nekit.Tunnel.QueueFactory
@@ -31,7 +31,7 @@ import com.example.nekit.IPStack.AddressFamily
 object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
     private val logger = LoggerFactory.getLogger(TCPStack::class.java)
     private val tun2socksStack: LibTun2SocksStackInterface = JnaLibTun2Socks()
-    private val activeSockets = mutableMapOf<Int, TUNTCPSocket>()
+    // private val activeSockets = mutableMapOf<Int, TUNTCPSocket>()
     private val activeSocketsMutex = Mutex() // To protect activeSockets map
 
     // Using WeakReference for proxyServer to avoid potential retain cycles.

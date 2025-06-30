@@ -1,3 +1,6 @@
 package com.example.nekit.Utils
 
-interface IPInterval
+sealed class IPInterval {
+    data class IPv4(val value: UInt) : IPInterval()
+    data class IPv6(val value: UInt128) : IPInterval()
+}

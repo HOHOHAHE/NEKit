@@ -18,11 +18,11 @@ class SOCKS5Adapter(
         super.openSocketWith(session)
         logger.info("Opening SOCKS5 proxy connection for session: ${session.host}:${session.port}")
 
-        val rawSocket = RawSocketFactory.getRawSocket()
+        val rawSocket = RawSocketFactory.currentFactory.getRawTCPSocket(session!!)
         _rawSocket = rawSocket
 
         socks5ProxySocket = SOCKS5ProxySocket(rawSocket, session)
-        socks5ProxySocket?.delegate = WeakReference(this)
+        
 
         // The SOCKS5ProxySocket will handle the connection to the proxy server
         // and the subsequent SOCKS5 handshake.

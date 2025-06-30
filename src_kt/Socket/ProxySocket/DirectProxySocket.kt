@@ -17,12 +17,12 @@ class DirectProxySocket(
         // and notify the delegate.
         val session = ConnectSession(
             host = destinationIPAddress?.toString() ?: "",
-            port = destinationPort?.value?.toShort() ?: 0
+            port = destinationPort?.hostOrderValue ?: 0
         )
         this.session = session
         
         logger.info("Direct proxy socket opened for session: $session")
-        observer?.signal(ProxySocketEvent.ReceivedRequest(this, session))
+        observer?.signal(ProxySocketEvent.ReceivedRequest(this))
         delegate?.get()?.didReceive(session, this)
     }
 }

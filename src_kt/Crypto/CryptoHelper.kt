@@ -51,6 +51,29 @@ object CryptoHelper {
         return result.toByteArray().copyOfRange(0, keyLength)
     }
 
+        fun getShadowsocksKeyAndIv(password: ByteArray, methodType: CryptoAlgorithm): Pair<ByteArray, ByteArray> {
+        val keyLength = getKeyLength(methodType)
+        val ivLength = getIVLength(methodType)
+
+        var md5Result = md5Hash(password)
+
+        val result = ByteArrayOutputStream()
+        result.write(md5Result)
+
+        while (result.size() < keyLength + ivLength) {
+            val temp = ByteArrayOutputStream()
+            temp.write(md5Result)
+            temp.write(password)
+            md5Result = md5Hash(temp.toByteArray())
+            result.write(md5Result)
+        }
+
+        val fullData = result.toByteArray()
+        val key = fullData.copyOfRange(0, keyLength)
+        val iv = fullData.copyOfRange(keyLength, keyLength + ivLength)
+        return Pair(key, iv)
+    }
+
     private fun md5Hash(data: ByteArray): ByteArray {
         return MessageDigest.getInstance("MD5").digest(data)
     }

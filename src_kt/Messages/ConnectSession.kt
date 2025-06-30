@@ -11,7 +11,7 @@ import com.example.nekit.IPStack.DNS.DNSServer
 import com.example.nekit.Rule.Rule
 import com.example.nekit.GeoIP.GeoIP
 
-class ConnectSession(
+data class ConnectSession(
     var host: String,
     val port: Int,
     var isTLS: Boolean = false,

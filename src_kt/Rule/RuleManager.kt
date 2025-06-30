@@ -9,5 +9,17 @@ import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
 import com.example.nekit.Rule.RuleManager
 
 class RuleManager(val rules: List<Rule>, val appendDirect: Boolean) {
-    fun ruleMatchResult(): Any? = null // Placeholder
+    fun match(session: ConnectSession): AdapterFactory {
+        for (rule in rules) {
+            val result = rule.match(session)
+            if (result != null) {
+                return result
+            }
+        }
+        return DirectAdapterFactory()
+    }
+
+    companion object {
+        var currentManager: RuleManager? = null
+    }
 }

@@ -25,7 +25,13 @@ enum class CryptoAlgorithm(val rawValue: String, val requiresBouncyCastle: Boole
     AES256_CFB("AES-256-CFB"),
     CHACHA20("CHACHA20", requiresBouncyCastle = true),
     SALSA20("SALSA20", requiresBouncyCastle = true),
-    RC4_MD5("RC4-MD5", requiresBouncyCastle = true); // RC4 itself might need BC for consistent availability
+    RC4_MD5("RC4-MD5", requiresBouncyCastle = true);
+
+    companion object {
+        fun fromString(name: String): CryptoAlgorithm {
+            return values().first { it.rawValue.equals(name, ignoreCase = true) }
+        }
+    }
 
     // getJceTransformation is less relevant for stream ciphers if they don't use mode/padding strings.
     // It's primarily used by CCCryptoAdapter which handles block ciphers with modes like CFB.

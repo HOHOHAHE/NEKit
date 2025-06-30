@@ -4,6 +4,8 @@ import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.RawSocket.RawSocketFactory
 import com.example.nekit.Crypto.CryptoHelper
+import com.example.nekit.Crypto.JceStreamCipherAdapter
+import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
@@ -20,20 +22,28 @@ class ShadowsocksAdapter(
 
     private val logger = LoggerFactory.getLogger(ShadowsocksAdapter::class.java)
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var cryptoStreamProcessor: CryptoStreamProcessor? = null
+        private lateinit var encryptor: JceStreamCipherAdapter
+    private lateinit var decryptor: JceStreamCipherAdapter
 
     override fun openSocketWith(session: ConnectSession) {
         super.openSocketWith(session)
         logger.info("Opening Shadowsocks connection for session: ${session.host}:${session.port}")
 
-        _rawSocket = RawSocketFactory.getRawSocket()
+        _rawSocket = RawSocketFactory.currentFactory.getRawTCPSocket(session!!)
         _rawSocket?.delegate = WeakReference(this)
 
-        cryptoStreamProcessor = CryptoStreamProcessor(
-            method,
-            key,
-            _rawSocket!!,
-            this
+        val (encryptKey, encryptIv) = CryptoHelper.getShadowsocksKeyAndIv(key, com.example.nekit.Crypto.CryptoAlgorithm.fromString(method))
+        encryptor = JceStreamCipherAdapter(
+            operation = com.example.nekit.Crypto.CryptoOperation.ENCRYPT,
+            algorithm = com.example.nekit.Crypto.CryptoAlgorithm.fromString(method),
+            key = encryptKey,
+            iv = encryptIv
+        )
+        decryptor = JceStreamCipherAdapter(
+            operation = com.example.nekit.Crypto.CryptoOperation.DECRYPT,
+            algorithm = com.example.nekit.Crypto.CryptoAlgorithm.fromString(method),
+            key = encryptKey,
+            iv = encryptIv
         )
 
         scope.launch {
@@ -41,7 +51,8 @@ class ShadowsocksAdapter(
                 _rawSocket?.connectTo(serverHost, serverPort)
                 // After connection, send the Shadowsocks header
                 val header = createShadowsocksHeader(session)
-                cryptoStreamProcessor?.write(header)
+                                val encryptedHeader = encryptor.update(header)
+                super.write(encryptedHeader)
             } catch (e: Exception) {
                 logger.error("Failed to connect to Shadowsocks server $serverHost:$serverPort", e)
                 forceDisconnect(e)
@@ -50,8 +61,13 @@ class ShadowsocksAdapter(
     }
 
     override suspend fun write(data: ByteArray) {
-        cryptoStreamProcessor?.write(data)
-            ?: throw java.io.IOException("CryptoStreamProcessor not initialized.")
+        val encryptedData = encryptor.update(data)
+        super.write(encryptedData)
+    }
+
+    override fun didRead(data: ByteArray, from: RawTCPSocketProtocol) {
+        val decryptedData = decryptor.update(data)
+        super.didRead(decryptedData, from)
     }
 
     private fun createShadowsocksHeader(session: ConnectSession): ByteArray {

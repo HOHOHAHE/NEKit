@@ -19,8 +19,8 @@ class HTTPAdapter(
         super.openSocketWith(session)
         logger.info("Opening HTTP proxy connection for session: ${session.host}:${session.port}")
 
-        val rawSocket = RawSocketFactory.currentFactory?.getRawTCPSocket(session!!)
-        _rawSocket = rawSocket
+        val rawSocket = RawSocketFactory.getRawSocket(session!!)
+        _rawSocket = rawSocket!!
 
         httpProxySocket = HTTPProxySocket(rawSocket, session)
         

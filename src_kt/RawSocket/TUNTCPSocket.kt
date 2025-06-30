@@ -36,11 +36,18 @@ import com.example.nekit.Messages.ConnectSession
 class TUNTCPSocket(
     internal val socketId: Int, // ID from tun2socks
     private val stackInterface: LibTun2SocksStackInterface, // Interface to call native tun2socks functions
-    observe: Boolean = true, // For AdapterSocket observer
     // Allow passing a custom scope, primarily for testing or specific dispatching needs.
     // Defaults to QueueFactory.getProcessingDispatcher() for operations.
     customScope: CoroutineScope? = null
-) : AdapterSocket(initialRawSocket = null, observe = observe), LibTun2SocksSocketCallbacks {
+) : RawTCPSocketProtocol, LibTun2SocksSocketCallbacks {
+
+    // Properties from SocketProtocol that AdapterSocket would have provided
+    override var delegate: WeakReference<RawTCPSocketDelegate?>? = null
+    var status: SocketStatus = SocketStatus.INVALID
+        private set
+
+    // For compatibility with code that might check the session on the socket
+    var session: ConnectSession? = null
 
     private val logger = LoggerFactory.getLogger(TUNTCPSocket::class.java)
 
@@ -58,17 +65,15 @@ class TUNTCPSocket(
     )
 
     init {
-        logger.info("TUNTCPSocket created for socketId: {}. Observer enabled: {}", socketId, observe)
+        logger.info("TUNTCPSocket created for socketId: {}", socketId)
     }
 
-    override val rawSocket: RawTCPSocketProtocol?
-        get() = null
-
+    // RawTCPSocketProtocol Implementation
     override val isConnected: Boolean
-        get() = _status == SocketStatus.ESTABLISHED || _status == SocketStatus.CONNECTING
+        get() = status == SocketStatus.ESTABLISHED || status == SocketStatus.CONNECTING
 
     override val sourceIPAddress: IPAddress?
-        get() = null
+        get() = null // Source is the TUN interface, not a specific socket address
 
     override val sourcePort: Port?
         get() = null
@@ -79,33 +84,38 @@ class TUNTCPSocket(
     override val destinationPort: Port?
         get() = session?.port?.let { Port(it.toInt()) }
 
-    override fun openSocketWith(session: ConnectSession) {
-        if (isCancelled) {
-            logger.warn("TUNTCPSocket {}: openSocketWith called on a cancelled socket for session: {}", socketId, session)
-            return
-        }
-        this.session = session
-        logger.info("TUNTCPSocket {}: Associated with session: {}. Current status: {}", socketId, session, _status)
-        observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
+    // This method is not used by TUNTCPSocket as connections are initiated from the native side.
+    override suspend fun connectTo(host: String, port: Int, enableTLS: Boolean, tlsSettings: Map<String, Any>?) {
+        throw UnsupportedOperationException("connectTo is not supported on TUNTCPSocket")
+    }
 
-        if (_status == SocketStatus.ESTABLISHED) {
+    // Method to associate with a session, similar to AdapterSocket's openSocketWith
+    fun associateWith(session: ConnectSession) {
+        this.session = session
+        logger.info("TUNTCPSocket {}: Associated with session: {}. Current status: {}", socketId, session, status)
+
+        if (status == SocketStatus.ESTABLISHED) {
             internalScope.launch {
-                logger.info("TUNTCPSocket {}: Was already connected by tun2socks. Signaling ready for forward for session: {}", socketId, session)
-                delegate?.get()?.didBecomeReadyToForward(this@TUNTCPSocket)
+                logger.info("TUNTCPSocket {}: Was already connected. Signaling ready for forward.", socketId)
+                delegate?.get()?.didConnect(this@TUNTCPSocket)
             }
         } else {
-            _status = SocketStatus.CONNECTING
+            status = SocketStatus.CONNECTING
         }
     }
+
+
+
 
     override fun disconnect(becauseOf: Throwable?) {
         internalScope.launch {
             logger.info("TUNTCPSocket {}: disconnect() called. Error: {}", socketId, becauseOf?.message)
-            if (_status == SocketStatus.CLOSED || _status == SocketStatus.DISCONNECTING) {
+            if (status == SocketStatus.CLOSED || status == SocketStatus.DISCONNECTING) {
                 logger.debug("TUNTCPSocket {}: Already closing or closed.", socketId)
                 return@launch
             }
 
+            status = SocketStatus.DISCONNECTING
             closeAfterWriting = true
             checkWriteStatusAndCloseIfNeeded()
         }
@@ -114,25 +124,26 @@ class TUNTCPSocket(
     override fun forceDisconnect(becauseOf: Throwable?) {
         internalScope.launch {
             logger.info("TUNTCPSocket {}: forceDisconnect() called. Error: {}", socketId, becauseOf?.message)
-            if (_status == SocketStatus.CLOSED && _cancelled) {
-                logger.debug("TUNTCPSocket {}: Already force-closed and cancelled.", socketId)
+            if (status == SocketStatus.CLOSED) {
+                logger.debug("TUNTCPSocket {}: Already closed.", socketId)
                 return@launch
             }
 
-            super.forceDisconnect(becauseOf)
+            val wasConnected = isConnected
+            status = SocketStatus.CLOSED
+
             stackInterface.closeTcp(socketId)
 
-            if (_status != SocketStatus.CLOSED) {
-                logger.warn("TUNTCPSocket {}: Forcing status to CLOSED locally after stackInterface.closeTcp, if callbacks don't follow.", socketId)
-                this@TUNTCPSocket.delegate?.get()?.didDisconnect(this@TUNTCPSocket)
+            if (wasConnected) {
+                delegate?.get()?.didDisconnect(this@TUNTCPSocket)
             }
         }
     }
 
     @Throws(IOException::class)
     override suspend fun write(data: ByteArray) {
-        if (_status != SocketStatus.ESTABLISHED && _status != SocketStatus.CONNECTING) {
-            throw IOException("TUNTCPSocket $socketId not connected or ready for writes (status: $_status).")
+        if (status != SocketStatus.ESTABLISHED && status != SocketStatus.CONNECTING) {
+            throw IOException("TUNTCPSocket $socketId not connected or ready for writes (status: $status).")
         }
         if (data.isEmpty()) return
 
@@ -269,13 +280,8 @@ class TUNTCPSocket(
         if (this.socketId != socketId) return
         internalScope.launch {
             logger.info("TUNTCPSocket {} received onConnected from tun2socks.", socketId)
-            _status = SocketStatus.ESTABLISHED // Update AdapterSocket status
-            // AdapterSocket's didConnect also signals observer
-            super.didConnect(this@TUNTCPSocket) // Call base AdapterSocket's didConnect
-            // didBecomeReadyToForward is also typically called by AdapterSocket's didConnect
-            // If not, call it explicitly:
-            // delegate?.get()?.didBecomeReadyToForward(this@TUNTCPSocket)
-            // observer?.signal(AdapterSocketEvent.ReadyForForward(this@TUNTCPSocket))
+            status = SocketStatus.ESTABLISHED
+            delegate?.get()?.didConnect(this@TUNTCPSocket)
         }
     }
 

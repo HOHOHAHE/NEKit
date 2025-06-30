@@ -34,17 +34,18 @@ import com.example.nekit.Messages.EventSource
 abstract class AdapterSocket(
     observe: Boolean = true
 ) : SocketProtocol, RawTCPSocketDelegate {
+
  
      protected var _rawSocket: RawTCPSocketProtocol? = null
-     override val rawSocket: RawTCPSocketProtocol?
-         get() = _rawSocket
+    override val rawSocket: RawTCPSocketProtocol?
+        get() = _rawSocket
  
      private val logger = LoggerFactory.getLogger(this::class.java)
  
      constructor(initialRawSocket: RawTCPSocketProtocol?, observe: Boolean = true) : this(observe) {
-         this._rawSocket = initialRawSocket
-         this._rawSocket?.delegate = WeakReference(this)
-     }
+        this._rawSocket = initialRawSocket
+        this._rawSocket?.delegate = WeakReference(this)
+    }
  
      var session: ConnectSession? = null
          protected set
@@ -86,24 +87,24 @@ abstract class AdapterSocket(
      }
  
      open fun openSocketWith(session: ConnectSession) {
-         if (isCancelled) {
-             logger.warn("openSocketWith called on a cancelled socket for session: {}", session)
-             return
-         }
- 
-         this.session = session
-         observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
- 
-         val currentRawSocket = _rawSocket ?: run {
-             logger.error("Internal rawSocket is null in openSocketWith for session: {}. Cannot proceed.", session)
-             _status = SocketStatus.CLOSED
-             delegate?.get()?.didDisconnect(this)
-             return
-         }
- 
-         currentRawSocket.delegate = WeakReference(this)
-         _status = SocketStatus.CONNECTING
-     }
+        if (isCancelled) {
+            logger.warn("openSocketWith called on a cancelled socket for session: {}", session)
+            return
+        }
+
+        this.session = session
+        observer?.signal(AdapterSocketEvent.SocketOpened(this, session))
+
+        val currentRawSocket = _rawSocket ?: run {
+            logger.error("Internal rawSocket is null in openSocketWith for session: {}. Cannot proceed.", session)
+            _status = SocketStatus.CLOSED
+            delegate?.get()?.didDisconnect(this)
+            return
+        }
+
+        currentRawSocket.delegate = WeakReference(this)
+        _status = SocketStatus.CONNECTING
+    }
  
      override suspend fun readData() {
          if (isCancelled) return

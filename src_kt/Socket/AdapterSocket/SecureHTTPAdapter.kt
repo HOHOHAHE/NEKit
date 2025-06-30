@@ -20,8 +20,8 @@ class SecureHTTPAdapter(
         super.openSocketWith(session)
         logger.info("Opening Secure HTTP proxy connection for session: ${session.host}:${session.port}")
 
-        val rawSocket = RawSocketFactory.currentFactory?.getRawTCPSocket(session!!)
-        _rawSocket = rawSocket
+        val rawSocket = RawSocketFactory.getRawSocket(session!!)
+        _rawSocket = rawSocket!!
         
         // Mark the session as requiring TLS for the proxy connection itself.
         val proxySession = session.copy(isTLS = true)

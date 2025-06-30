@@ -1,3 +1,0 @@
-package com.example.nekit.ProxyServer
-
-interface KotlinAcceptedSocketInterface

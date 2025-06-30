@@ -13,14 +13,17 @@ import com.example.nekit.IPStack.Native.JnaLibTun2Socks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
-
-// import com.example.nekit.RawSocket.TUNTCPSocket
+import com.example.nekit.RawSocket.TUNTCPSocket
 import com.example.nekit.ProxyServer.ProxyServer
 import com.example.nekit.Socket.ProxySocket.DirectProxySocket
+import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Tunnel.QueueFactory
 import com.example.nekit.IPStack.Packet.IPPacket
 import com.example.nekit.IPStack.IPStackProtocol
 import com.example.nekit.IPStack.AddressFamily
+
+
+
 
 
 
@@ -31,7 +34,7 @@ import com.example.nekit.IPStack.AddressFamily
 object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
     private val logger = LoggerFactory.getLogger(TCPStack::class.java)
     private val tun2socksStack: LibTun2SocksStackInterface = JnaLibTun2Socks()
-    // private val activeSockets = mutableMapOf<Int, TUNTCPSocket>()
+        private val activeSockets = mutableMapOf<Int, TUNTCPSocket>()
     private val activeSocketsMutex = Mutex() // To protect activeSockets map
 
     // Using WeakReference for proxyServer to avoid potential retain cycles.
@@ -91,11 +94,11 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
         // Or make stop() suspend. For now, assuming closeTcp is non-blocking JNA call.
         runBlocking { // Or use a dedicated scope for cleanup.
             activeSocketsMutex.withLock {
-                activeSockets.values.forEach { socket ->
+                activeSockets.values.forEach { socket: TUNTCPSocket ->
                     try {
                         socket.forceDisconnect() // Or a more graceful disconnect if appropriate
                     } catch (e: Exception) {
-                        logger.warn("Exception closing active TUNTCPSocket (id: {}): {}", (socket as? TUNTCPSocket)?.socketId ?: "N/A", e.message)
+                        logger.warn("Exception closing active TUNTCPSocket (id: {}): {}", socket.socketId ?: "N/A", e.message)
                     }
                 }
                 activeSockets.clear()
@@ -125,7 +128,7 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
         // Better: Use a scope that can be cancelled when TCPStack stops.
         val tunnelScope = CoroutineScope(Dispatchers.Default + SupervisorJob()) // Placeholder scope
 
-        val newTunSocket = TUNTCPSocket(socketId, tun2socksStack, true, tunnelScope)
+        val newTunSocket = TUNTCPSocket(socketId, tun2socksStack, customScope = tunnelScope)
 
         runBlocking { // Use runBlocking if activeSocketsMutex.withLock is not suspend and map operations are quick
             activeSocketsMutex.withLock {
@@ -134,7 +137,8 @@ object TCPStack : LibTun2SocksStackCallbacks, IPStackProtocol {
         }
 
         tunnelScope.launch { // Launch a coroutine to call suspend function
-            proxyServer?.didAcceptNewSocket(DirectProxySocket(newTunSocket))
+            val adapterSocket = object : AdapterSocket(newTunSocket) {}
+            proxyServer?.didAcceptNewSocket(DirectProxySocket(adapterSocket))
                 ?: logger.warn("No proxyServer delegate set in TCPStack to handle new TCP socketId: {}", socketId)
         }
 

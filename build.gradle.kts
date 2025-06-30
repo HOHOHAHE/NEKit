@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.20" // Upgrading Kotlin to support JVM 21
-    
+    application
 }
 
 group = "com.example.nekit" // Placeholder group
@@ -65,7 +65,9 @@ sourceSets {
 
 
 // Application plugin configuration (optional, for running the application)
-
+application {
+    mainClass.set("com.example.nekit.main.MainKt")
+}
 
 // If creating a fat JAR (optional)
 // tasks.jar {

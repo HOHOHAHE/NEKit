@@ -86,6 +86,7 @@ open class Tunnel(
 
     override fun didReceive(session: ConnectSession, from: ProxySocket) {
         logger.info("Tunnel: Received session: {} from {}", session, from)
+        from.updateStatus(com.example.nekit.Socket.SocketStatus.CONNECTING)
         val manager = RuleManager.currentManager
         val factory = manager?.match(session)
         val adapter = factory?.getAdapter(session)

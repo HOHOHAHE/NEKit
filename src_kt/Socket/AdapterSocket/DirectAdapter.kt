@@ -15,14 +15,15 @@ class DirectAdapter : AdapterSocket() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun openSocketWith(session: ConnectSession) {
-        // First, call the superclass implementation to set up the session and observer.
-        super.openSocketWith(session)
         logger.info("Opening direct connection for session: ${session.host}:${session.port}")
         
         // Create a new raw socket for the direct connection.
         _rawSocket = RawSocketFactory.getRawSocket(session)
         // The delegate is set to this AdapterSocket instance to receive callbacks from the raw socket.
         _rawSocket?.delegate = WeakReference(this)
+
+        // First, call the superclass implementation to set up the session and observer.
+        super.openSocketWith(session)
 
         // Launch a coroutine to handle the network connection asynchronously.
         scope.launch {

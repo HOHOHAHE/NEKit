@@ -99,6 +99,13 @@ abstract class ProxySocket(
         logger.info("respondTo called with adapter {} for session {}. Client should be notified of success.", adapter, session)
         observer?.signal(ProxySocketEvent.AskedToResponseTo(adapter, this))
     }
+
+    fun updateStatus(newStatus: SocketStatus) {
+        if (_status != newStatus) {
+            logger.info("Status changing from {} to {} for session {}", _status, newStatus, session)
+            _status = newStatus
+        }
+    }
  
     override suspend fun readData() {
         if (isCancelled) return

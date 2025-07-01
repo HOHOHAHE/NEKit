@@ -25,6 +25,7 @@ import io.ktor.network.sockets.*
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import com.example.nekit.RawSocket.RawTCPSocketDelegate
 import com.example.nekit.RawSocket.KtorAcceptedRawSocketAdapter
+import com.example.nekit.RawSocket.NetworkDispatchers
 import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -58,7 +59,8 @@ abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
         logger.info("Attempting to start Ktor server...")
         
         try {
-            selectorManager = SelectorManager(Dispatchers.IO)
+            // 使用共享的 SelectorManager 而不是建立新的
+            selectorManager = NetworkDispatchers.selectorManager
             
             val bindAddress = address?.presentation ?: "0.0.0.0"
             val bindPort = port.hostOrderValue.toInt()
@@ -114,10 +116,9 @@ abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
         serverSocket = null
         logger.info("Ktor server socket closed.")
 
-        // Close the selector manager
-        selectorManager?.close()
+        // 不要關閉共享的 selector manager，只是清除引用
         selectorManager = null
-        logger.info("Ktor selector manager closed.")
+        logger.info("Ktor selector manager reference cleared.")
 
         super.stop() // Call ProxyServer's stop for its logic
         logger.info("Ktor server stopped.")

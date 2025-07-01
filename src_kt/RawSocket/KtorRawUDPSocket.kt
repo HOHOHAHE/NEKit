@@ -23,7 +23,8 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
 
     private val logger = LoggerFactory.getLogger(KtorRawUDPSocket::class.java)
     private var socket: Any? = null // Can be BoundDatagramSocket or ConnectedDatagramSocket
-    private val selectorManager = ActorSelectorManager(Dispatchers.IO)
+    // 使用共享的 SelectorManager 而不是為每個連線建立新的
+    private val selectorManager = NetworkDispatchers.selectorManager
     private val writeMutex = Mutex() // 防止並發寫入
     private val readMutex = Mutex() // 防止並發讀取
     private var readJob: Job? = null

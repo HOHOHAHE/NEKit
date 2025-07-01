@@ -31,7 +31,8 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     private var socket: Socket? = null
     private var readChannel: ByteReadChannel? = null
     private var writeChannel: ByteWriteChannel? = null
-    private val selectorManager = ActorSelectorManager(Dispatchers.IO)
+    // 使用共享的 SelectorManager 而不是為每個連線建立新的
+    private val selectorManager = NetworkDispatchers.selectorManager
     private val writeMutex = Mutex() // 防止並發寫入
     private val readMutex = Mutex() // 防止並發讀取
     

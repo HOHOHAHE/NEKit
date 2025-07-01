@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import org.slf4j.LoggerFactory
 import kotlinx.coroutines.delay
+import com.example.nekit.Opt
 
 open class Tunnel(
     val proxySocket: ProxySocket
@@ -122,12 +123,17 @@ open class Tunnel(
         if (_cancelled) return
         
         if (by == proxySocket) {
-            logger.trace("ProxySocket wrote {} bytes, triggering AdapterSocket read", data?.size ?: 0)
-            // 立即觸發讀取，不要延遲
-            adapterSocket?.readData()
+            logger.trace("ProxySocket wrote {} bytes, triggering AdapterSocket read with backpressure delay", data?.size ?: 0)
+            // 加入反壓機制：使用配置的延遲來避免緊密迴圈，模仿 Swift 版本的 Opt.forwardReadInterval
+            GlobalScope.launch(Dispatchers.IO) {
+                delay(Opt.FORWARD_READ_INTERVAL.toLong()) // 使用配置的延遲值（50ms），提供反壓控制
+                if (!_cancelled) {
+                    adapterSocket?.readData()
+                }
+            }
         } else if (by == adapterSocket) {
             logger.trace("AdapterSocket wrote {} bytes, triggering ProxySocket read", data?.size ?: 0)
-            // ProxySocket端立即讀取
+            // ProxySocket 端可以立即讀取，或同樣加入輕微延遲
             proxySocket.readData()
         }
     }

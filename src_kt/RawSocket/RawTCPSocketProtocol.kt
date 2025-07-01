@@ -134,7 +134,7 @@ interface RawTCPSocketProtocol {
      * mechanism managed by the user of the socket.
      */
     @Throws(Exception::class)
-    suspend fun write(data: ByteArray)
+    fun write(data: ByteArray)
 
     /**
      * Initiates an asynchronous read operation. Data read will be delivered via `delegate.didRead`.
@@ -146,7 +146,7 @@ interface RawTCPSocketProtocol {
      * Warning: Original Swift comments imply a one-at-a-time read model: only call after the
      * previous `didReadData` (didRead) delegate callback.
      */
-    suspend fun readData()
+    fun readData()
 
     /**
      * Read specific length of data from the socket.
@@ -155,7 +155,7 @@ interface RawTCPSocketProtocol {
      * @param length The exact number of bytes to read.
      * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
      */
-    suspend fun readDataTo(length: Int)
+    fun readDataTo(length: Int)
 
     /**
      * Read data until a specific pattern (including the pattern).
@@ -164,7 +164,7 @@ interface RawTCPSocketProtocol {
      * @param data The pattern to search for.
      * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
      */
-    suspend fun readDataTo(data: ByteArray)
+    fun readDataTo(data: ByteArray)
 
     /**
      * Read data until a specific pattern (including the pattern).
@@ -174,5 +174,5 @@ interface RawTCPSocketProtocol {
      * @param maxLength The maximum length of data to scan for the pattern.
      * Warning: This should only be called after the last read is finished, i.e., `delegate.didRead` is called.
      */
-    suspend fun readDataTo(data: ByteArray, maxLength: Int)
+    fun readDataTo(data: ByteArray, maxLength: Int)
 }

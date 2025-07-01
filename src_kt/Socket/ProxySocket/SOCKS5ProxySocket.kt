@@ -37,7 +37,7 @@ class SOCKS5ProxySocket(
         super.openSocket()
         state = State.GREETING
         // Start by reading exactly 2 bytes for version and number of methods
-        GlobalScope.launch { rawSocket.readDataTo(2) }
+        rawSocket.readDataTo(2)
     }
 
     override fun didRead(data: ByteArray, from: RawTCPSocketProtocol) {
@@ -109,18 +109,16 @@ class SOCKS5ProxySocket(
         }
         
         // Read the methods
-        GlobalScope.launch { rawSocket.readDataTo(nMethods) }
+        rawSocket.readDataTo(nMethods) 
         state = State.READING_METHODS
     }
     
     private fun handleMethods(data: ByteArray) {
         // TODO: check for 0x00 in read data
         val response = byteArrayOf(0x05, 0x00) // NO AUTH
-        GlobalScope.launch { 
-            write(response)
-            // After sending response, read connect header (4 bytes)
-            rawSocket.readDataTo(4)
-        }
+        write(response)
+        // After sending response, read connect header (4 bytes)
+        rawSocket.readDataTo(4)
         state = State.CONNECTING
     }
 
@@ -145,15 +143,15 @@ class SOCKS5ProxySocket(
         when (atyp) {
             0x01.toByte() -> { // IPv4 - read 4 bytes for IP
                 state = State.READING_IPV4
-                GlobalScope.launch { rawSocket.readDataTo(4) }
+                rawSocket.readDataTo(4) 
             }
             0x03.toByte() -> { // Domain - read 1 byte for length first
                 state = State.READING_DOMAIN_LENGTH
-                GlobalScope.launch { rawSocket.readDataTo(1) }
+                rawSocket.readDataTo(1) 
             }
             0x04.toByte() -> { // IPv6 - read 16 bytes for IP
                 state = State.READING_IPV6
-                GlobalScope.launch { rawSocket.readDataTo(16) }
+                rawSocket.readDataTo(16) 
             }
             else -> {
                 forceDisconnect(IOException("Unsupported address type in SOCKS5 request: $atyp"))
@@ -171,7 +169,7 @@ class SOCKS5ProxySocket(
         }
         destinationHost = data.joinToString(".") { (it.toInt() and 0xFF).toString() }
         state = State.READING_PORT
-        GlobalScope.launch { rawSocket.readDataTo(2) }
+        rawSocket.readDataTo(2)
     }
     
     private fun handleIPv6Address(data: ByteArray) {
@@ -183,7 +181,7 @@ class SOCKS5ProxySocket(
             String.format("%02x%02x", it[0], it[1])
         }
         state = State.READING_PORT
-        GlobalScope.launch { rawSocket.readDataTo(2) }
+        rawSocket.readDataTo(2)
     }
     
     private fun handleDomainLength(data: ByteArray) {
@@ -193,13 +191,13 @@ class SOCKS5ProxySocket(
         }
         val domainLength = data[0].toInt() and 0xFF
         state = State.READING_DOMAIN
-        GlobalScope.launch { rawSocket.readDataTo(domainLength) }
+        rawSocket.readDataTo(domainLength)
     }
     
     private fun handleDomain(data: ByteArray) {
         destinationHost = String(data)
         state = State.READING_PORT
-        GlobalScope.launch { rawSocket.readDataTo(2) }
+        rawSocket.readDataTo(2)
     }
     
     private fun handlePort(data: ByteArray) {
@@ -226,8 +224,6 @@ class SOCKS5ProxySocket(
         // SOCKS5 success reply: VER | REP | RSV | ATYP | BND.ADDR | BND.PORT
         val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
         state = State.SENDING_RESPONSE
-        GlobalScope.launch { 
-            write(response)
-        }
+        write(response)
     }
 }

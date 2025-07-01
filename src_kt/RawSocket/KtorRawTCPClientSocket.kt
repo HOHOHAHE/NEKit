@@ -9,6 +9,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.InetSocketAddress
@@ -82,23 +83,23 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     }
 
     @Throws(Exception::class)
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) {
         val currentWriteChannel = writeChannel
         if (currentWriteChannel == null || socket?.isClosed == true) {
             logger.warn("write called on inactive or null socket. Data not sent.")
             throw IOException("Socket not connected or channel is null.")
         }
 
-        writeMutex.withLock {
+        GlobalScope.launch(Dispatchers.IO) {
             try {
                 logger.debug("Writing {} bytes to socket", data.size)
                 currentWriteChannel.writeFully(data)
                 currentWriteChannel.flush()
                 logger.trace("Successfully wrote {} bytes to socket", data.size)
-                delegate?.get()?.didWrite(data, this)
+                delegate?.get()?.didWrite(data, this@KtorRawTCPClientSocket)
             } catch (e: Exception) {
                 logger.error("Failed to write {} bytes to socket: {}", data.size, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
                 throw e
             }
         }
@@ -109,17 +110,23 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
      * Complex reading logic (delimiters, fixed lengths) should be handled at the application layer.
      * This eliminates the need for mutex and reduces complexity.
      */
-    override suspend fun readData() {
+    private var isReading = AtomicBoolean(false)
+    
+    override fun readData() {
         val currentReadChannel = readChannel
         if (currentReadChannel == null || socket?.isClosed == true) {
             logger.warn("readData called on inactive or null socket.")
             return
         }
-
-        readMutex.withLock {
+        
+        // 防止併發讀取
+        if (!isReading.compareAndSet(false, true)) {
+            logger.trace("readData already in progress, skipping")
+            return
+        }
+    
+        GlobalScope.launch(Dispatchers.IO) {
             try {
-                // 修改為單次讀取，與Swift版本保持一致
-                // 增加緩衝區大小以減少數據分片
                 val buffer = ByteArray(16384) // 16KB buffer
                 val bytesRead = currentReadChannel.readAvailable(buffer)
                 
@@ -128,17 +135,10 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                         // End of stream
                         logger.debug("End of stream reached")
                         delegate?.get()?.didDisconnect(this@KtorRawTCPClientSocket)
-                        return
                     }
                     0 -> {
-                        // No data available, but connection is still open
-                        logger.trace("No data available")
-                        // 繼續嘗試讀取，類似Swift版本的連續讀取
-                        GlobalScope.launch(Dispatchers.IO) {
-                            delay(1)
-                            readData()
-                        }
-                        return
+                        // No data available, exit gracefully
+                        logger.trace("No data available, exiting read")
                     }
                     else -> {
                         // Data received
@@ -154,6 +154,8 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 } else {
                     // CancellationException - normal cancellation, no action needed
                 }
+            } finally {
+                isReading.set(false)
             }
         }
     }
@@ -161,38 +163,40 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     /**
      * Read specific length of data from the socket.
      */
-    override suspend fun readDataTo(length: Int) {
-        val currentReadChannel = readChannel
-        if (currentReadChannel == null || socket?.isClosed == true) {
-            logger.warn("readDataTo called on inactive or null socket.")
-            return
-        }
+    override fun readDataTo(length: Int) {
+        GlobalScope.launch {
+            val currentReadChannel = readChannel
+            if (currentReadChannel == null || socket?.isClosed == true) {
+                logger.warn("readDataTo called on inactive or null socket.")
+                return@launch
+            }
 
-        readMutex.withLock {
-            try {
-                val buffer = ByteArray(length)
-                var totalRead = 0
-                
-                while (totalRead < length && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
-                    val bytesRead = currentReadChannel.readAvailable(buffer, totalRead, length - totalRead)
-                    if (bytesRead > 0) {
-                        totalRead += bytesRead
-                    } else if (bytesRead == -1) {
-                        // End of stream before reading required length
-                        logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
-                        break
+            readMutex.withLock {
+                try {
+                    val buffer = ByteArray(length)
+                    var totalRead = 0
+                    
+                    while (totalRead < length && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
+                        val bytesRead = currentReadChannel.readAvailable(buffer, totalRead, length - totalRead)
+                        if (bytesRead > 0) {
+                            totalRead += bytesRead
+                        } else if (bytesRead == -1) {
+                            // End of stream before reading required length
+                            logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
+                            break
+                        }
                     }
-                }
-                
-                if (totalRead > 0) {
-                    val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
-                    logger.trace("Read {} bytes from socket (requested {})", totalRead, length)
-                    delegate?.get()?.didRead(data, this@KtorRawTCPClientSocket)
-                }
-            } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    logger.error("Error reading {} bytes from socket: {}", length, e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    
+                    if (totalRead > 0) {
+                        val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
+                        logger.trace("Read {} bytes from socket (requested {})", totalRead, length)
+                        delegate?.get()?.didRead(data, this@KtorRawTCPClientSocket)
+                    }
+                } catch (e: Exception) {
+                    if (e !is CancellationException) {
+                        logger.error("Error reading {} bytes from socket: {}", length, e.message, e)
+                        delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    }
                 }
             }
         }
@@ -201,62 +205,64 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     /**
      * Read data until a specific pattern (including the pattern).
      */
-    override suspend fun readDataTo(data: ByteArray) {
+    override fun readDataTo(data: ByteArray) {
         readDataTo(data, 8192) // Default max length
     }
 
     /**
      * Read data until a specific pattern (including the pattern).
      */
-    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
-        val currentReadChannel = readChannel
-        if (currentReadChannel == null || socket?.isClosed == true) {
-            logger.warn("readDataTo called on inactive or null socket.")
-            return
-        }
+    override fun readDataTo(data: ByteArray, maxLength: Int) {
+        GlobalScope.launch {
+            val currentReadChannel = readChannel
+            if (currentReadChannel == null || socket?.isClosed == true) {
+                logger.warn("readDataTo called on inactive or null socket.")
+                return@launch
+            }
 
-        readMutex.withLock {
-            try {
-                val buffer = mutableListOf<Byte>()
-                val pattern = data
-                var totalRead = 0
-                
-                while (totalRead < maxLength && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
-                    val tempBuffer = ByteArray(1)
-                    val bytesRead = currentReadChannel.readAvailable(tempBuffer)
+            readMutex.withLock {
+                try {
+                    val buffer = mutableListOf<Byte>()
+                    val pattern = data
+                    var totalRead = 0
                     
-                    if (bytesRead > 0) {
-                        buffer.add(tempBuffer[0])
-                        totalRead++
+                    while (totalRead < maxLength && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
+                        val tempBuffer = ByteArray(1)
+                        val bytesRead = currentReadChannel.readAvailable(tempBuffer)
                         
-                        // Check if we have found the pattern
-                        if (buffer.size >= pattern.size) {
-                            val lastBytes = buffer.takeLast(pattern.size).toByteArray()
-                            if (lastBytes.contentEquals(pattern)) {
-                                // Found pattern, return all data including pattern
-                                val resultData = buffer.toByteArray()
-                                logger.trace("Found pattern after reading {} bytes", totalRead)
-                                delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
-                                return@withLock
+                        if (bytesRead > 0) {
+                            buffer.add(tempBuffer[0])
+                            totalRead++
+                            
+                            // Check if we have found the pattern
+                            if (buffer.size >= pattern.size) {
+                                val lastBytes = buffer.takeLast(pattern.size).toByteArray()
+                                if (lastBytes.contentEquals(pattern)) {
+                                    // Found pattern, return all data including pattern
+                                    val resultData = buffer.toByteArray()
+                                    logger.trace("Found pattern after reading {} bytes", totalRead)
+                                    delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
+                                    return@withLock
+                                }
                             }
+                        } else if (bytesRead == -1) {
+                            // End of stream
+                            logger.warn("Socket reached end of stream before finding pattern")
+                            break
                         }
-                    } else if (bytesRead == -1) {
-                        // End of stream
-                        logger.warn("Socket reached end of stream before finding pattern")
-                        break
                     }
-                }
-                
-                // Return whatever we read even if pattern not found
-                if (buffer.isNotEmpty()) {
-                    val resultData = buffer.toByteArray()
-                    logger.trace("Read {} bytes without finding pattern", totalRead)
-                    delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
-                }
-            } catch (e: Exception) {
-                if (e !is CancellationException) {
-                    logger.error("Error reading until pattern from socket: {}", e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    
+                    // Return whatever we read even if pattern not found
+                    if (buffer.isNotEmpty()) {
+                        val resultData = buffer.toByteArray()
+                        logger.trace("Read {} bytes without finding pattern", totalRead)
+                        delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
+                    }
+                } catch (e: Exception) {
+                    if (e !is CancellationException) {
+                        logger.error("Error reading until pattern from socket: {}", e.message, e)
+                        delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    }
                 }
             }
         }

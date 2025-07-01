@@ -106,14 +106,14 @@ interface SocketProtocol {
      * Application layer should handle delimiter-based parsing, fixed-length reading, etc.
      * This eliminates concurrency issues and simplifies the socket implementation.
      */
-    suspend fun readData()
+    fun readData()
 
     /**
      * Writes data to the socket. This operation is suspending.
      *
      * @param data The [ByteArray] to send.
      */
-    suspend fun write(data: ByteArray)
+    fun write(data: ByteArray)
 
     /**
      * Initiates a graceful disconnect.

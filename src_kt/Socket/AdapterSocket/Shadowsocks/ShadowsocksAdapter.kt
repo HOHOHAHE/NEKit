@@ -60,7 +60,7 @@ class ShadowsocksAdapter(
         }
     }
 
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) {
         val encryptedData = encryptor.update(data)
         super.write(encryptedData)
     }

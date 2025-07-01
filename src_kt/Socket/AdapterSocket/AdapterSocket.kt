@@ -106,14 +106,14 @@ abstract class AdapterSocket(
         _status = SocketStatus.CONNECTING
     }
  
-     override suspend fun readData() {
+     override fun readData() {
         if (isCancelled) return
         rawSocket?.readData()
     }
     
     // Removed readDataTo methods - complex reading logic should be handled at application layer
  
-     override suspend fun write(data: ByteArray) {
+     override fun write(data: ByteArray) {
          if (isCancelled) throw java.io.IOException("Socket is cancelled.")
          rawSocket?.write(data) ?: throw java.io.IOException("Raw socket not available.")
      }

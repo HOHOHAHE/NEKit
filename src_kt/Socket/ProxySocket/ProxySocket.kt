@@ -110,7 +110,7 @@ abstract class ProxySocket(
         }
     }
  
-    override suspend fun readData() {
+    override fun readData() {
         if (isCancelled) return
         logger.debug("readData() called for session {}, delegating to rawSocket.", session)
         rawSocket.readData()
@@ -118,7 +118,7 @@ abstract class ProxySocket(
  
     // Removed readDataTo methods - complex reading logic should be handled at application layer
  
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) {
         if (isCancelled) throw IOException("Socket is cancelled.")
         logger.debug("write({} bytes) called for session {}, delegating to rawSocket.", data.size, session)
         rawSocket.write(data)

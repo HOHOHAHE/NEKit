@@ -141,71 +141,80 @@ class TUNTCPSocket(
     }
 
     @Throws(IOException::class)
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) {
         if (status != SocketStatus.ESTABLISHED && status != SocketStatus.CONNECTING) {
             throw IOException("TUNTCPSocket $socketId not connected or ready for writes (status: $status).")
         }
         if (data.isEmpty()) return
 
-        writeMutex.withLock {
-            if (remainWriteLength > 0) {
-                logger.warn("TUNTCPSocket {} write called while previous write ({} bytes) still pending.", socketId, remainWriteLength)
-            }
-            remainWriteLength = data.size
-        }
-
-        logger.debug("TUNTCPSocket {} writing {} bytes to tun2socks.", socketId, data.size)
-        val bytesWritten = stackInterface.writeData(socketId, data, data.size)
-
-        if (bytesWritten < 0) {
-            val error = IOException("tun2socks writeData failed for socket $socketId, code: $bytesWritten")
-            logger.error("TUNTCPSocket {} failed to write data. Error code: {}", socketId, bytesWritten, error)
-            writeMutex.withLock { remainWriteLength = 0 }
-            delegate?.get()?.didErrorOccur(error, this)
-            forceDisconnect(error)
-            throw error
-        } else {
+        internalScope.launch {
             writeMutex.withLock {
-                remainWriteLength -= bytesWritten
-                if (remainWriteLength < 0) remainWriteLength = 0
+                if (remainWriteLength > 0) {
+                    logger.warn("TUNTCPSocket {} write called while previous write ({} bytes) still pending.", socketId, remainWriteLength)
+                }
+                remainWriteLength = data.size
             }
-            if (bytesWritten < data.size) {
-                logger.warn("TUNTCPSocket {} partial write: {} of {} bytes written.", socketId, bytesWritten, data.size)
+
+            logger.debug("TUNTCPSocket {} writing {} bytes to tun2socks.", socketId, data.size)
+            val bytesWritten = stackInterface.writeData(socketId, data, data.size)
+
+            if (bytesWritten < 0) {
+                val error = IOException("tun2socks writeData failed for socket $socketId, code: $bytesWritten")
+                logger.error("TUNTCPSocket {} failed to write data. Error code: {}", socketId, bytesWritten, error)
+                writeMutex.withLock { remainWriteLength = 0 }
+                delegate?.get()?.didErrorOccur(error, this@TUNTCPSocket)
+                forceDisconnect(error)
+            } else {
+                writeMutex.withLock {
+                    remainWriteLength -= bytesWritten
+                    if (remainWriteLength < 0) remainWriteLength = 0
+                }
+                if (bytesWritten < data.size) {
+                    logger.warn("TUNTCPSocket {} partial write: {} of {} bytes written.", socketId, bytesWritten, data.size)
+                }
             }
         }
     }
 
-    override suspend fun readData() {
+    override fun readData() {
         logger.debug("TUNTCPSocket {} readData() called by delegate.", socketId)
         reading = true
         readLengthTarget = null
         scanner = null
-        checkAndProcessPendingReadData()
+        internalScope.launch {
+            checkAndProcessPendingReadData()
+        }
     }
 
-    override suspend fun readDataTo(length: Int) {
+    override fun readDataTo(length: Int) {
         logger.debug("TUNTCPSocket {} readDataTo(length={}) called by delegate.", socketId, length)
         reading = true
         readLengthTarget = length
         scanner = null
-        checkAndProcessPendingReadData()
+        internalScope.launch {
+            checkAndProcessPendingReadData()
+        }
     }
 
-    override suspend fun readDataTo(data: ByteArray) {
+    override fun readDataTo(data: ByteArray) {
         logger.debug("TUNTCPSocket {} readDataTo(data.size={}) called by delegate.", socketId, data.size)
         reading = true
         readLengthTarget = data.size
         scanner = null
-        checkAndProcessPendingReadData()
+        internalScope.launch {
+            checkAndProcessPendingReadData()
+        }
     }
 
-    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
+    override fun readDataTo(data: ByteArray, maxLength: Int) {
         val actualLength = minOf(maxLength, data.size)
         logger.debug("TUNTCPSocket {} readDataTo(data.size={}, maxLength={}, actual={}) called by delegate.", socketId, data.size, maxLength, actualLength)
         reading = true
         readLengthTarget = actualLength
         scanner = null
-        checkAndProcessPendingReadData()
+        internalScope.launch {
+            checkAndProcessPendingReadData()
+        }
     }
 
 

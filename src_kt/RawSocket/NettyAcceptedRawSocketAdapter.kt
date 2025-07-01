@@ -105,54 +105,46 @@ class NettyAcceptedRawSocketAdapter(
         // forceDisconnect()
     }
 
-    override suspend fun write(data: ByteArray) {
+    override fun write(data: ByteArray) {
         if (!channel.isActive) {
             logger.warn("write called on inactive Netty channel. Data not sent.")
             delegate?.get()?.didErrorOccur(IOException("Channel is inactive, write failed."), this)
             return
         }
         logger.debug("Writing {} bytes to Netty channel: {}", data.size, channel)
-        return suspendCancellableCoroutine { continuation ->
-            channel.writeAndFlush(Unpooled.wrappedBuffer(data)).addListener { future ->
-                if (future.isSuccess) {
-                    logger.trace("Successfully wrote {} bytes to Netty channel {}", data.size, channel)
-                    delegate?.get()?.didWrite(data, this)
-                    continuation.resume(Unit)
-                } else {
-                    logger.error("Failed to write {} bytes to Netty channel {}: {}", data.size, channel, future.cause().message, future.cause())
-                    delegate?.get()?.didErrorOccur(future.cause(), this)
-                    continuation.resumeWith(Result.failure(future.cause()))
-                }
+        channel.writeAndFlush(Unpooled.wrappedBuffer(data)).addListener { future ->
+            if (future.isSuccess) {
+                logger.trace("Successfully wrote {} bytes to Netty channel {}", data.size, channel)
+                delegate?.get()?.didWrite(data, this@NettyAcceptedRawSocketAdapter)
+            } else {
+                logger.error("Failed to write {} bytes to Netty channel {}: {}", data.size, channel, future.cause().message, future.cause())
+                delegate?.get()?.didErrorOccur(future.cause(), this@NettyAcceptedRawSocketAdapter)
             }
         }
     }
 
-    override suspend fun readData() {
-        logger.warn("readData() called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. This method should suspend until data is available.")
-        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
-        // or similar mechanism to be resumed by channelRead.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    override fun readData() {
+        logger.warn("readData() called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven and handled automatically by channelRead.")
+        // Netty handles reading automatically through channelRead events
+        // This method is a no-op for Netty implementation
     }
 
-    override suspend fun readDataTo(length: Int) {
-        logger.warn("readDataTo(length={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. This method should suspend until data is available.", length)
-        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
-        // or similar mechanism to be resumed by channelRead.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    override fun readDataTo(length: Int) {
+        logger.warn("readDataTo(length={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven and handled automatically by channelRead.", length)
+        // Netty handles reading automatically through channelRead events
+        // This method is a no-op for Netty implementation
     }
 
-    override suspend fun readDataTo(data: ByteArray) {
-        logger.warn("readDataTo(data.size={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. This method should suspend until data is available.", data.size)
-        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
-        // or similar mechanism to be resumed by channelRead.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    override fun readDataTo(data: ByteArray) {
+        logger.warn("readDataTo(data.size={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven and handled automatically by channelRead.", data.size)
+        // Netty handles reading automatically through channelRead events
+        // This method is a no-op for Netty implementation
     }
 
-    override suspend fun readDataTo(data: ByteArray, maxLength: Int) {
-        logger.warn("readDataTo(data.size={}, maxLength={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven. This method should suspend until data is available.", data.size, maxLength)
-        // For now, it will indefinitely suspend. Proper implementation would involve a CompletableDeferred
-        // or similar mechanism to be resumed by channelRead.
-        return suspendCancellableCoroutine { } // Never resumes, effectively blocks
+    override fun readDataTo(data: ByteArray, maxLength: Int) {
+        logger.warn("readDataTo(data.size={}, maxLength={}) called on NettyAcceptedRawSocketAdapter. Netty reads are event-driven and handled automatically by channelRead.", data.size, maxLength)
+        // Netty handles reading automatically through channelRead events
+        // This method is a no-op for Netty implementation
     }
 
     override fun disconnect(becauseOf: Throwable?) {

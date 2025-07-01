@@ -14,7 +14,7 @@ interface ProxySocketInterface : SocketProtocol {
     fun openSocket()
     override fun disconnect(becauseOf: Throwable?)
     override fun forceDisconnect(becauseOf: Throwable?)
-    override suspend fun readData()
+    override fun readData()
     fun respondTo(adapter: AdapterSocket)
     fun didRead(data: ByteArray, from: RawTCPSocketProtocol)
     fun didWrite(data: ByteArray?, by: RawTCPSocketProtocol)

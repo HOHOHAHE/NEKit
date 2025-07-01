@@ -18,6 +18,8 @@ import kotlin.coroutines.resumeWithException
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
+import com.example.nekit.Utils.StreamScanner
+import com.example.nekit.Opt
 
 /**
  * Ktor-based implementation of RawTCPSocketProtocol for client-side TCP connections.
@@ -41,6 +43,11 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
 
     // Default connect timeout
     private var connectTimeoutMillis: Long = 5000L
+
+    // 統一讀取架構的狀態變數（類似 Swift 版本）
+    private var scanner: StreamScanner? = null
+    private var scanning: Boolean = false
+    private var readDataPrefix: ByteArray? = null
 
     @Throws(Exception::class)
     override suspend fun connectTo(host: String, port: Int, enableTLS: Boolean, tlsSettings: Map<String, Any>?) {
@@ -106,9 +113,8 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     }
 
     /**
-     * Simplified read method that reads available data from the socket.
-     * Complex reading logic (delimiters, fixed lengths) should be handled at the application layer.
-     * This eliminates the need for mutex and reduces complexity.
+     * 統一的讀取方法，所有讀取操作都通過此方法進行
+     * 類似 Swift 版本的架構，所有數據都通過 readCallback 處理
      */
     private var isReading = AtomicBoolean(false)
     
@@ -127,7 +133,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     
         GlobalScope.launch(Dispatchers.IO) {
             try {
-                val buffer = ByteArray(16384) // 16KB buffer
+                val buffer = ByteArray(Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE) // 128KB buffer for better performance
                 val bytesRead = currentReadChannel.readAvailable(buffer)
                 
                 when (bytesRead) {
@@ -141,10 +147,10 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                         logger.trace("No data available, exiting read")
                     }
                     else -> {
-                        // Data received
+                        // Data received - 通過統一的 readCallback 處理
                         val actualData = buffer.copyOf(bytesRead)
                         logger.trace("Read {} bytes from socket", bytesRead)
-                        delegate?.get()?.didRead(actualData, this@KtorRawTCPClientSocket)
+                        readCallback(actualData)
                     }
                 }
             } catch (e: Exception) {
@@ -161,7 +167,67 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     }
 
     /**
+     * 統一的讀取回調處理方法（類似 Swift 版本的 readCallback）
+     * 所有從 socket 讀取的數據都會通過此方法處理
+     */
+    private suspend fun readCallback(data: ByteArray) {
+        var processedData = data
+        
+        // 如果有待處理的前綴數據，合併處理
+        readDataPrefix?.let { prefix ->
+            processedData = prefix + data
+            readDataPrefix = null
+        }
+        
+        if (scanning && scanner != null) {
+            // 掃描模式：使用 scanner 處理數據
+            val result = scanner!!.addAndScan(processedData)
+            
+            if (result != null) {
+                val (foundData, remainderData) = result
+                
+                if (foundData != null) {
+                    // 找到模式，返回包含模式的數據
+                    logger.trace("Found pattern after scanning {} bytes", scanner!!.currentLength)
+                    delegate?.get()?.didRead(foundData, this@KtorRawTCPClientSocket)
+                    
+                    // 處理剩餘數據
+                    if (remainderData.isNotEmpty()) {
+                        readDataPrefix = remainderData
+                        logger.trace("Stored {} bytes as readDataPrefix", remainderData.size)
+                    }
+                } else {
+                    // 超過最大長度，返回累積的數據
+                    logger.warn("Maximum scan length exceeded")
+                    delegate?.get()?.didRead(remainderData, this@KtorRawTCPClientSocket)
+                }
+                
+                // 完成掃描
+                scanning = false
+                scanner = null
+            } else {
+                // 模式未找到，繼續讀取更多數據
+                logger.trace("Pattern not found yet, continuing to read")
+                readData() // 遞歸調用繼續讀取
+            }
+        } else {
+            // 正常模式：直接返回數據
+            delegate?.get()?.didRead(processedData, this@KtorRawTCPClientSocket)
+        }
+    }
+
+    /**
+     * 消耗並返回存儲的前綴數據（類似 Swift 版本的 consumeReadData）
+     */
+    private fun consumeReadData(): ByteArray? {
+        val data = readDataPrefix
+        readDataPrefix = null
+        return data
+    }
+
+    /**
      * Read specific length of data from the socket.
+     * Optimized to use larger read chunks when possible.
      */
     override fun readDataTo(length: Int) {
         GlobalScope.launch {
@@ -176,15 +242,25 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                     val buffer = ByteArray(length)
                     var totalRead = 0
                     
+                    // Use larger chunks for better performance when reading large amounts
+                    val chunkSize = minOf(length, Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE)
+                    val tempBuffer = ByteArray(chunkSize)
+                    
                     while (totalRead < length && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
-                        val bytesRead = currentReadChannel.readAvailable(buffer, totalRead, length - totalRead)
+                        val remainingBytes = length - totalRead
+                        val readSize = minOf(remainingBytes, chunkSize)
+                        
+                        val bytesRead = currentReadChannel.readAvailable(tempBuffer, 0, readSize)
                         if (bytesRead > 0) {
+                            // Copy data from temp buffer to main buffer
+                            System.arraycopy(tempBuffer, 0, buffer, totalRead, bytesRead)
                             totalRead += bytesRead
                         } else if (bytesRead == -1) {
                             // End of stream before reading required length
                             logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
                             break
                         }
+                        // If bytesRead == 0, continue trying to read more data
                     }
                     
                     if (totalRead > 0) {
@@ -206,66 +282,29 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
      * Read data until a specific pattern (including the pattern).
      */
     override fun readDataTo(data: ByteArray) {
-        readDataTo(data, 8192) // Default max length
+        readDataTo(data, Opt.MAX_NWTCPSCAN_LENGTH) // Use optimized default max length
     }
 
     /**
-     * Read data until a specific pattern (including the pattern).
+     * 讀取數據直到找到指定模式（包含模式）
+     * 重構為使用統一架構：設置 scanner 狀態後調用 readData()
+     * 類似 Swift 版本的實現方式
      */
     override fun readDataTo(data: ByteArray, maxLength: Int) {
-        GlobalScope.launch {
-            val currentReadChannel = readChannel
-            if (currentReadChannel == null || socket?.isClosed == true) {
-                logger.warn("readDataTo called on inactive or null socket.")
-                return@launch
-            }
-
-            readMutex.withLock {
-                try {
-                    val buffer = mutableListOf<Byte>()
-                    val pattern = data
-                    var totalRead = 0
-                    
-                    while (totalRead < maxLength && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
-                        val tempBuffer = ByteArray(1)
-                        val bytesRead = currentReadChannel.readAvailable(tempBuffer)
-                        
-                        if (bytesRead > 0) {
-                            buffer.add(tempBuffer[0])
-                            totalRead++
-                            
-                            // Check if we have found the pattern
-                            if (buffer.size >= pattern.size) {
-                                val lastBytes = buffer.takeLast(pattern.size).toByteArray()
-                                if (lastBytes.contentEquals(pattern)) {
-                                    // Found pattern, return all data including pattern
-                                    val resultData = buffer.toByteArray()
-                                    logger.trace("Found pattern after reading {} bytes", totalRead)
-                                    delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
-                                    return@withLock
-                                }
-                            }
-                        } else if (bytesRead == -1) {
-                            // End of stream
-                            logger.warn("Socket reached end of stream before finding pattern")
-                            break
-                        }
-                    }
-                    
-                    // Return whatever we read even if pattern not found
-                    if (buffer.isNotEmpty()) {
-                        val resultData = buffer.toByteArray()
-                        logger.trace("Read {} bytes without finding pattern", totalRead)
-                        delegate?.get()?.didRead(resultData, this@KtorRawTCPClientSocket)
-                    }
-                } catch (e: Exception) {
-                    if (e !is CancellationException) {
-                        logger.error("Error reading until pattern from socket: {}", e.message, e)
-                        delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
-                    }
-                }
-            }
+        val currentReadChannel = readChannel
+        if (currentReadChannel == null || socket?.isClosed == true) {
+            logger.warn("readDataTo called on inactive or null socket.")
+            return
         }
+
+        // 設置掃描狀態（類似 Swift 版本）
+        scanner = StreamScanner(data, maxLength)
+        scanning = true
+        
+        logger.trace("Starting pattern scan for {} bytes pattern, max length: {}", data.size, maxLength)
+        
+        // 調用統一的 readData() 方法，讓所有數據通過 readCallback 處理
+        readData()
     }
 
     override fun disconnect(becauseOf: Throwable?) {
@@ -291,6 +330,12 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
             writeChannel = null
             readChannel = null
             socket = null
+            
+            // 重置掃描狀態
+            scanner = null
+            scanning = false
+            readDataPrefix = null
+            isReading.set(false)
         }
     }
 

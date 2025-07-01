@@ -143,8 +143,8 @@ class KtorAcceptedRawSocketAdapter(
         GlobalScope.launch {
             readMutex.withLock {
                 try {
-                    // 只讀取一次可用數據，不要持續循環
-                    val buffer = ByteArray(8192) // 8KB buffer
+                    // 使用更大的緩衝區提高性能
+                    val buffer = ByteArray(65536) // 64KB buffer for better performance
                     val bytesRead = readChannel.readAvailable(buffer)
                     
                     if (bytesRead > 0) {
@@ -157,29 +157,8 @@ class KtorAcceptedRawSocketAdapter(
                         delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
                         return@withLock
                     } else if (bytesRead == 0) {
-                        // No data available right now, wait for one byte to arrive
-                        logger.trace("No data available, waiting for data...")
-                        try {
-                            val firstByte = readChannel.readByte()
-                            val remainingBuffer = ByteArray(8191) // 8KB - 1 byte
-                            val remainingBytes = readChannel.readAvailable(remainingBuffer)
-                            
-                            val totalData = if (remainingBytes > 0) {
-                                byteArrayOf(firstByte) + remainingBuffer.copyOf(remainingBytes)
-                            } else {
-                                byteArrayOf(firstByte)
-                            }
-                            
-                            logger.trace("Read {} bytes from socket (after waiting)", totalData.size)
-                            delegate?.get()?.didRead(totalData, this@KtorAcceptedRawSocketAdapter)
-                        } catch (e: Exception) {
-                            if (e !is CancellationException) {
-                                logger.debug("Exception while waiting for data: {}", e.message)
-                                // 不要重新拋出異常，讓上層決定如何處理
-                                delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
-                            }
-                            return@withLock
-                        }
+                        // No data available, exit gracefully instead of blocking
+                        logger.trace("No data available, exiting read")
                     }
                 } catch (e: Exception) {
                     if (e !is CancellationException) {

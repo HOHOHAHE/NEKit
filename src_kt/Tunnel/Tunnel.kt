@@ -123,11 +123,8 @@ open class Tunnel(
         
         if (by == proxySocket) {
             logger.trace("ProxySocket wrote {} bytes, triggering AdapterSocket read", data?.size ?: 0)
-            // 使用協程延遲而不是阻塞線程
-            GlobalScope.launch {
-                yield()
-                adapterSocket?.readData()
-            }
+            // 立即觸發讀取，不要延遲
+            adapterSocket?.readData()
         } else if (by == adapterSocket) {
             logger.trace("AdapterSocket wrote {} bytes, triggering ProxySocket read", data?.size ?: 0)
             // ProxySocket端立即讀取
@@ -147,7 +144,7 @@ open class Tunnel(
             proxySocket.respondTo(socket)
         }
         // 先處理readySignal邏輯
-        if (readySignal == 2) {
+        if (readySignal >= 2 && _status != TunnelStatus.FORWARDING) {
             _status = TunnelStatus.FORWARDING
             logger.info("Tunnel: Starting data forwarding with readySignal: {}", readySignal)
             proxySocket.readData()

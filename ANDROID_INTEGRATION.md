@@ -29,16 +29,28 @@ dependencies {
     implementation files('libs/nekit-release.aar')
     
     // NEKit 的依賴項（必須手動添加）
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
-    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.2'
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2'
-    implementation 'com.maxmind.geoip2:geoip2:4.0.1'
-    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.20'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.slf4j:slf4j-android:1.7.36'
-    implementation 'org.bouncycastle:bcprov-jdk18on:1.77'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
-    implementation 'io.ktor:ktor-network:2.3.7'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.13.5'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.5'
+    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin:2.13.5'
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.5'
+    implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'net.java.dev.jna:jna:5.13.0'
+    implementation 'com.maxmind.geoip2:geoip2:4.0.1'
+    
+    // Netty for networking
+    implementation 'io.netty:netty-all:4.1.100.Final'
+    
+    // Ktor for networking (alternative to Netty for Android compatibility)
+    implementation 'io.ktor:ktor-network:2.3.7'
+    implementation 'io.ktor:ktor-network-tls:2.3.7'
+    
+    // Android specific dependencies
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
 }
 ```
 

@@ -1,9 +1,12 @@
 package com.example.nekit.Socket.ProxySocket
 
 import com.example.nekit.Messages.ConnectSession
+import com.example.nekit.ProxyServer.SOCKS5UDPRelayServer
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Socket.SocketStatus
+import com.example.nekit.Utils.IPAddress
+import com.example.nekit.Utils.Port
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
@@ -18,6 +21,11 @@ class SOCKS5ProxySocket(
 
     private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
     private var state = State.INITIAL
+    
+    // For storing the relay server if it's a UDP associate connection
+    private var udpRelayServer: SOCKS5UDPRelayServer? = null
+    // To identify if the current connection is for UDP
+    private var isUdpAssociate = false
 
     private enum class State {
         INITIAL,
@@ -134,8 +142,18 @@ class SOCKS5ProxySocket(
         // Skip RSV (data[2])
         val atyp = data[3]
         
-        if (version != 0x05.toByte() || cmd != 0x01.toByte()) {
-            forceDisconnect(IOException("Invalid SOCKS5 connect request: version=$version, cmd=$cmd"))
+        if (version != 0x05.toByte()) {
+            forceDisconnect(IOException("Invalid SOCKS5 connect request: version=$version"))
+            return
+        }
+        
+        if (cmd == 0x01.toByte()) {
+            isUdpAssociate = false
+        } else if (cmd == 0x03.toByte()) {
+            isUdpAssociate = true
+        } else {
+            // We only support CONNECT (0x01) and UDP ASSOCIATE (0x03)
+            forceDisconnect(IOException("Unsupported SOCKS5 command: $cmd"))
             return
         }
         
@@ -212,10 +230,68 @@ class SOCKS5ProxySocket(
         if (host != null && port != null) {
             val requestSession = ConnectSession(host = host, port = port)
             this.session = requestSession
-            // 不要立即进入FORWARDING状态，等待respondTo被调用
-            delegate?.get()?.didReceive(requestSession, this)
+            
+            if (isUdpAssociate) {
+                // Determine client's assumed IP and Port from the connection itself
+                // (Using the TCP source IP as best-effort for UDP source if the client sent 0.0.0.0)
+                val clientIP = rawSocket.sourceIPAddress ?: IPAddress.parse("0.0.0.0")!!
+                var clientPortParam: Port = Port(port)
+                // If the client sent 0.0.0.0:0, it means any IP and Port might be used. 
+                // We'll trust our SOCKS5UDPRelayServer's default acceptance logic.
+                
+                startUdpRelay(clientIP, clientPortParam)
+            } else {
+                // 不要立即进入FORWARDING状态，等待respondTo被调用
+                delegate?.get()?.didReceive(requestSession, this)
+            }
         } else {
             forceDisconnect(IOException("Missing host or port information"))
+        }
+    }
+    
+    private fun startUdpRelay(clientIP: IPAddress, clientPort: Port) {
+        GlobalScope.launch {
+            val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket)
+            val success = relayServer.start()
+            
+            if (success) {
+                udpRelayServer = relayServer
+                val boundIPStr = relayServer.boundAddress?.presentation ?: "0.0.0.0"
+                val boundPortInt = relayServer.boundPort?.hostOrderValue ?: 0
+                
+                // Reply to the client with the IP and Port they should send UDP datagrams to
+                sendUdpAssociateSuccessResponse(boundIPStr, boundPortInt)
+            } else {
+                logger.error("Failed to start UDP relay server.")
+                // Send general SOCKS server failure reply
+                write(byteArrayOf(0x05, 0x01, 0x00, 0x01, 0, 0, 0, 0, 0, 0))
+                forceDisconnect(IOException("Failed to start UDP Relay"))
+            }
+        }
+    }
+    
+    private fun sendUdpAssociateSuccessResponse(boundIP: String, boundPort: Int) {
+        val ipParts = boundIP.split(".")
+        if (ipParts.size == 4) {
+            // IPv4
+            val response = ByteArray(10)
+            response[0] = 0x05 // VER
+            response[1] = 0x00 // REP (Success)
+            response[2] = 0x00 // RSV
+            response[3] = 0x01 // ATYP (IPv4)
+            for (i in 0..3) {
+                response[4 + i] = ipParts[i].toInt().toByte()
+            }
+            response[8] = ((boundPort shr 8) and 0xFF).toByte()
+            response[9] = (boundPort and 0xFF).toByte()
+            
+            state = State.SENDING_RESPONSE
+            write(response)
+        } else {
+            // Simplistic fallback for IPv6
+            val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
+            state = State.SENDING_RESPONSE
+            write(response)
         }
     }
 
@@ -225,5 +301,10 @@ class SOCKS5ProxySocket(
         val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
         state = State.SENDING_RESPONSE
         write(response)
+    }
+    override fun forceDisconnect(becauseOf: Throwable?) {
+        udpRelayServer?.stop()
+        udpRelayServer = null
+        super.forceDisconnect(becauseOf)
     }
 }

@@ -30,6 +30,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
     private var readJob: Job? = null
     
     override var delegate: WeakReference<RawUDPSocketDelegate?>? = null
+    override var onDatagramReceived: ((data: ByteArray, sourceAddress: IPAddress, sourcePort: Port) -> Unit)? = null
 
     // Connection state
     private var _isConnected: Boolean = false
@@ -295,6 +296,25 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 val data = datagram.packet.readBytes()
                 
                 logger.trace("Received {} bytes from UDP socket", data.size)
+                
+                // If the new callback is set, use it to pass source address info (e.g. for SOCKS5 UDP Relay)
+                val datagramCallback = onDatagramReceived
+                if (datagramCallback != null) {
+                    val remoteAddress = datagram.address as? InetSocketAddress
+                    if (remoteAddress != null) {
+                        val sourceAddress = IPAddress.parse(remoteAddress.address.hostAddress)
+                        val sourcePort = Port(remoteAddress.port)
+                        if (sourceAddress != null) {
+                            datagramCallback.invoke(data, sourceAddress, sourcePort)
+                        } else {
+                            logger.warn("Received datagram but could not parse source IP: {}", remoteAddress.address.hostAddress)
+                        }
+                    } else {
+                        logger.warn("Received datagram but address is not InetSocketAddress: {}", datagram.address)
+                    }
+                }
+                
+                // Always call the standard delegate
                 delegate?.get()?.didReceive(data, this@KtorRawUDPSocket)
                 
             } catch (e: CancellationException) {

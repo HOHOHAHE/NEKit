@@ -13,6 +13,7 @@ class NettyRawUDPSocket(val host: String, val port: Int) : RawUDPSocketProtocol 
     override val destinationIPAddress: IPAddress? = null // Placeholder
     override val destinationPort: Port? = null // Placeholder
     override val localAddress: IPAddress? = null // Placeholder for local IP address
+    override var onDatagramReceived: ((data: ByteArray, sourceAddress: IPAddress, sourcePort: Port) -> Unit)? = null
 
     override fun connect() {
         // Placeholder

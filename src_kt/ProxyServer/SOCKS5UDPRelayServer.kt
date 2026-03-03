@@ -52,7 +52,7 @@ class SOCKS5UDPRelayServer(
             }
             
             // Wait for it to bind
-            socket.bind(null, 0)
+            socket.suspendBind(null, 0)
             
             // Retrieve the bound port info
             val localAddr = socket.localAddress
@@ -85,6 +85,9 @@ class SOCKS5UDPRelayServer(
         relaySocket = null
     }
 
+    private var actualClientAddress: IPAddress? = null
+    private var actualClientPort: Port? = null
+
     /**
      * Handles an incoming UDP datagram.
      * 
@@ -97,8 +100,19 @@ class SOCKS5UDPRelayServer(
             try {
                 // Determine if this datagram is coming from the connected SOCKS5 client
                 // Note: The client might send from a different IP/Port than expected, 
-                // but checking against the expected client is the correct default behavior.
-                val isFromClient = (sourceAddress.presentation == expectedClientAddress.presentation)
+                // but checking against the expected client's IP is good to learn the port.
+                // If actualClientAddress is already learned, use it.
+                val isFromClient = if (actualClientAddress != null && actualClientPort != null) {
+                    sourceAddress.presentation == actualClientAddress!!.presentation && sourcePort.hostOrderValue == actualClientPort!!.hostOrderValue
+                } else if (sourceAddress.presentation == expectedClientAddress.presentation || expectedClientAddress.presentation == "0.0.0.0" || expectedClientAddress.presentation == "::" ||
+                           expectedClientAddress.presentation == "0:0:0:0:0:0:0:0" || expectedClientAddress.presentation == "127.0.0.1" && sourceAddress.presentation == "::1") {
+                    // This is likely the first packet from the client. Update actual client info.
+                    actualClientAddress = sourceAddress
+                    actualClientPort = sourcePort
+                    true
+                } else {
+                    false
+                }
                 
                 if (isFromClient) {
                     handleDatagramFromClient(data)
@@ -247,7 +261,9 @@ class SOCKS5UDPRelayServer(
             data.size)
             
         // Send back to the client
-        // We use the client's expected IP and Port.
-        relaySocket?.send(responseData, expectedClientAddress.presentation, expectedClientPort.hostOrderValue)
+        // We use the learned client IP and port.
+        val replyAddr = actualClientAddress ?: expectedClientAddress
+        val replyPort = actualClientPort ?: expectedClientPort
+        relaySocket?.send(responseData, replyAddr.presentation, replyPort.hostOrderValue)
     }
 }

@@ -8,7 +8,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
-import java.net.InetSocketAddress
 import java.util.concurrent.CancellationException
 import java.io.IOException
 
@@ -70,7 +69,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
 
         try {
             // Create UDP socket and connect to remote address
-            val remoteAddress = InetSocketAddress(host, port) as SocketAddress
+            val remoteAddress = io.ktor.network.sockets.InetSocketAddress(host, port)
             socket = aSocket(selectorManager).udp().connect(remoteAddress)
             
             // Update connection state
@@ -81,9 +80,9 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             // Get actual bound address info
             val currentSocket = socket
             if (currentSocket is BoundDatagramSocket) {
-                val boundSocketAddress = currentSocket.localAddress as? InetSocketAddress
+                val boundSocketAddress = currentSocket.localAddress as? io.ktor.network.sockets.InetSocketAddress
                 boundSocketAddress?.let {
-                    _localAddress = IPAddress.parse(it.address.hostAddress)
+                    _localAddress = IPAddress.parse(it.hostname)
                     _sourceIPAddress = _localAddress
                     _sourcePort = Port(it.port)
                 }
@@ -199,9 +198,9 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
         logger.info("Binding UDP socket to {}:{}", host ?: "0.0.0.0", port)
 
         try {
-            // Create bound UDP socket
-            val localAddress = InetSocketAddress(host, port) as SocketAddress
-            socket = aSocket(selectorManager).udp().bind(localAddress)
+            // Create bound UDP socket (0.0.0.0 will be used if host is null)
+            val bindHost = host ?: "0.0.0.0"
+            socket = aSocket(selectorManager).udp().bind(io.ktor.network.sockets.InetSocketAddress(bindHost, port))
             
             // Update connection state
             _isConnected = true
@@ -209,9 +208,9 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             // Get local address info
             val currentSocket = socket
             if (currentSocket is BoundDatagramSocket) {
-                val localSocketAddress = currentSocket.localAddress as? InetSocketAddress
+                val localSocketAddress = currentSocket.localAddress as? io.ktor.network.sockets.InetSocketAddress
                 localSocketAddress?.let {
-                    _localAddress = IPAddress.parse(it.address.hostAddress)
+                    _localAddress = IPAddress.parse(it.hostname)
                     _sourceIPAddress = _localAddress
                     _sourcePort = Port(it.port)
                 }
@@ -228,6 +227,10 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             delegate?.get()?.didErrorOccur(e, this)
             throw e
         }
+    }
+
+    suspend fun suspendBind(host: String?, port: Int) {
+        bindAsync(host, port)
     }
 
     override fun send(data: ByteArray, destinationHost: String, destinationPort: Int) {
@@ -247,7 +250,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
         writeMutex.withLock {
             try {
                 logger.debug("Sending {} bytes to {}:{}", data.size, destinationHost, destinationPort)
-                val remoteSocketAddress = InetSocketAddress(destinationHost, destinationPort) as SocketAddress
+                val remoteSocketAddress = io.ktor.network.sockets.InetSocketAddress(destinationHost, destinationPort)
                 val packet = Datagram(
                     packet = buildPacket { writeFully(data) },
                     address = remoteSocketAddress
@@ -300,14 +303,14 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 // If the new callback is set, use it to pass source address info (e.g. for SOCKS5 UDP Relay)
                 val datagramCallback = onDatagramReceived
                 if (datagramCallback != null) {
-                    val remoteAddress = datagram.address as? InetSocketAddress
+                    val remoteAddress = datagram.address as? io.ktor.network.sockets.InetSocketAddress
                     if (remoteAddress != null) {
-                        val sourceAddress = IPAddress.parse(remoteAddress.address.hostAddress)
+                        val sourceAddress = IPAddress.parse(remoteAddress.hostname)
                         val sourcePort = Port(remoteAddress.port)
                         if (sourceAddress != null) {
                             datagramCallback.invoke(data, sourceAddress, sourcePort)
                         } else {
-                            logger.warn("Received datagram but could not parse source IP: {}", remoteAddress.address.hostAddress)
+                            logger.warn("Received datagram but could not parse source IP: {}", remoteAddress.hostname)
                         }
                     } else {
                         logger.warn("Received datagram but address is not InetSocketAddress: {}", datagram.address)

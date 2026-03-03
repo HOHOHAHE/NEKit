@@ -80,3 +80,32 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
+
+// 增加一個獨立的執行 task，這完全不會影響原有 assembleRelease 或 Android 整合
+afterEvaluate {
+    tasks.register("runLocal", JavaExec) {
+        group = 'application'
+        description = 'Run Main.kt locally on Mac'
+        
+        // 確保執行前先編譯 debug 版本的 Kotlin 程式碼
+        dependsOn 'compileDebugKotlin'
+        
+        // 指定 Main function 的進入點 (套件名稱 + 類別名稱)
+        mainClass.set('com.example.nekit.main.MainKt')
+        
+        // 將 classpath 取值延後，避免設定階段找不到變數
+        classpath = files("$buildDir/tmp/kotlin-classes/debug")
+        
+        // 移除 slf4j-android，避免在 Mac 上呼叫到不存在的 android.util.Log 原生方法
+        classpath += files({ 
+            configurations.getByName("debugRuntimeClasspath").filter { file ->
+                !file.name.contains("slf4j-android")
+            }
+        })
+        
+        // 動態加入 slf4j-simple 供本機開發測試輸出 Log 使用
+        classpath += configurations.detachedConfiguration(dependencies.create('org.slf4j:slf4j-simple:1.7.36'))
+        
+        classpath += files({ android.bootClasspath })
+    }
+}

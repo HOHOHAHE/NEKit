@@ -289,7 +289,15 @@ class SOCKS5ProxySocket(
             write(response)
         } else {
             // Simplistic fallback for IPv6
-            val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
+            val response = ByteArray(10)
+            response[0] = 0x05 // VER
+            response[1] = 0x00 // REP (Success)
+            response[2] = 0x00 // RSV
+            response[3] = 0x01 // ATYP (IPv4)
+            // returning 0.0.0.0 for IP
+            response[4] = 0; response[5] = 0; response[6] = 0; response[7] = 0;
+            response[8] = ((boundPort shr 8) and 0xFF).toByte()
+            response[9] = (boundPort and 0xFF).toByte()
             state = State.SENDING_RESPONSE
             write(response)
         }

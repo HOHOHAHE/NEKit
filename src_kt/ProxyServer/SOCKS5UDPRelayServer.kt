@@ -198,7 +198,7 @@ class SOCKS5UDPRelayServer(
         val payloadData = ByteArray(buffer.remaining())
         buffer.get(payloadData)
         
-        logger.debug("Relaying UDP: Client -> Target ({}:{}) | {} bytes payload", destHostStr, destPortInt, payloadData.size)
+        logger.info("Relaying UDP: Client -> Target ({}:{}) | {} bytes payload", destHostStr, destPortInt, payloadData.size)
         
         // Forward the actual payload to the target server using the relay socket
         // Note: For UDP relay, we just use the existing socket to send to the destination host/port directly.
@@ -255,7 +255,7 @@ class SOCKS5UDPRelayServer(
         // DATA
         buffer.put(data)
         
-        logger.debug("Relaying UDP: Target ({}:{}) -> Client ({}:{}) | {} bytes payload", 
+        logger.info("Relaying UDP: Target ({}:{}) -> Client ({}:{}) | {} bytes payload", 
             targetAddress.presentation, targetPort.hostOrderValue, 
             expectedClientAddress.presentation, expectedClientPort.hostOrderValue, 
             data.size)

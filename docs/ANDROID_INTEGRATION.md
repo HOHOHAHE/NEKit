@@ -31,7 +31,9 @@ dependencies {
     // NEKit 的依賴項（必須手動添加）
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.20'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-    implementation 'org.slf4j:slf4j-android:1.7.36'
+    // 必須額外提供真正的 SLF4J 實作 (例如 logback-android) 才能在 Logcat 看到日誌
+    implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'com.github.tony19:logback-android:3.0.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.13.5'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.5'

@@ -24,10 +24,11 @@ struct Buffer {
             return
         }
 
-        buffer.withUnsafeMutableBytes {
-            buffer.copyBytes(to: $0, from: offset..<buffer.count)
+        var newBuffer = Data()
+        if offset < buffer.count {
+            newBuffer = buffer.subdata(in: offset..<buffer.count)
         }
-        buffer.replaceSubrange(buffer.count - offset ..< buffer.count, with: Data())
+        buffer = newBuffer
         offset = 0
     }
 

@@ -1,12 +1,12 @@
 import Foundation
 
-public protocol DNSResolverProtocol: class {
-    weak var delegate: DNSResolverDelegate? { get set }
+public protocol DNSResolverProtocol: AnyObject {
+    var delegate: DNSResolverDelegate? { get set }
     func resolve(session: DNSSession)
     func stop()
 }
 
-public protocol DNSResolverDelegate: class {
+public protocol DNSResolverDelegate: AnyObject {
     func didReceive(rawResponse: Data)
 }
 

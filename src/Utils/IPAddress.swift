@@ -7,20 +7,6 @@ public class IPAddress: CustomStringConvertible, Hashable, Comparable {
 
     public enum Address: Equatable {
         case IPv4(in_addr), IPv6(in6_addr)
-
-        public var asUInt128: UInt128 {
-            switch self {
-            case .IPv4(let addr):
-                return UInt128(addr.s_addr.byteSwapped)
-            case .IPv6(var addr):
-                var upperBits: UInt64 = 0, lowerBits: UInt64 = 0
-                withUnsafeBytes(of: &addr) {
-                    upperBits = $0.load(as: UInt64.self).byteSwapped
-                    lowerBits = $0.load(fromByteOffset: MemoryLayout<UInt64>.size, as: UInt64.self).byteSwapped
-                }
-                return UInt128(upperBits: upperBits, lowerBits: lowerBits)
-            }
-        }
     }
 
     public let family: Family
@@ -81,17 +67,7 @@ public class IPAddress: CustomStringConvertible, Hashable, Comparable {
         self.init(fromInAddr: addr)
     }
 
-    public convenience init(ipv6InNetworkOrder: UInt128) {
-        var ip = ipv6InNetworkOrder
-        var addr = in6_addr()
-        withUnsafeBytes(of: &ip) { ipptr in
-            withUnsafeMutableBytes(of: &addr) { addrptr in
-                addrptr.storeBytes(of: ipptr.load(fromByteOffset: MemoryLayout<UInt64>.size, as: UInt64.self), toByteOffset: 0, as: UInt64.self)
-                addrptr.storeBytes(of: ipptr.load(as: UInt64.self), toByteOffset: MemoryLayout<UInt64>.size, as: UInt64.self)
-            }
-        }
-        self.init(fromIn6Addr: addr)
-    }
+
 
     public convenience init(fromBytesInNetworkOrder ptr: UnsafeRawPointer, family: Family = .IPv4) {
         switch family {
@@ -136,9 +112,7 @@ public class IPAddress: CustomStringConvertible, Hashable, Comparable {
         }
     }
 
-    public var UInt128InNetworkOrder: UInt128? {
-        return self.address.asUInt128.byteSwapped
-    }
+
 
     public func withBytesInNetworkOrder<U>(_ body: (UnsafeRawBufferPointer) throws -> U) rethrows -> U {
         switch address {
@@ -153,8 +127,8 @@ public class IPAddress: CustomStringConvertible, Hashable, Comparable {
         switch (interval, address) {
         case (.IPv4(let range), .IPv4(let addr)):
             return IPAddress(ipv4InNetworkOrder: (addr.s_addr.byteSwapped &+ range).byteSwapped)
-        case (.IPv6(let range), .IPv6):
-            return IPAddress(ipv6InNetworkOrder: (address.asUInt128 &+ range).byteSwapped)
+        // case (.IPv6(let range), .IPv6):
+        //    return IPAddress(ipv6InNetworkOrder: (address.asUInt128 &+ range).byteSwapped)
         default:
             return nil
         }
@@ -165,7 +139,8 @@ public class IPAddress: CustomStringConvertible, Hashable, Comparable {
         case .IPv4(let addr):
             return IPAddress(ipv4InNetworkOrder: (addr.s_addr.byteSwapped &+ UInt32(interval)).byteSwapped)
         case .IPv6:
-            return IPAddress(ipv6InNetworkOrder: (address.asUInt128 &+ UInt128(interval)).byteSwapped)
+            // return IPAddress(ipv6InNetworkOrder: (address.asUInt128 &+ UInt128(interval)).byteSwapped)
+            return nil
         }
     }
 }
@@ -180,10 +155,12 @@ public func < (lhs: IPAddress, rhs: IPAddress) -> Bool {
     switch (lhs.address, rhs.address) {
     case (.IPv4(let addrl), .IPv4(let addrr)):
         return addrl.s_addr.byteSwapped < addrr.s_addr.byteSwapped
-    case (.IPv6(var addrl), .IPv6(var addrr)):
-        return (withUnsafeBytes(of: &addrl) { ptrl in
-            withUnsafeBytes(of: &addrr) { ptrr in
-                return memcmp(ptrl.baseAddress!, ptrr.baseAddress!, MemoryLayout.size(ofValue: addrl))
+    case (.IPv6(let addrl), .IPv6(let addrr)):
+        var l = addrl, r = addrr
+        let size = MemoryLayout.size(ofValue: l)
+        return (withUnsafeBytes(of: &l) { ptrl in
+            withUnsafeBytes(of: &r) { ptrr in
+                return memcmp(ptrl.baseAddress!, ptrr.baseAddress!, size)
             }
         }) < 0
     case (.IPv4, .IPv6):

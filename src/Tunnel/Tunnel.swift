@@ -1,7 +1,7 @@
 import Foundation
 import Resolver
 
-protocol TunnelDelegate : class {
+protocol TunnelDelegate : AnyObject {
     func tunnelDidClose(_ tunnel: Tunnel)
 }
 
@@ -38,7 +38,7 @@ public class Tunnel: NSObject, SocketDelegate {
     var adapterSocket: AdapterSocket?
     
     /// The delegate instance.
-    weak var delegate: TunnelDelegate?
+    var delegate: TunnelDelegate?
     
     weak var observer: Observer<TunnelEvent>?
     

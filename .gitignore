@@ -163,3 +163,5 @@ text_graph/*
 test_output/*
 
 Frameworks/*
+
+.build/*

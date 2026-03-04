@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Clibsodium)
+import Clibsodium
+#endif
 import Sodium
 
 open class SodiumStreamCrypto: StreamCryptoProtocol {
@@ -6,9 +9,9 @@ open class SodiumStreamCrypto: StreamCryptoProtocol {
         case chacha20, salsa20
     }
 
-    open let key: Data
-    open let iv: Data
-    open let algorithm: Alogrithm
+    public let key: Data
+    public let iv: Data
+    public let algorithm: Alogrithm
 
     var counter = 0
 
@@ -36,25 +39,32 @@ open class SodiumStreamCrypto: StreamCryptoProtocol {
             outputData.replaceSubrange(padding..<padding + data.count, with: data)
         }
 
+        var tempOutput = outputData
+        let count = tempOutput.count
         switch algorithm {
         case .chacha20:
-            _ = outputData.withUnsafeMutableBytes { outputPtr in
-                iv.withUnsafeBytes { ivPtr in
-                    key.withUnsafeBytes { keyPtr in
-                        crypto_stream_chacha20_xor_ic(outputPtr, outputPtr, UInt64(outputData.count), ivPtr, UInt64(counter/blockSize), keyPtr)
+            _ = tempOutput.withUnsafeMutableBytes { outPtr in
+                _ = outputData.withUnsafeBytes { inPtr in
+                    iv.withUnsafeBytes { ivPtr in
+                        key.withUnsafeBytes { keyPtr in
+                            crypto_stream_chacha20_xor_ic(outPtr.baseAddress!, inPtr.baseAddress!, UInt64(count), ivPtr.baseAddress!, UInt64(counter/blockSize), keyPtr.baseAddress!)
+                        }
                     }
                 }
             }
 
         case .salsa20:
-            _ = outputData.withUnsafeMutableBytes { outputPtr in
-                iv.withUnsafeBytes { ivPtr in
-                    key.withUnsafeBytes { keyPtr in
-                        crypto_stream_salsa20_xor_ic(outputPtr, outputPtr, UInt64(outputData.count), ivPtr, UInt64(counter/blockSize), keyPtr)
+            _ = tempOutput.withUnsafeMutableBytes { outPtr in
+                _ = outputData.withUnsafeBytes { inPtr in
+                    iv.withUnsafeBytes { ivPtr in
+                        key.withUnsafeBytes { keyPtr in
+                            crypto_stream_salsa20_xor_ic(outPtr.baseAddress!, inPtr.baseAddress!, UInt64(count), ivPtr.baseAddress!, UInt64(counter/blockSize), keyPtr.baseAddress!)
+                        }
                     }
                 }
             }
         }
+        outputData = tempOutput
 
         counter += data.count
 

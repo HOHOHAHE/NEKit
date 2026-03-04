@@ -1,7 +1,7 @@
 import Foundation
 
 public enum IPMask {
-    case IPv4(UInt32), IPv6(UInt128)
+    case IPv4(UInt32) //, IPv6(UInt128)
 
     func mask(baseIP: IPAddress) -> (IPAddress, IPAddress)? {
         switch (self, baseIP.address) {
@@ -24,6 +24,7 @@ public enum IPMask {
             let b = IPAddress(ipv4InNetworkOrder: base.byteSwapped)
             let e = IPAddress(ipv4InNetworkOrder: end.byteSwapped)
             return (b, e)
+        /*
         case (.IPv6(var m), .IPv6):
             guard m <= 128 else {
                 return nil
@@ -43,6 +44,7 @@ public enum IPMask {
             let b = IPAddress(ipv6InNetworkOrder: base.byteSwapped)
             let e = IPAddress(ipv6InNetworkOrder: end.byteSwapped)
             return (b, e)
+        */
         default:
             return nil
         }

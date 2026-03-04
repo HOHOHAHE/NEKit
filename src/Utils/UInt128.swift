@@ -1,12 +1,14 @@
 //
 // UInt128.swift
 //
+#if false
 // An implementation of a 128-bit unsigned integer data type not
 // relying on any outside libraries apart from Swift's standard
 // library. It also seeks to implement the entirety of the
 // UnsignedInteger protocol as well as standard functions supported
 // by Swift's native unsigned integer types.
 //
+
 // Copyright 2016 Joel Gerber
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -794,6 +796,7 @@ extension UInt128: CustomStringConvertible {
         return self.toString()
     }
 }
+#if false
 // MARK: - Extend SignedIntegerType for UInt128
 extension SignedInteger {
     public init(_ value: UInt128) {
@@ -818,3 +821,5 @@ extension String {
         self.append(string)
     }
 }
+#endif
+#endif

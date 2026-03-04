@@ -15,14 +15,18 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 
 /**
- * Ktor-based implementation of RawUDPSocketProtocol for UDP connections.
- * This implementation uses Ktor's coroutine-based UDP sockets for better integration with the existing architecture.
+ * Ktor-based implementation of RawUDPSocketProtocol for UDP connections,
+ * forced to use the Cellular network.
+ * 
+ * TODO: Ktor common API does not natively support binding to a specific network interface (like Cellular).
+ * You will need to implement platform-specific logic here:
+ * - On Android: Extract the underlying java.io.FileDescriptor or java.net.DatagramSocket and use ConnectivityManager.Network.bindSocket()
+ * - On iOS (if KMP native): You might need to use NWConnection directly with requiredInterfaceType = .cellular
  */
-class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDPSocketProtocol {
+class KtorRawCellularUDPSocket(private val host: String, private val port: Int) : RawUDPSocketProtocol {
 
-    private val logger = LoggerFactory.getLogger(KtorRawUDPSocket::class.java)
+    private val logger = LoggerFactory.getLogger(KtorRawCellularUDPSocket::class.java)
     private var socket: Any? = null // Can be BoundDatagramSocket or ConnectedDatagramSocket
-    // 使用共享的 SelectorManager 而不是為每個連線建立新的
     private val selectorManager = NetworkDispatchers.selectorManager
     private val writeMutex = Mutex() // 防止並發寫入
     private val readMutex = Mutex() // 防止並發讀取
@@ -54,7 +58,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 connectAsync()
             } catch (e: Exception) {
                 logger.error("Failed to connect UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
             }
         }
     }
@@ -65,11 +69,13 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        logger.info("Connecting UDP socket to {}:{}", host, port)
+        logger.info("Connecting Cellular UDP socket to {}:{}", host, port)
 
         try {
             // Create UDP socket and connect to remote address
             val remoteAddress = io.ktor.network.sockets.InetSocketAddress(host, port)
+            
+            // TODO: Apply cellular binding logic here before connecting
             socket = aSocket(selectorManager).udp().connect(remoteAddress)
             
             // Update connection state
@@ -88,13 +94,13 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 }
             }
 
-            logger.info("Successfully connected UDP socket to {}:{}", host, port)
+            logger.info("Successfully connected Cellular UDP socket to {}:{}", host, port)
             
             // Start reading data
             startReading()
             
         } catch (e: Exception) {
-            logger.error("Failed to connect UDP socket to {}:{}: {}", host, port, e.message, e)
+            logger.error("Failed to connect Cellular UDP socket to {}:{}: {}", host, port, e.message, e)
             cleanup()
             delegate?.get()?.didErrorOccur(e, this)
             throw e
@@ -113,7 +119,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        logger.info("Disconnecting UDP socket")
+        logger.info("Disconnecting Cellular UDP socket")
         cleanup()
         delegate?.get()?.didCancel(this)
     }
@@ -158,7 +164,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
 
         writeMutex.withLock {
             try {
-                logger.debug("Writing {} bytes to UDP socket", data.size)
+                logger.debug("Writing {} bytes to Cellular UDP socket", data.size)
                 when (currentSocket) {
                     is ConnectedDatagramSocket -> {
                         val packet = Datagram(buildPacket { writeFully(data) }, currentSocket.remoteAddress)
@@ -166,14 +172,14 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                     }
                     else -> {
                         logger.error("Cannot write to non-connected UDP socket")
-                        delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@KtorRawUDPSocket)
+                        delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@KtorRawCellularUDPSocket)
                         return@withLock
                     }
                 }
-                logger.trace("Successfully wrote {} bytes to UDP socket", data.size)
+                logger.trace("Successfully wrote {} bytes to Cellular UDP socket", data.size)
             } catch (e: Exception) {
-                logger.error("Failed to write {} bytes to UDP socket: {}", data.size, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                logger.error("Failed to write {} bytes to Cellular UDP socket: {}", data.size, e.message, e)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
             }
         }
     }
@@ -183,8 +189,8 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             try {
                 bindAsync(host, port)
             } catch (e: Exception) {
-                logger.error("Failed to bind UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                logger.error("Failed to bind Cellular UDP socket: {}", e.message, e)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
             }
         }
     }
@@ -195,11 +201,13 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        logger.info("Binding UDP socket to {}:{}", host ?: "0.0.0.0", port)
+        logger.info("Binding Cellular UDP socket to {}:{}", host ?: "0.0.0.0", port)
 
         try {
             // Create bound UDP socket (0.0.0.0 will be used if host is null)
             val bindHost = host ?: "0.0.0.0"
+            
+            // TODO: Apply cellular binding logic here before binding
             socket = aSocket(selectorManager).udp().bind(io.ktor.network.sockets.InetSocketAddress(bindHost, port))
             
             // Update connection state
@@ -216,13 +224,13 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 }
             }
 
-            logger.info("Successfully bound UDP socket to {}:{}", host ?: "0.0.0.0", port)
+            logger.info("Successfully bound Cellular UDP socket to {}:{}", host ?: "0.0.0.0", port)
             
             // Start reading data
             startReading()
             
         } catch (e: Exception) {
-            logger.error("Failed to bind UDP socket to {}:{}: {}", host ?: "0.0.0.0", port, e.message, e)
+            logger.error("Failed to bind Cellular UDP socket to {}:{}: {}", host ?: "0.0.0.0", port, e.message, e)
             cleanup()
             delegate?.get()?.didErrorOccur(e, this)
             throw e
@@ -249,7 +257,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
 
         writeMutex.withLock {
             try {
-                logger.debug("Sending {} bytes to {}:{}", data.size, destinationHost, destinationPort)
+                logger.debug("Sending {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
                 val remoteSocketAddress = io.ktor.network.sockets.InetSocketAddress(destinationHost, destinationPort)
                 val packet = Datagram(
                     packet = buildPacket { writeFully(data) },
@@ -257,10 +265,10 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 )
                 
                 (currentSocket as? BoundDatagramSocket)?.send(packet)
-                logger.trace("Successfully sent {} bytes to {}:{}", data.size, destinationHost, destinationPort)
+                logger.trace("Successfully sent {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
             } catch (e: Exception) {
                 logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
             }
         }
     }
@@ -274,8 +282,8 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                     // Job was cancelled, exit gracefully
                     break
                 } catch (e: Exception) {
-                    logger.error("Error in UDP read loop: {}", e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                    logger.error("Error in Cellular UDP read loop: {}", e.message, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
                     break
                 }
             }
@@ -298,7 +306,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 }
                 val data = datagram.packet.readBytes()
                 
-                logger.trace("Received {} bytes from UDP socket", data.size)
+                logger.trace("Received {} bytes from Cellular UDP socket", data.size)
                 
                 // If the new callback is set, use it to pass source address info (e.g. for SOCKS5 UDP Relay)
                 val datagramCallback = onDatagramReceived
@@ -318,14 +326,14 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 }
                 
                 // Always call the standard delegate
-                delegate?.get()?.didReceive(data, this@KtorRawUDPSocket)
+                delegate?.get()?.didReceive(data, this@KtorRawCellularUDPSocket)
                 
             } catch (e: CancellationException) {
                 // Job was cancelled, don't handle as error
                 throw e
             } catch (e: Exception) {
-                logger.error("Failed to read from UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                logger.error("Failed to read from Cellular UDP socket: {}", e.message, e)
+                delegate?.get()?.didErrorOccur(e, this@KtorRawCellularUDPSocket)
             }
         }
     }

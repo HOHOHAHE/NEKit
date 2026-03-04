@@ -11,12 +11,15 @@ import com.example.nekit.IPStack.DNS.DNSServer
 import com.example.nekit.Rule.Rule
 import com.example.nekit.GeoIP.GeoIP
 
+import com.example.nekit.Config.NetworkInterfaceType
+
 data class ConnectSession(
     var host: String,
     val port: Int,
     var isTLS: Boolean = false,
     val requestedHost: String? = null,
-    val fakeIPEnabled: Boolean = false
+    val fakeIPEnabled: Boolean = false,
+    var interfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
 ) {
     private val logger = LoggerFactory.getLogger(ConnectSession::class.java)
 

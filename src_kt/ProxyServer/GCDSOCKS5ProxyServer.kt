@@ -12,6 +12,7 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.Config.NetworkInterfaceType
 
 
 /**
@@ -34,6 +35,8 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
         port: Port
     ) : super(address, port)
 
+    var outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
+
     /**
      * Handles a newly accepted socket from the listening server socket by wrapping it
      * into a SOCKS5ProxySocket and passing it to the base class's tunnel management logic.
@@ -43,6 +46,7 @@ class GCDSOCKS5ProxyServer : GCDProxyServer {
     override fun handleNewAcceptedSocket(socket: RawTCPSocketProtocol) {
         socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", socket)
         val socks5ProxySocket = SOCKS5ProxySocket(socket)
+        socks5ProxySocket.outboundInterfaceType = this.outboundInterfaceType
         
         // Launch the call to super.didAcceptNewSocket in a coroutine scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.

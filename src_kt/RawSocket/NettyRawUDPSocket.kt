@@ -33,6 +33,10 @@ class NettyRawUDPSocket(val host: String, val port: Int) : RawUDPSocketProtocol 
         // For now, it's a no-op as the host and port are already passed in the constructor.
         // A proper implementation would bind the underlying Netty channel here.
     }
+
+    override suspend fun suspendBind(host: String?, port: Int) {
+        bind(host, port)
+    }
     override fun send(data: ByteArray, destinationHost: String, destinationPort: Int) {
         // Placeholder for sending UDP data.
         // This would typically involve using Netty's DatagramChannel to write data.

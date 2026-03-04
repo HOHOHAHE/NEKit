@@ -16,6 +16,7 @@ interface RawUDPSocketProtocol {
     fun disconnect()
     fun write(data: ByteArray)
     fun bind(host: String?, port: Int) // Add bind function
+    suspend fun suspendBind(host: String?, port: Int)
     val localAddress: IPAddress? // Add localAddress property
     fun send(data: ByteArray, destinationHost: String, destinationPort: Int) // Add send function
     

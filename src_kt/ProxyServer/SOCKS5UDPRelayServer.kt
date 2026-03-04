@@ -2,10 +2,13 @@ package com.example.nekit.ProxyServer
 
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.RawSocket.KtorRawUDPSocket
+import com.example.nekit.RawSocket.KtorRawCellularUDPSocket
 import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
+import com.example.nekit.Config.NetworkInterfaceType
+import com.example.nekit.Config.GlobalNetworkManager
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -20,7 +23,8 @@ import java.nio.ByteBuffer
 class SOCKS5UDPRelayServer(
     private val expectedClientAddress: IPAddress,
     private val expectedClientPort: Port,
-    private val socks5ProxySocket: SOCKS5ProxySocket
+    private val socks5ProxySocket: SOCKS5ProxySocket,
+    val outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
 ) {
     private val logger = LoggerFactory.getLogger(SOCKS5UDPRelayServer::class.java)
     
@@ -43,8 +47,18 @@ class SOCKS5UDPRelayServer(
      */
     suspend fun start(): Boolean {
         try {
+            val activeInterface = if (outboundInterfaceType != NetworkInterfaceType.DEFAULT) {
+                outboundInterfaceType
+            } else {
+                GlobalNetworkManager.currentActiveInterface
+            }
+
             // Use 0 for an ephemeral port, and bind to all interfaces (0.0.0.0 or ::)
-            val socket = KtorRawUDPSocket("0.0.0.0", 0)
+            val socket = if (activeInterface == NetworkInterfaceType.CELLULAR) {
+                KtorRawCellularUDPSocket("0.0.0.0", 0)
+            } else {
+                KtorRawUDPSocket("0.0.0.0", 0)
+            }
             
             // Set up our callback listener BEFORE binding so we don't miss packets
             socket.onDatagramReceived = { data, sourceAddress, sourcePort ->

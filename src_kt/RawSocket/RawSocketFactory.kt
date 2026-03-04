@@ -2,6 +2,8 @@ package com.example.nekit.RawSocket
 
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.SocketProtocol
+import com.example.nekit.Config.NetworkInterfaceType
+import com.example.nekit.Config.GlobalNetworkManager
 
 object RawSocketFactory {
     // Assuming LibTun2SocksStackInterface is a singleton or easily accessible
@@ -15,9 +17,14 @@ object RawSocketFactory {
         // or a global configuration flag.
         // Here, we'll use a placeholder condition. Replace with your actual logic.
 
+        val requestedInterface = session?.interfaceType ?: GlobalNetworkManager.currentActiveInterface
 
         // Fallback to a direct Ktor-based TCP socket if TUN is not required
-        return KtorRawTCPClientSocket()
+        return if (requestedInterface == NetworkInterfaceType.CELLULAR) {
+            KtorRawCellularTCPClientSocket()
+        } else {
+            KtorRawTCPClientSocket()
+        }
     }
 
 

@@ -11,6 +11,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import com.example.nekit.Config.NetworkInterfaceType
 
 class SOCKS5ProxySocket(
     rawSocket: RawTCPSocketProtocol
@@ -18,6 +19,8 @@ class SOCKS5ProxySocket(
 
     override var session: ConnectSession? = null
         public set
+
+    var outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
 
     private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
     private var state = State.INITIAL
@@ -228,7 +231,7 @@ class SOCKS5ProxySocket(
         val host = destinationHost
         val port = targetPort
         if (host != null && port != null) {
-            val requestSession = ConnectSession(host = host, port = port)
+            val requestSession = ConnectSession(host = host, port = port, interfaceType = outboundInterfaceType)
             this.session = requestSession
             
             if (isUdpAssociate) {
@@ -251,7 +254,7 @@ class SOCKS5ProxySocket(
     
     private fun startUdpRelay(clientIP: IPAddress, clientPort: Port) {
         GlobalScope.launch {
-            val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket)
+            val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket, outboundInterfaceType)
             val success = relayServer.start()
             
             if (success) {

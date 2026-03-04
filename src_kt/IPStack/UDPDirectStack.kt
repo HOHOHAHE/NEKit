@@ -11,11 +11,15 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.RawSocket.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.KtorRawUDPSocket
+import com.example.nekit.RawSocket.KtorRawCellularUDPSocket
 import com.example.nekit.RawSocket.NettyRawUDPSocket
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.IPStack.Packet.IPPacket
 import com.example.nekit.IPStack.Packet.UDPProtocolParser
 import com.example.nekit.IPStack.Packet.IPPacketImpl // Import IPPacketImpl
+import com.example.nekit.Config.NetworkInterfaceType
+import com.example.nekit.Config.GlobalNetworkManager
 
 data class ConnectInfo(
     val sourceAddress: IPAddress,
@@ -100,11 +104,13 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
 
         val connectInfo = ConnectInfo(srcAddr, srcPort, dstAddr, dstPort)
 
-        // ConcurrentHashMap.get is thread-safe.
-        // For complex logic (check-then-put), use computeIfAbsent for atomicity.
-        val socket = activeSockets.computeIfAbsent(connectInfo) {
-            logger.info("Creating new UDP socket for {}", it)
-            val newUdpSocket = NettyRawUDPSocket(it.destinationAddress.presentation, it.destinationPort.hostOrderValue)
+        val socket = activeSockets.getOrPut(connectInfo) {
+            logger.info("Creating new UDP socket for {}", connectInfo)
+            val newUdpSocket = if (GlobalNetworkManager.currentActiveInterface == NetworkInterfaceType.CELLULAR) {
+                KtorRawCellularUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
+            } else {
+                KtorRawUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
+            }
             newUdpSocket.delegate = WeakReference(this@UDPDirectStack)
             newUdpSocket
         }

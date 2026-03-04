@@ -16,8 +16,8 @@ interface Opt {
 
 
 object Base64 {
-    fun decode(data: String): ByteArray = java.util.Base64.getDecoder().decode(data)
-    fun encode(data: ByteArray): String = java.util.Base64.getEncoder().encodeToString(data)
+    fun decode(data: String): ByteArray = android.util.Base64.decode(data, android.util.Base64.DEFAULT)
+    fun encode(data: ByteArray): String = android.util.Base64.encodeToString(data, android.util.Base64.NO_WRAP)
 }
 
 interface ZERO

@@ -21,7 +21,7 @@ object RawSocketFactory {
 
         // Fallback to a direct Ktor-based TCP socket if TUN is not required
         return if (requestedInterface == NetworkInterfaceType.CELLULAR) {
-            KtorRawCellularTCPClientSocket()
+            RawCellularTCPSocket()
         } else {
             KtorRawTCPClientSocket()
         }

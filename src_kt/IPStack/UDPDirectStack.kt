@@ -12,7 +12,7 @@ import com.example.nekit.Utils.Port
 import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.RawSocket.RawUDPSocketDelegate
 import com.example.nekit.RawSocket.KtorRawUDPSocket
-import com.example.nekit.RawSocket.KtorRawCellularUDPSocket
+import com.example.nekit.RawSocket.RawCellularUDPSocket
 import com.example.nekit.RawSocket.NettyRawUDPSocket
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.IPStack.Packet.IPPacket
@@ -107,7 +107,7 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
         val socket = activeSockets.getOrPut(connectInfo) {
             logger.info("Creating new UDP socket for {}", connectInfo)
             val newUdpSocket = if (GlobalNetworkManager.currentActiveInterface == NetworkInterfaceType.CELLULAR) {
-                KtorRawCellularUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
+                RawCellularUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
             } else {
                 KtorRawUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
             }

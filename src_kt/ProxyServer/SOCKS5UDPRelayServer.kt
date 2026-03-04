@@ -2,7 +2,7 @@ package com.example.nekit.ProxyServer
 
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.RawSocket.KtorRawUDPSocket
-import com.example.nekit.RawSocket.KtorRawCellularUDPSocket
+import com.example.nekit.RawSocket.RawCellularUDPSocket
 import com.example.nekit.RawSocket.RawUDPSocketProtocol
 import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import com.example.nekit.Utils.IPAddress
@@ -55,7 +55,7 @@ class SOCKS5UDPRelayServer(
 
             // Use 0 for an ephemeral port, and bind to all interfaces (0.0.0.0 or ::)
             val socket = if (activeInterface == NetworkInterfaceType.CELLULAR) {
-                KtorRawCellularUDPSocket("0.0.0.0", 0)
+                RawCellularUDPSocket("0.0.0.0", 0)
             } else {
                 KtorRawUDPSocket("0.0.0.0", 0)
             }

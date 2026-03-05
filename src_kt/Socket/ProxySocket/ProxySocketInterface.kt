@@ -1,6 +1,6 @@
 package com.example.nekit.Socket.ProxySocket
 
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Socket.SocketProtocol
 import com.example.nekit.Messages.ConnectSession

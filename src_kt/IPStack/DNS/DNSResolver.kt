@@ -4,9 +4,9 @@ import java.lang.ref.WeakReference
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.NettyRawUDPSocket
-import com.example.nekit.RawSocket.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.ktor.RawUDPSocket
+import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
 import com.example.nekit.IPStack.DNS.DNSSession // Replaced placeholder with actual import
 
 
@@ -32,8 +32,8 @@ open class UDPDNSResolver(
 ) : DNSResolverProtocol, RawUDPSocketDelegate {
 
     private val logger = LoggerFactory.getLogger(UDPDNSResolver::class.java)
-    // Instantiate NettyRawUDPSocket with host and port
-    private val socket: RawUDPSocketProtocol = NettyRawUDPSocket(remoteAddress.presentation, remotePort.hostOrderValue)
+    // Instantiate RawUDPSocket with host and port
+    private val socket: RawUDPSocketProtocol = RawUDPSocket(remoteAddress.presentation, remotePort.hostOrderValue)
 
     override var delegate: DNSResolverDelegate? = null
 

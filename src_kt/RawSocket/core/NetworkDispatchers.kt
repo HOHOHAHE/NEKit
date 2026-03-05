@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.core
 
 import io.ktor.network.selector.*
 import kotlinx.coroutines.Dispatchers

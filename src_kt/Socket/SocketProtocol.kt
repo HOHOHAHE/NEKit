@@ -2,7 +2,7 @@ package com.example.nekit.Socket
 
 import java.lang.ref.WeakReference
 
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 

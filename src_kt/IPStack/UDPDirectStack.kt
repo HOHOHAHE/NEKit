@@ -9,11 +9,10 @@ import org.slf4j.LoggerFactory
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.RawUDPSocketDelegate
-import com.example.nekit.RawSocket.KtorRawUDPSocket
-import com.example.nekit.RawSocket.RawCellularUDPSocket
-import com.example.nekit.RawSocket.NettyRawUDPSocket
+import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.ktor.RawUDPSocket
+import com.example.nekit.RawSocket.cellular.RawCellularUDPSocket
 import com.example.nekit.Utils.PlatformDetector
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.IPStack.Packet.IPPacket
@@ -108,11 +107,11 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
         val socket = activeSockets.getOrPut(connectInfo) {
             logger.info("Creating new UDP socket for {}", connectInfo)
             // On Android + CELLULAR: use RawCellularUDPSocket (network.bindSocket capable)
-            // On macOS runLocal: always fall back to KtorRawUDPSocket
+            // On macOS runLocal: always fall back to RawUDPSocket
             val newUdpSocket = if (PlatformDetector.isAndroid && GlobalNetworkManager.currentActiveInterface == NetworkInterfaceType.CELLULAR) {
                 RawCellularUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
             } else {
-                KtorRawUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
+                RawUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
             }
             newUdpSocket.delegate = WeakReference(this@UDPDirectStack)
             newUdpSocket

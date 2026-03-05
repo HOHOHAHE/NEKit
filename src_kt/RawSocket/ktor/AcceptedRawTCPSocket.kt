@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.ktor
 
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -13,6 +13,8 @@ import java.net.InetSocketAddress
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
 
 /**
  * Adapts a Ktor `Socket` (representing an accepted client connection)
@@ -21,18 +23,18 @@ import com.example.nekit.Utils.Port
  * This implementation uses Ktor's coroutine-based sockets for better integration
  * with the existing coroutine-based architecture.
  */
-class KtorAcceptedRawSocketAdapter(
+class AcceptedRawTCPSocket(
     private val socket: Socket
 ) : RawTCPSocketProtocol {
 
-    private val logger = LoggerFactory.getLogger(KtorAcceptedRawSocketAdapter::class.java)
+    private val logger = LoggerFactory.getLogger(AcceptedRawTCPSocket::class.java)
     override var delegate: WeakReference<RawTCPSocketDelegate?>? = null
     
     private val readChannel: ByteReadChannel = socket.openReadChannel()
     private val writeChannel: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
 
     init {
-        logger.info("KtorAcceptedRawSocketAdapter created for socket: {}", socket)
+        logger.info("AcceptedRawTCPSocket created for socket: {}", socket)
     }
 
     override val isConnected: Boolean
@@ -92,7 +94,7 @@ class KtorAcceptedRawSocketAdapter(
     override fun write(data: ByteArray) {
         if (socket.isClosed) {
             logger.warn("write called on closed socket. Data not sent.")
-            delegate?.get()?.didErrorOccur(IOException("Socket is closed, write failed."), this@KtorAcceptedRawSocketAdapter)
+            delegate?.get()?.didErrorOccur(IOException("Socket is closed, write failed."), this@AcceptedRawTCPSocket)
             return
         }
 
@@ -102,7 +104,7 @@ class KtorAcceptedRawSocketAdapter(
                 // 检查写入通道是否仍然可用
                 if (writeChannel.isClosedForWrite) {
                     logger.warn("Write channel is closed, cannot write {} bytes", data.size)
-                    delegate?.get()?.didErrorOccur(IOException("Write channel is closed"), this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didErrorOccur(IOException("Write channel is closed"), this@AcceptedRawTCPSocket)
                     return@launch
                 }
                 
@@ -110,7 +112,7 @@ class KtorAcceptedRawSocketAdapter(
                 writeChannel.writeFully(data)
                 writeChannel.flush()
                 logger.trace("Successfully wrote {} bytes to socket", data.size)
-                delegate?.get()?.didWrite(data, this@KtorAcceptedRawSocketAdapter)
+                delegate?.get()?.didWrite(data, this@AcceptedRawTCPSocket)
             } catch (e: Exception) {
                 // 改进错误信息处理，避免乱码
                 val errorMsg = when {
@@ -121,7 +123,7 @@ class KtorAcceptedRawSocketAdapter(
                     else -> "Write operation failed: ${e.javaClass.simpleName}"
                 }
                 logger.error("Failed to write {} bytes to socket: {}", data.size, errorMsg, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
                 // 不要重新拋出異常，讓上層決定如何處理
             }
         }
@@ -143,11 +145,11 @@ class KtorAcceptedRawSocketAdapter(
                 if (bytesRead > 0) {
                     val data = buffer.copyOf(bytesRead)
                     logger.trace("Read {} bytes from socket", bytesRead)
-                    delegate?.get()?.didRead(data, this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didRead(data, this@AcceptedRawTCPSocket)
                 } else if (bytesRead == -1) {
                     // End of stream
                     logger.info("Socket reached end of stream")
-                    delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didDisconnect(this@AcceptedRawTCPSocket)
                     return@launch
                 } else if (bytesRead == 0) {
                     // No data available, exit gracefully instead of blocking
@@ -162,11 +164,11 @@ class KtorAcceptedRawSocketAdapter(
                         else -> "Read operation failed: ${e.javaClass.simpleName}"
                     }
                     logger.error("Error reading from socket: {}", errorMsg, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
                 }
             } finally {
                 if (socket.isClosed || readChannel.isClosedForRead) {
-                    delegate?.get()?.didDisconnect(this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didDisconnect(this@AcceptedRawTCPSocket)
                 }
             }
         }
@@ -183,7 +185,7 @@ class KtorAcceptedRawSocketAdapter(
                 val buffer = ByteArray(length)
                 readChannel.readFully(buffer, 0, length)
                 logger.trace("Read exactly {} bytes from socket", length)
-                delegate?.get()?.didRead(buffer, this@KtorAcceptedRawSocketAdapter)
+                delegate?.get()?.didRead(buffer, this@AcceptedRawTCPSocket)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     val errorMsg = when {
@@ -193,7 +195,7 @@ class KtorAcceptedRawSocketAdapter(
                         else -> "Read operation failed: ${e.javaClass.simpleName}"
                     }
                     logger.error("Error reading {} bytes from socket: {}", length, errorMsg, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
                 } else {
                     // CancellationException - do nothing
                 }
@@ -211,7 +213,7 @@ class KtorAcceptedRawSocketAdapter(
             try {
                 readChannel.readFully(data, 0, data.size)
                 logger.trace("Read exactly {} bytes into provided buffer", data.size)
-                delegate?.get()?.didRead(data, this@KtorAcceptedRawSocketAdapter)
+                delegate?.get()?.didRead(data, this@AcceptedRawTCPSocket)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     val errorMsg = when {
@@ -221,7 +223,7 @@ class KtorAcceptedRawSocketAdapter(
                         else -> "Read operation failed: ${e.javaClass.simpleName}"
                     }
                     logger.error("Error reading {} bytes into buffer: {}", data.size, errorMsg, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
                 } else {
                     // CancellationException - do nothing
                 }
@@ -246,7 +248,7 @@ class KtorAcceptedRawSocketAdapter(
                 } else {
                     data
                 }
-                delegate?.get()?.didRead(result, this@KtorAcceptedRawSocketAdapter)
+                delegate?.get()?.didRead(result, this@AcceptedRawTCPSocket)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     val errorMsg = when {
@@ -256,7 +258,7 @@ class KtorAcceptedRawSocketAdapter(
                         else -> "Read operation failed: ${e.javaClass.simpleName}"
                     }
                     logger.error("Error reading {} bytes into buffer: {}", actualLength, errorMsg, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorAcceptedRawSocketAdapter)
+                    delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
                 } else {
                     // CancellationException - do nothing
                 }

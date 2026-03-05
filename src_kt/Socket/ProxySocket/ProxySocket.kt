@@ -6,8 +6,8 @@ import org.slf4j.LoggerFactory // Added import
 
 import com.example.nekit.Socket.SocketProtocol
 import com.example.nekit.Socket.SocketDelegate
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Event.Observer
 import com.example.nekit.Event.Event.ProxySocketEvent

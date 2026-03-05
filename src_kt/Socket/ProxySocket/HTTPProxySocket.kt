@@ -1,7 +1,7 @@
 package com.example.nekit.Socket.ProxySocket
 
 import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Utils.HTTPStreamScanner
 import com.example.nekit.Utils.ProcessedData

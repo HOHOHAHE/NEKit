@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.ktor
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -18,14 +18,17 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Utils.StreamScanner
 import com.example.nekit.Opt
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Ktor-based implementation of RawTCPSocketProtocol for client-side TCP connections.
  * This implementation uses Ktor's coroutine-based sockets for better integration with the existing architecture.
  */
-class KtorRawTCPClientSocket : RawTCPSocketProtocol {
+class RawTCPSocket : RawTCPSocketProtocol {
 
-    private val logger = LoggerFactory.getLogger(KtorRawTCPClientSocket::class.java)
+    private val logger = LoggerFactory.getLogger(RawTCPSocket::class.java)
     private var socket: Socket? = null
     private var readChannel: ByteReadChannel? = null
     private var writeChannel: ByteWriteChannel? = null
@@ -100,11 +103,11 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 currentWriteChannel.writeFully(data)
                 currentWriteChannel.flush()
                 logger.trace("Successfully wrote {} bytes to socket", data.size)
-                delegate?.get()?.didWrite(data, this@KtorRawTCPClientSocket)
+                delegate?.get()?.didWrite(data, this@RawTCPSocket)
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     logger.error("Failed to write {} bytes to socket: {}", data.size, e.message)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didErrorOccur(e, this@RawTCPSocket)
                     cleanup()
                 }
             }
@@ -139,7 +142,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                     -1 -> {
                         // End of stream
                         logger.debug("End of stream reached")
-                        delegate?.get()?.didDisconnect(this@KtorRawTCPClientSocket)
+                        delegate?.get()?.didDisconnect(this@RawTCPSocket)
                     }
                     0 -> {
                         // No data available, exit gracefully
@@ -155,7 +158,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     logger.error("Error reading from socket: {}", e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didErrorOccur(e, this@RawTCPSocket)
                 } else {
                     // CancellationException - normal cancellation, no action needed
                 }
@@ -188,7 +191,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 if (foundData != null) {
                     // 找到模式，返回包含模式的數據
                     logger.trace("Found pattern after scanning {} bytes", scanner!!.currentLength)
-                    delegate?.get()?.didRead(foundData, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didRead(foundData, this@RawTCPSocket)
                     
                     // 處理剩餘數據
                     if (remainderData.isNotEmpty()) {
@@ -198,7 +201,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 } else {
                     // 超過最大長度，返回累積的數據
                     logger.warn("Maximum scan length exceeded")
-                    delegate?.get()?.didRead(remainderData, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didRead(remainderData, this@RawTCPSocket)
                 }
                 
                 // 完成掃描
@@ -211,7 +214,7 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
             }
         } else {
             // 正常模式：直接返回數據
-            delegate?.get()?.didRead(processedData, this@KtorRawTCPClientSocket)
+            delegate?.get()?.didRead(processedData, this@RawTCPSocket)
         }
     }
 
@@ -264,12 +267,12 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 if (totalRead > 0) {
                     val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
                     logger.trace("Read {} bytes from socket (requested {})", totalRead, length)
-                    delegate?.get()?.didRead(data, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didRead(data, this@RawTCPSocket)
                 }
             } catch (e: Exception) {
                 if (e !is CancellationException) {
                     logger.error("Error reading {} bytes from socket: {}", length, e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    delegate?.get()?.didErrorOccur(e, this@RawTCPSocket)
                 }
             }
         }

@@ -2,9 +2,9 @@ package com.example.nekit.Socket
 
 import java.lang.ref.WeakReference
 
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
 import com.example.nekit.Socket.ProxySocket.ProxySocket
 

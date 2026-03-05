@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.ktor
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -13,14 +13,17 @@ import java.io.IOException
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
+import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Ktor-based implementation of RawUDPSocketProtocol for UDP connections.
  * This implementation uses Ktor's coroutine-based UDP sockets for better integration with the existing architecture.
  */
-class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDPSocketProtocol {
+class RawUDPSocket(private val host: String, private val port: Int) : RawUDPSocketProtocol {
 
-    private val logger = LoggerFactory.getLogger(KtorRawUDPSocket::class.java)
+    private val logger = LoggerFactory.getLogger(RawUDPSocket::class.java)
     private var socket: Any? = null // Can be BoundDatagramSocket or ConnectedDatagramSocket
     // 使用共享的 SelectorManager 而不是為每個連線建立新的
     private val selectorManager = NetworkDispatchers.selectorManager
@@ -52,7 +55,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 connectAsync()
             } catch (e: Exception) {
                 logger.error("Failed to connect UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
             }
         }
     }
@@ -163,14 +166,14 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 }
                 else -> {
                     logger.error("Cannot write to non-connected UDP socket")
-                    delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@KtorRawUDPSocket)
+                    delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@RawUDPSocket)
                     return
                 }
             }
             logger.trace("Successfully wrote {} bytes to UDP socket", data.size)
         } catch (e: Exception) {
             logger.error("Failed to write {} bytes to UDP socket: {}", data.size, e.message, e)
-            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+            delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
         }
     }
 
@@ -180,7 +183,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                 bindAsync(host, port)
             } catch (e: Exception) {
                 logger.error("Failed to bind UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
             }
         }
     }
@@ -255,7 +258,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             logger.trace("Successfully sent {} bytes to {}:{}", data.size, destinationHost, destinationPort)
         } catch (e: Exception) {
             logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
-            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+            delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
         }
     }
 
@@ -269,7 +272,7 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
                     break
                 } catch (e: Exception) {
                     logger.error("Error in UDP read loop: {}", e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                    delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
                     break
                 }
             }
@@ -311,14 +314,14 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             }
             
             // Always call the standard delegate
-            delegate?.get()?.didReceive(data, this@KtorRawUDPSocket)
+            delegate?.get()?.didReceive(data, this@RawUDPSocket)
             
         } catch (e: CancellationException) {
             // Job was cancelled, don't handle as error
             throw e
         } catch (e: Exception) {
             logger.error("Failed to read from UDP socket: {}", e.message, e)
-            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+            delegate?.get()?.didErrorOccur(e, this@RawUDPSocket)
         }
     }
 }

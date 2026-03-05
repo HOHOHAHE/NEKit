@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.tun
 
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
@@ -9,8 +9,8 @@ import kotlinx.coroutines.sync.withLock // For withLock extension function
 
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.RawSocket.RawTCPSocketProtocol // Corrected import
-import com.example.nekit.RawSocket.RawTCPSocketDelegate // Corrected import
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol // Corrected import
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate // Corrected import
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Utils.StreamScanner

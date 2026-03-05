@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.cellular
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -15,6 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean
 import android.annotation.SuppressLint
 
 import com.example.nekit.Utils.CellularNetworkRequester
+import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
+import com.example.nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Native implementation of RawUDPSocketProtocol targeting the cellular network.

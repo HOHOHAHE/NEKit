@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket
+package com.example.nekit.RawSocket.cellular
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -17,6 +17,9 @@ import javax.net.ssl.SSLSocketFactory
 import android.annotation.SuppressLint
 
 import com.example.nekit.Utils.CellularNetworkRequester
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Implementation of RawTCPSocketProtocol targeting the cellular network.

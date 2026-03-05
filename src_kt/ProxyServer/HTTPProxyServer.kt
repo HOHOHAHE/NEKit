@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 // import com.example.nekit.Socket.ProxySocket // Removed as it's a package, not a class to import directly
 
 

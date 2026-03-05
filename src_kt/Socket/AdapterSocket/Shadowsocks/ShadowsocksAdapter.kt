@@ -2,10 +2,10 @@ package com.example.nekit.Socket.AdapterSocket.Shadowsocks
 
 import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.RawSocket.RawSocketFactory
+import com.example.nekit.RawSocket.protocol.RawSocketFactory
 import com.example.nekit.Crypto.CryptoHelper
 import com.example.nekit.Crypto.JceStreamCipherAdapter
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope

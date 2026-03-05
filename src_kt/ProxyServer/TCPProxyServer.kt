@@ -22,10 +22,10 @@ import io.ktor.network.sockets.*
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
 // Assuming RawTCPSocketProtocol.kt (from RawSocket module) is available for NettyAcceptedRawSocketAdapter.
 
-import com.example.nekit.RawSocket.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.RawTCPSocketDelegate
-import com.example.nekit.RawSocket.KtorAcceptedRawSocketAdapter
-import com.example.nekit.RawSocket.NetworkDispatchers
+import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
+import com.example.nekit.RawSocket.ktor.AcceptedRawTCPSocket
+import com.example.nekit.RawSocket.core.NetworkDispatchers
 import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -126,11 +126,11 @@ abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
 
     private suspend fun handleKtorClientConnection(clientSocket: Socket) {
         logger.info("Ktor handling new client connection: {}", clientSocket)
-        val acceptedRawSocket = KtorAcceptedRawSocketAdapter(clientSocket)
+        val acceptedRawSocket = AcceptedRawTCPSocket(clientSocket)
 
         // The `handleNewAcceptedSocket` method is overridden by subclasses (GCDHTTPProxyServer, GCDSOCKS5ProxyServer)
         // to create their specific ProxySocket types (HTTPProxySocket, SOCKS5ProxySocket).
-        // Those ProxySocket types now need to accept a RawTCPSocketProtocol (which KtorAcceptedRawSocketAdapter is).
+        // Those ProxySocket types now need to accept a RawTCPSocketProtocol (which AcceptedRawTCPSocket is).
         // This call dispatches to the appropriate overridden version.
         // With Ktor, we have native coroutine support, so suspend functions work naturally.
         // ProxyServer.didAcceptNewSocket (called by handleNewAcceptedSocket's overrides)

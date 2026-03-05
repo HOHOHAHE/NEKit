@@ -1,9 +1,9 @@
 package com.example.nekit.ProxyServer
 
 import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.KtorRawUDPSocket
-import com.example.nekit.RawSocket.RawCellularUDPSocket
-import com.example.nekit.RawSocket.RawUDPSocketProtocol
+import com.example.nekit.RawSocket.ktor.RawUDPSocket
+import com.example.nekit.RawSocket.cellular.RawCellularUDPSocket
+import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
 import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -55,7 +55,7 @@ class SOCKS5UDPRelayServer(
             // The CLIENT listening socket must ALWAYS be a standard socket (not cellular bound)
             // because SOCKS5 clients on the same device communicate via loopback (127.0.0.1).
             // Cellular interfaces cannot route 127.0.0.1.
-            val socket = KtorRawUDPSocket("0.0.0.0", 0)
+            val socket = RawUDPSocket("0.0.0.0", 0)
             
             // Set up our callback listener BEFORE binding so we don't miss packets
             socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
@@ -236,7 +236,7 @@ class SOCKS5UDPRelayServer(
         val socket = if (PlatformDetector.isAndroid && activeInterface == NetworkInterfaceType.CELLULAR) {
             RawCellularUDPSocket("0.0.0.0", 0)
         } else {
-            KtorRawUDPSocket("0.0.0.0", 0)
+            RawUDPSocket("0.0.0.0", 0)
         }
 
         socket.onDatagramReceived = { data, sourceAddress, sourcePort ->

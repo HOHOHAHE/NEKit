@@ -13,7 +13,7 @@ import com.example.nekit.IPStack.Native.JnaLibTun2Socks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
 import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
-import com.example.nekit.RawSocket.TUNTCPSocket
+import com.example.nekit.RawSocket.tun.TUNTCPSocket
 import com.example.nekit.ProxyServer.ProxyServer
 import com.example.nekit.Socket.ProxySocket.DirectProxySocket
 import com.example.nekit.Socket.AdapterSocket.AdapterSocket

@@ -41,7 +41,7 @@ import java.nio.channels.AsynchronousCloseException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(address, port) {
+abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(address, port) {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
 
@@ -147,7 +147,7 @@ abstract class GCDProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
      */
     protected open fun handleNewAcceptedSocket(acceptedRawSocket: RawTCPSocketProtocol) {
         // Base implementation (if called directly, which shouldn't happen if subclasses override)
-        logger.warn("GCDProxyServer.handleNewAcceptedSocket (base) called with {}. This should be overridden. Closing socket.", acceptedRawSocket)
+        logger.warn("TCPProxyServer.handleNewAcceptedSocket (base) called with {}. This should be overridden. Closing socket.", acceptedRawSocket)
         // This implies that if a subclass doesn't override, the raw socket might not be properly closed
         // as RawTCPSocketProtocol doesn't have a simple close(). It has disconnect/forceDisconnect.
         // For now, let's assume subclasses *will* override and handle the socket.

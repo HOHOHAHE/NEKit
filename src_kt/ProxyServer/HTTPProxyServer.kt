@@ -5,8 +5,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch // Added missing import
 import org.slf4j.LoggerFactory
 
-// Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
-// Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
+// Assuming TCPProxyServer.kt, IPAddress.kt, Port.kt are available.
+// Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from TCPProxyServer.kt context or common files.
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -17,12 +17,12 @@ import com.example.nekit.RawSocket.RawTCPSocketProtocol
 
 /**
  * The HTTP proxy server.
- * Extends GCDProxyServer to handle incoming TCP connections as HTTP proxy sessions.
+ * Extends TCPProxyServer to handle incoming TCP connections as HTTP proxy sessions.
  */
-class GCDHTTPProxyServer : GCDProxyServer {
+class HTTPProxyServer : TCPProxyServer {
     // Inherits logger from ProxyServer, or can define its own if specific logging needed here.
-    // For instance-specific logging related to GCDHTTPProxyServer behavior, can add:
-    private val httpLogger = LoggerFactory.getLogger(GCDHTTPProxyServer::class.java)
+    // For instance-specific logging related to HTTPProxyServer behavior, can add:
+    private val httpLogger = LoggerFactory.getLogger(HTTPProxyServer::class.java)
 
 
     /**
@@ -51,10 +51,10 @@ class GCDHTTPProxyServer : GCDProxyServer {
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.
         // This ensures that if handleNewAcceptedSocket is called from a different thread (e.g. NIO selector thread),
         // it correctly suspends and resumes on the dispatcher expected by ProxyServer's Mutex operations.
-        // Using mainDispatcher passed to GCDProxyServer, or a default one.
+        // Using mainDispatcher passed to TCPProxyServer, or a default one.
         // Note: ProxyServer.didAcceptNewSocket itself launches Tunnel.openTunnel, which might be async.
         // This launch here is for the call to didAcceptNewSocket itself.
-        val scope = CoroutineScope(Dispatchers.Default) // Or use a dedicated scope from GCDProxyServer if available
+        val scope = CoroutineScope(Dispatchers.Default) // Or use a dedicated scope from TCPProxyServer if available
         scope.launch {
             try {
                 super.didAcceptNewSocket(httpProxySocket)

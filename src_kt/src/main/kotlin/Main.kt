@@ -1,7 +1,7 @@
 
 package com.example.nekit.main
 
-import com.example.nekit.ProxyServer.GCDSOCKS5ProxyServer
+import com.example.nekit.ProxyServer.SOCKS5ProxyServer
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Rule.RuleManager
@@ -20,7 +20,7 @@ fun main(args: Array<String>) = runBlocking {
     val rules = listOf(DirectRule())
     RuleManager.currentManager = RuleManager(rules, true)
 
-    val server = GCDSOCKS5ProxyServer(ipAddress, Port(1080))
+    val server = SOCKS5ProxyServer(ipAddress, Port(1080))
     try {
         println("Starting SOCKS5 proxy server on 127.0.0.1:1080")
         server.start()

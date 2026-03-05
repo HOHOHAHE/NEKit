@@ -5,8 +5,8 @@ import kotlinx.coroutines.CoroutineScope // For launching super.didAcceptNewSock
 import kotlinx.coroutines.launch     // For launching super.didAcceptNewSocket
 import org.slf4j.LoggerFactory
 
-// Assuming GCDProxyServer.kt, IPAddress.kt, Port.kt are available.
-// Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from GCDProxyServer.kt context or common files.
+// Assuming TCPProxyServer.kt, IPAddress.kt, Port.kt are available.
+// Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from TCPProxyServer.kt context or common files.
 
 import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
@@ -17,11 +17,11 @@ import com.example.nekit.Config.NetworkInterfaceType
 
 /**
  * The SOCKS5 proxy server.
- * Extends GCDProxyServer to handle incoming TCP connections as SOCKS5 proxy sessions.
+ * Extends TCPProxyServer to handle incoming TCP connections as SOCKS5 proxy sessions.
  */
-class GCDSOCKS5ProxyServer : GCDProxyServer {
+class SOCKS5ProxyServer : TCPProxyServer {
     // Inherits logger from ProxyServer, or can define its own if specific logging needed here.
-    private val socks5Logger = LoggerFactory.getLogger(GCDSOCKS5ProxyServer::class.java)
+    private val socks5Logger = LoggerFactory.getLogger(SOCKS5ProxyServer::class.java)
 
     /**
      * Creates an instance of SOCKS5 proxy server.

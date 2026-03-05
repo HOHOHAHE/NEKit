@@ -163,9 +163,11 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
                 logger.trace("Successfully wrote {} bytes to Cellular socket", data.size)
                 delegate?.get()?.didWrite(data, this@RawCellularTCPSocket)
             } catch (e: Exception) {
-                logger.error("Failed to write {} bytes to Cellular socket: {}", data.size, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
-                throw e
+                if (e !is CancellationException) {
+                    logger.error("Failed to write {} bytes to Cellular socket: {}", data.size, e.message)
+                    delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
+                    cleanup()
+                }
             }
         }
     }

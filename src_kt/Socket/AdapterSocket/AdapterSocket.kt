@@ -171,7 +171,7 @@ abstract class AdapterSocket(
      }
  
      override fun didErrorOccur(error: Throwable, on: RawTCPSocketProtocol) {
-         logger.error("Raw socket error on {}: {}", on, error.message, error)
+         logger.error("Raw socket error on {}: {}", on, error.message)
          observer?.signal(AdapterSocketEvent.ErrorOccurred(error, this))
          delegate?.get()?.didErrorOccur(error, this)
          forceDisconnect(becauseOf = error)

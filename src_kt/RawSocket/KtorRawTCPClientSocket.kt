@@ -102,9 +102,11 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 logger.trace("Successfully wrote {} bytes to socket", data.size)
                 delegate?.get()?.didWrite(data, this@KtorRawTCPClientSocket)
             } catch (e: Exception) {
-                logger.error("Failed to write {} bytes to socket: {}", data.size, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
-                throw e
+                if (e !is CancellationException) {
+                    logger.error("Failed to write {} bytes to socket: {}", data.size, e.message)
+                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
+                    cleanup()
+                }
             }
         }
     }

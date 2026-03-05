@@ -4,28 +4,19 @@ import com.example.nekit.Messages.ConnectSession
 import com.example.nekit.Socket.SocketProtocol
 import com.example.nekit.Config.NetworkInterfaceType
 import com.example.nekit.Config.GlobalNetworkManager
+import com.example.nekit.Utils.PlatformDetector
 
 object RawSocketFactory {
-    // Assuming LibTun2SocksStackInterface is a singleton or easily accessible
-    // This is a placeholder for however you get the instance.
-
 
     fun getRawSocket(session: ConnectSession? = null): RawTCPSocketProtocol {
-        // Logic to decide if a TUN socket should be created.
-        // This is highly dependent on your application's logic.
-        // For example, you might decide based on the session's destination address,
-        // or a global configuration flag.
-        // Here, we'll use a placeholder condition. Replace with your actual logic.
-
         val requestedInterface = session?.interfaceType ?: GlobalNetworkManager.currentActiveInterface
 
-        // Fallback to a direct Ktor-based TCP socket if TUN is not required
-        return if (requestedInterface == NetworkInterfaceType.CELLULAR) {
+        // On Android: use RawCellularTCPSocket (supports network.bindSocket for cellular)
+        // On macOS runLocal: fall back to KtorRawTCPClientSocket (no cellular concept on JVM)
+        return if (PlatformDetector.isAndroid && requestedInterface == NetworkInterfaceType.CELLULAR) {
             RawCellularTCPSocket()
         } else {
             KtorRawTCPClientSocket()
         }
     }
-
-
 }

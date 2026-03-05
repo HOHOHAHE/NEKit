@@ -4,8 +4,6 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Opt
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.ref.WeakReference
@@ -14,10 +12,17 @@ import java.net.DatagramSocket
 import java.net.InetSocketAddress
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
+import android.annotation.SuppressLint
+
+import com.example.nekit.Utils.CellularNetworkRequester
 
 /**
- * Native implementation of RawUDPSocketProtocol targeting the cellular network via SocketBinderFactory.
- * Wraps java.net.DatagramSocket to hook Android Cellular network binding capabilities.
+ * Native implementation of RawUDPSocketProtocol targeting the cellular network.
+ * Wraps java.net.DatagramSocket and binds it to Android's cellular Network before
+ * transmitting.
+ *
+ * Uses CellularNetworkRequester to dynamically request the Cellular network via Reflection,
+ * making this socket completely self-contained without needing App-level Context injection.
  */
 class RawCellularUDPSocket(private val host: String, private val port: Int) : RawUDPSocketProtocol {
 
@@ -25,7 +30,6 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
     private var socket: DatagramSocket? = null
     
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val writeMutex = Mutex()
     private var readJob: Job? = null
     
     override var delegate: WeakReference<RawUDPSocketDelegate?>? = null
@@ -59,6 +63,7 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
         }
     }
 
+    @SuppressLint("NewApi")
     private suspend fun connectAsync() {
         if (_isConnected) {
             logger.warn("UDP socket is already connected")
@@ -72,13 +77,14 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
                 val newSocket = DatagramSocket(null) // Unbound
                 newSocket.reuseAddress = true
 
-                // Bind to cellular network
-                val binder = SocketBinderFactory.cellularBinder
-                if (binder != null) {
-                    logger.debug("Binding UDP socket to cellular network via SocketBinder")
-                    binder.bindDatagramSocket(newSocket)
+                // Request and wait for cellular network via Reflection utility
+                logger.debug("Requesting cellular network from system...")
+                val cellularNetwork = CellularNetworkRequester.requestAndGetCellularNetwork(5000L)
+                if (cellularNetwork != null) {
+                    logger.debug("Binding UDP socket to active cellular network: {}", cellularNetwork)
+                    cellularNetwork.bindSocket(newSocket)
                 } else {
-                    logger.warn("SocketBinderFactory.cellularBinder is null. Socket will use default network route.")
+                    logger.warn("Cellular network request timed out or unavailable. Socket will use default network route.")
                 }
 
                 // Connect the remote address
@@ -167,21 +173,19 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
             return
         }
 
-        writeMutex.withLock {
-            try {
-                logger.debug("Writing {} bytes to Cellular UDP socket", data.size)
-                
-                // For connected datagram sockets, we don't need to specify the packet address
-                // unless we want to override the connection
-                val packet = DatagramPacket(data, data.size)
-                currentSocket.send(packet)
-                
-                logger.trace("Successfully wrote {} bytes to Cellular UDP socket", data.size)
-            } catch (e: Exception) {
-                logger.error("Failed to write {} bytes to Cellular UDP socket: {}", data.size, e.message, e)
-                withContext(Dispatchers.Main.immediate) {
-                    delegate?.get()?.didErrorOccur(e, this@RawCellularUDPSocket)
-                }
+        try {
+            logger.debug("Writing {} bytes to Cellular UDP socket", data.size)
+            
+            // For connected datagram sockets, we don't need to specify the packet address
+            // unless we want to override the connection
+            val packet = DatagramPacket(data, data.size)
+            currentSocket.send(packet)
+            
+            logger.trace("Successfully wrote {} bytes to Cellular UDP socket", data.size)
+        } catch (e: Exception) {
+            logger.error("Failed to write {} bytes to Cellular UDP socket: {}", data.size, e.message, e)
+            withContext(Dispatchers.Main.immediate) {
+                delegate?.get()?.didErrorOccur(e, this@RawCellularUDPSocket)
             }
         }
     }
@@ -199,6 +203,7 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
         }
     }
 
+    @SuppressLint("NewApi")
     private suspend fun bindAsync(host: String?, port: Int) {
         if (_isConnected) {
             logger.warn("Cannot bind already connected UDP socket")
@@ -212,11 +217,14 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
                 val newSocket = DatagramSocket(null) // Unbound
                 newSocket.reuseAddress = true
                 
-                // Bind to cellular network
-                val binder = SocketBinderFactory.cellularBinder
-                if (binder != null) {
-                    logger.debug("Binding UDP socket to cellular network via SocketBinder")
-                    binder.bindDatagramSocket(newSocket)
+                // Request and wait for cellular network via Reflection utility
+                logger.debug("Requesting cellular network from system...")
+                val cellularNetwork = CellularNetworkRequester.requestAndGetCellularNetwork(5000L)
+                if (cellularNetwork != null) {
+                    logger.debug("Binding UDP socket to active cellular network: {}", cellularNetwork)
+                    cellularNetwork.bindSocket(newSocket)
+                } else {
+                    logger.warn("Cellular network request timed out or unavailable. Socket will use default network route.")
                 }
 
                 val bindHost = host ?: "0.0.0.0"
@@ -269,20 +277,18 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
             return
         }
 
-        writeMutex.withLock {
-            try {
-                logger.debug("Sending {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
-                
-                val destAddress = InetSocketAddress(destinationHost, destinationPort)
-                val packet = DatagramPacket(data, data.size, destAddress)
-                currentSocket.send(packet)
-                
-                logger.trace("Successfully sent {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
-            } catch (e: Exception) {
-                logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
-                withContext(Dispatchers.Main.immediate) {
-                    delegate?.get()?.didErrorOccur(e, this@RawCellularUDPSocket)
-                }
+        try {
+            logger.debug("Sending {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
+            
+            val destAddress = InetSocketAddress(destinationHost, destinationPort)
+            val packet = DatagramPacket(data, data.size, destAddress)
+            currentSocket.send(packet)
+            
+            logger.trace("Successfully sent {} bytes to {}:{} via Cellular", data.size, destinationHost, destinationPort)
+        } catch (e: Exception) {
+            logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
+            withContext(Dispatchers.Main.immediate) {
+                delegate?.get()?.didErrorOccur(e, this@RawCellularUDPSocket)
             }
         }
     }

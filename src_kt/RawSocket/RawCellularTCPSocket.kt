@@ -5,8 +5,6 @@ import com.example.nekit.Utils.Port
 import com.example.nekit.Utils.StreamScanner
 import com.example.nekit.Opt
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.io.OutputStream
@@ -16,11 +14,16 @@ import java.net.Socket
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.SSLSocketFactory
+import android.annotation.SuppressLint
+
+import com.example.nekit.Utils.CellularNetworkRequester
 
 /**
- * Implementation of RawTCPSocketProtocol targeting the cellular network via SocketBinderFactory.
- * This socket wraps a native java.net.Socket to allow Android's Network object to bind to it
- * before establishing the connection.
+ * Implementation of RawTCPSocketProtocol targeting the cellular network.
+ * Binds the underlying java.net.Socket to Android's cellular Network before connecting.
+ * 
+ * Uses CellularNetworkRequester to dynamically request the Cellular network via Reflection,
+ * making this socket completely self-contained without needing App-level Context injection.
  */
 class RawCellularTCPSocket : RawTCPSocketProtocol {
 
@@ -29,8 +32,6 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
 
-    private val writeMutex = Mutex()
-    private val readMutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var readJob: Job? = null
 
@@ -78,6 +79,7 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
             try { socket?.port?.let { Port(it) } } catch (e: Exception) { null }
         }
 
+    @SuppressLint("NewApi")
     @Throws(Exception::class)
     override suspend fun connectTo(host: String, port: Int, enableTLS: Boolean, tlsSettings: Map<String, Any>?) {
         if (socket?.isClosed == false && socket?.isConnected == true) {
@@ -88,20 +90,21 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
         this.connectedHost = host
         this.connectedPort = port
 
-        logger.info("Attempting to connect to {}:{} via Cellular SocketBinder with timeout {}ms", host, port, connectTimeoutMillis)
+        logger.info("Attempting to connect to {}:{} via Cellular with timeout {}ms", host, port, connectTimeoutMillis)
 
         withContext(Dispatchers.IO) {
             try {
                 // 1. Create native socket
                 val baseSocket = Socket()
                 
-                // 2. Bind the socket to the cellular network via the injected binder
-                val binder = SocketBinderFactory.cellularBinder
-                if (binder != null) {
-                    logger.debug("Binding socket to cellular network via SocketBinder")
-                    binder.bindSocket(baseSocket)
+                // 2. Request and wait for cellular network via Reflection utility (max 5 seconds timeout)
+                logger.debug("Requesting cellular network from system...")
+                val cellularNetwork = CellularNetworkRequester.requestAndGetCellularNetwork(5000L)
+                if (cellularNetwork != null) {
+                    logger.debug("Binding socket to active cellular network: {}", cellularNetwork)
+                    cellularNetwork.bindSocket(baseSocket)
                 } else {
-                    logger.warn("SocketBinderFactory.cellularBinder is null. Socket will use default network route.")
+                    logger.warn("Cellular network request timed out or unavailable. Socket will use default network route.")
                 }
 
                 // 3. Connect the socket
@@ -153,18 +156,16 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
         }
 
         scope.launch {
-            writeMutex.withLock {
-                try {
-                    logger.debug("Writing {} bytes to Cellular socket", data.size)
-                    currentStream.write(data)
-                    currentStream.flush()
-                    logger.trace("Successfully wrote {} bytes to Cellular socket", data.size)
-                    delegate?.get()?.didWrite(data, this@RawCellularTCPSocket)
-                } catch (e: Exception) {
-                    logger.error("Failed to write {} bytes to Cellular socket: {}", data.size, e.message, e)
-                    delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
-                    throw e
-                }
+            try {
+                logger.debug("Writing {} bytes to Cellular socket", data.size)
+                currentStream.write(data)
+                currentStream.flush()
+                logger.trace("Successfully wrote {} bytes to Cellular socket", data.size)
+                delegate?.get()?.didWrite(data, this@RawCellularTCPSocket)
+            } catch (e: Exception) {
+                logger.error("Failed to write {} bytes to Cellular socket: {}", data.size, e.message, e)
+                delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
+                throw e
             }
         }
     }
@@ -255,36 +256,34 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
         }
 
         scope.launch {
-            readMutex.withLock {
-                try {
-                    val buffer = ByteArray(length)
-                    var totalRead = 0
+            try {
+                val buffer = ByteArray(length)
+                var totalRead = 0
+                
+                while (totalRead < length && socket?.isClosed == false) {
+                    val bytesToRead = length - totalRead
+                    val bytesRead = currentStream.read(buffer, totalRead, bytesToRead)
                     
-                    while (totalRead < length && socket?.isClosed == false) {
-                        val bytesToRead = length - totalRead
-                        val bytesRead = currentStream.read(buffer, totalRead, bytesToRead)
-                        
-                        if (bytesRead == -1) {
-                            logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
-                            break
-                        }
-                        totalRead += bytesRead
+                    if (bytesRead == -1) {
+                        logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
+                        break
                     }
-                    
-                    if (totalRead > 0) {
-                        val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
-                        logger.trace("Read {} bytes from Cellular socket (requested {})", totalRead, length)
-                        delegate?.get()?.didRead(data, this@RawCellularTCPSocket)
-                    } else if (totalRead == 0 && length > 0) {
-                        delegate?.get()?.didDisconnect(this@RawCellularTCPSocket)
-                        cleanup()
-                    }
-                } catch (e: Exception) {
-                    if (e !is CancellationException) {
-                        logger.error("Error reading {} bytes from Cellular socket: {}", length, e.message, e)
-                        delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
-                        cleanup()
-                    }
+                    totalRead += bytesRead
+                }
+                
+                if (totalRead > 0) {
+                    val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
+                    logger.trace("Read {} bytes from Cellular socket (requested {})", totalRead, length)
+                    delegate?.get()?.didRead(data, this@RawCellularTCPSocket)
+                } else if (totalRead == 0 && length > 0) {
+                    delegate?.get()?.didDisconnect(this@RawCellularTCPSocket)
+                    cleanup()
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    logger.error("Error reading {} bytes from Cellular socket: {}", length, e.message, e)
+                    delegate?.get()?.didErrorOccur(e, this@RawCellularTCPSocket)
+                    cleanup()
                 }
             }
         }

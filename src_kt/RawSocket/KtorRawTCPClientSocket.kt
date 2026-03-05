@@ -5,8 +5,6 @@ import io.ktor.network.sockets.*
 import io.ktor.network.tls.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -33,8 +31,6 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
     private var writeChannel: ByteWriteChannel? = null
     // 使用共享的 SelectorManager 而不是為每個連線建立新的
     private val selectorManager = NetworkDispatchers.selectorManager
-    private val writeMutex = Mutex() // 防止並發寫入
-    private val readMutex = Mutex() // 防止並發讀取
     
     override var delegate: WeakReference<RawTCPSocketDelegate?>? = null
 
@@ -238,42 +234,40 @@ class KtorRawTCPClientSocket : RawTCPSocketProtocol {
                 return@launch
             }
 
-            readMutex.withLock {
-                try {
-                    val buffer = ByteArray(length)
-                    var totalRead = 0
+            try {
+                val buffer = ByteArray(length)
+                var totalRead = 0
+                
+                // Use larger chunks for better performance when reading large amounts
+                val chunkSize = minOf(length, Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE)
+                val tempBuffer = ByteArray(chunkSize)
+                
+                while (totalRead < length && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
+                    val remainingBytes = length - totalRead
+                    val readSize = minOf(remainingBytes, chunkSize)
                     
-                    // Use larger chunks for better performance when reading large amounts
-                    val chunkSize = minOf(length, Opt.MAX_NWTCPSOCKET_READ_DATA_SIZE)
-                    val tempBuffer = ByteArray(chunkSize)
-                    
-                    while (totalRead < length && !currentReadChannel.isClosedForRead && socket?.isClosed == false) {
-                        val remainingBytes = length - totalRead
-                        val readSize = minOf(remainingBytes, chunkSize)
-                        
-                        val bytesRead = currentReadChannel.readAvailable(tempBuffer, 0, readSize)
-                        if (bytesRead > 0) {
-                            // Copy data from temp buffer to main buffer
-                            System.arraycopy(tempBuffer, 0, buffer, totalRead, bytesRead)
-                            totalRead += bytesRead
-                        } else if (bytesRead == -1) {
-                            // End of stream before reading required length
-                            logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
-                            break
-                        }
-                        // If bytesRead == 0, continue trying to read more data
+                    val bytesRead = currentReadChannel.readAvailable(tempBuffer, 0, readSize)
+                    if (bytesRead > 0) {
+                        // Copy data from temp buffer to main buffer
+                        System.arraycopy(tempBuffer, 0, buffer, totalRead, bytesRead)
+                        totalRead += bytesRead
+                    } else if (bytesRead == -1) {
+                        // End of stream before reading required length
+                        logger.warn("Socket reached end of stream before reading {} bytes (read {})", length, totalRead)
+                        break
                     }
-                    
-                    if (totalRead > 0) {
-                        val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
-                        logger.trace("Read {} bytes from socket (requested {})", totalRead, length)
-                        delegate?.get()?.didRead(data, this@KtorRawTCPClientSocket)
-                    }
-                } catch (e: Exception) {
-                    if (e !is CancellationException) {
-                        logger.error("Error reading {} bytes from socket: {}", length, e.message, e)
-                        delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
-                    }
+                    // If bytesRead == 0, continue trying to read more data
+                }
+                
+                if (totalRead > 0) {
+                    val data = if (totalRead == length) buffer else buffer.copyOf(totalRead)
+                    logger.trace("Read {} bytes from socket (requested {})", totalRead, length)
+                    delegate?.get()?.didRead(data, this@KtorRawTCPClientSocket)
+                }
+            } catch (e: Exception) {
+                if (e !is CancellationException) {
+                    logger.error("Error reading {} bytes from socket: {}", length, e.message, e)
+                    delegate?.get()?.didErrorOccur(e, this@KtorRawTCPClientSocket)
                 }
             }
         }

@@ -24,8 +24,6 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
     private var socket: Any? = null // Can be BoundDatagramSocket or ConnectedDatagramSocket
     // 使用共享的 SelectorManager 而不是為每個連線建立新的
     private val selectorManager = NetworkDispatchers.selectorManager
-    private val writeMutex = Mutex() // 防止並發寫入
-    private val readMutex = Mutex() // 防止並發讀取
     private var readJob: Job? = null
     
     override var delegate: WeakReference<RawUDPSocketDelegate?>? = null
@@ -156,25 +154,23 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        writeMutex.withLock {
-            try {
-                logger.debug("Writing {} bytes to UDP socket", data.size)
-                when (currentSocket) {
-                    is ConnectedDatagramSocket -> {
-                        val packet = Datagram(buildPacket { writeFully(data) }, currentSocket.remoteAddress)
-                        currentSocket.send(packet)
-                    }
-                    else -> {
-                        logger.error("Cannot write to non-connected UDP socket")
-                        delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@KtorRawUDPSocket)
-                        return@withLock
-                    }
+        try {
+            logger.debug("Writing {} bytes to UDP socket", data.size)
+            when (currentSocket) {
+                is ConnectedDatagramSocket -> {
+                    val packet = Datagram(buildPacket { writeFully(data) }, currentSocket.remoteAddress)
+                    currentSocket.send(packet)
                 }
-                logger.trace("Successfully wrote {} bytes to UDP socket", data.size)
-            } catch (e: Exception) {
-                logger.error("Failed to write {} bytes to UDP socket: {}", data.size, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+                else -> {
+                    logger.error("Cannot write to non-connected UDP socket")
+                    delegate?.get()?.didErrorOccur(IllegalStateException("Socket not connected"), this@KtorRawUDPSocket)
+                    return
+                }
             }
+            logger.trace("Successfully wrote {} bytes to UDP socket", data.size)
+        } catch (e: Exception) {
+            logger.error("Failed to write {} bytes to UDP socket: {}", data.size, e.message, e)
+            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
         }
     }
 
@@ -247,21 +243,19 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        writeMutex.withLock {
-            try {
-                logger.debug("Sending {} bytes to {}:{}", data.size, destinationHost, destinationPort)
-                val remoteSocketAddress = io.ktor.network.sockets.InetSocketAddress(destinationHost, destinationPort)
-                val packet = Datagram(
-                    packet = buildPacket { writeFully(data) },
-                    address = remoteSocketAddress
-                )
-                
-                (currentSocket as? BoundDatagramSocket)?.send(packet)
-                logger.trace("Successfully sent {} bytes to {}:{}", data.size, destinationHost, destinationPort)
-            } catch (e: Exception) {
-                logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
-            }
+        try {
+            logger.debug("Sending {} bytes to {}:{}", data.size, destinationHost, destinationPort)
+            val remoteSocketAddress = io.ktor.network.sockets.InetSocketAddress(destinationHost, destinationPort)
+            val packet = Datagram(
+                packet = buildPacket { writeFully(data) },
+                address = remoteSocketAddress
+            )
+            
+            (currentSocket as? BoundDatagramSocket)?.send(packet)
+            logger.trace("Successfully sent {} bytes to {}:{}", data.size, destinationHost, destinationPort)
+        } catch (e: Exception) {
+            logger.error("Failed to send {} bytes to {}:{}: {}", data.size, destinationHost, destinationPort, e.message, e)
+            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
         }
     }
 
@@ -289,44 +283,42 @@ class KtorRawUDPSocket(private val host: String, private val port: Int) : RawUDP
             return
         }
 
-        readMutex.withLock {
-            try {
-                val datagram = when (currentSocket) {
-                    is BoundDatagramSocket -> currentSocket.receive()
-                    is ConnectedDatagramSocket -> currentSocket.receive()
-                    else -> throw IllegalStateException("Unknown socket type")
-                }
-                val data = datagram.packet.readBytes()
-                
-                logger.trace("Received {} bytes from UDP socket", data.size)
-                
-                // If the new callback is set, use it to pass source address info (e.g. for SOCKS5 UDP Relay)
-                val datagramCallback = onDatagramReceived
-                if (datagramCallback != null) {
-                    val remoteAddress = datagram.address as? io.ktor.network.sockets.InetSocketAddress
-                    if (remoteAddress != null) {
-                        val sourceAddress = IPAddress.parse(remoteAddress.hostname)
-                        val sourcePort = Port(remoteAddress.port)
-                        if (sourceAddress != null) {
-                            datagramCallback.invoke(data, sourceAddress, sourcePort)
-                        } else {
-                            logger.warn("Received datagram but could not parse source IP: {}", remoteAddress.hostname)
-                        }
-                    } else {
-                        logger.warn("Received datagram but address is not InetSocketAddress: {}", datagram.address)
-                    }
-                }
-                
-                // Always call the standard delegate
-                delegate?.get()?.didReceive(data, this@KtorRawUDPSocket)
-                
-            } catch (e: CancellationException) {
-                // Job was cancelled, don't handle as error
-                throw e
-            } catch (e: Exception) {
-                logger.error("Failed to read from UDP socket: {}", e.message, e)
-                delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
+        try {
+            val datagram = when (currentSocket) {
+                is BoundDatagramSocket -> currentSocket.receive()
+                is ConnectedDatagramSocket -> currentSocket.receive()
+                else -> throw IllegalStateException("Unknown socket type")
             }
+            val data = datagram.packet.readBytes()
+            
+            logger.trace("Received {} bytes from UDP socket", data.size)
+            
+            // If the new callback is set, use it to pass source address info (e.g. for SOCKS5 UDP Relay)
+            val datagramCallback = onDatagramReceived
+            if (datagramCallback != null) {
+                val remoteAddress = datagram.address as? io.ktor.network.sockets.InetSocketAddress
+                if (remoteAddress != null) {
+                    val sourceAddress = IPAddress.parse(remoteAddress.hostname)
+                    val sourcePort = Port(remoteAddress.port)
+                    if (sourceAddress != null) {
+                        datagramCallback.invoke(data, sourceAddress, sourcePort)
+                    } else {
+                        logger.warn("Received datagram but could not parse source IP: {}", remoteAddress.hostname)
+                    }
+                } else {
+                    logger.warn("Received datagram but address is not InetSocketAddress: {}", datagram.address)
+                }
+            }
+            
+            // Always call the standard delegate
+            delegate?.get()?.didReceive(data, this@KtorRawUDPSocket)
+            
+        } catch (e: CancellationException) {
+            // Job was cancelled, don't handle as error
+            throw e
+        } catch (e: Exception) {
+            logger.error("Failed to read from UDP socket: {}", e.message, e)
+            delegate?.get()?.didErrorOccur(e, this@KtorRawUDPSocket)
         }
     }
 }

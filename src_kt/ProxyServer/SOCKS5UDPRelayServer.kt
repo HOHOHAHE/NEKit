@@ -9,6 +9,7 @@ import com.example.nekit.Utils.IPAddress
 import com.example.nekit.Utils.Port
 import com.example.nekit.Config.NetworkInterfaceType
 import com.example.nekit.Config.GlobalNetworkManager
+import com.example.nekit.Utils.PlatformDetector
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -28,8 +29,11 @@ class SOCKS5UDPRelayServer(
 ) {
     private val logger = LoggerFactory.getLogger(SOCKS5UDPRelayServer::class.java)
     
-    // The active socket listening for UDP datagrams
-    private var relaySocket: RawUDPSocketProtocol? = null
+    // The socket listening for UDP datagrams from the local SOCKS5 client
+    private var clientSocket: RawUDPSocketProtocol? = null
+    
+    // Cached outbound sockets to external targets (Key = Target IP:Port)
+    private val targetSockets = mutableMapOf<String, RawUDPSocketProtocol>()
     
     // Coroutine scope for handling UDP relay operations
     private val relayScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -47,18 +51,10 @@ class SOCKS5UDPRelayServer(
      */
     suspend fun start(): Boolean {
         try {
-            val activeInterface = if (outboundInterfaceType != NetworkInterfaceType.DEFAULT) {
-                outboundInterfaceType
-            } else {
-                GlobalNetworkManager.currentActiveInterface
-            }
-
-            // Use 0 for an ephemeral port, and bind to all interfaces (0.0.0.0 or ::)
-            val socket = if (activeInterface == NetworkInterfaceType.CELLULAR) {
-                RawCellularUDPSocket("0.0.0.0", 0)
-            } else {
-                KtorRawUDPSocket("0.0.0.0", 0)
-            }
+            // The CLIENT listening socket must ALWAYS be a standard socket (not cellular bound)
+            // because SOCKS5 clients on the same device communicate via loopback (127.0.0.1).
+            // Cellular interfaces cannot route 127.0.0.1.
+            val socket = KtorRawUDPSocket("0.0.0.0", 0)
             
             // Set up our callback listener BEFORE binding so we don't miss packets
             socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
@@ -75,8 +71,8 @@ class SOCKS5UDPRelayServer(
             if (localAddr != null && localPort != null) {
                 boundAddress = localAddr
                 boundPort = localPort
-                relaySocket = socket
-                logger.info("SOCKS5 UDP Relay started on {}:{}", boundAddress?.presentation, boundPort?.hostOrderValue)
+                clientSocket = socket
+                logger.info("SOCKS5 UDP Relay started on {}:{} for client requests", boundAddress?.presentation, boundPort?.hostOrderValue)
                 return true
             } else {
                 logger.error("Failed to retrieve local bound address/port for UDP Relay")
@@ -95,8 +91,11 @@ class SOCKS5UDPRelayServer(
     fun stop() {
         logger.info("Stopping SOCKS5 UDP Relay on {}:{}", boundAddress?.presentation, boundPort?.hostOrderValue)
         relayScope.cancel()
-        relaySocket?.disconnect()
-        relaySocket = null
+        clientSocket?.disconnect()
+        clientSocket = null
+        
+        targetSockets.values.forEach { it.disconnect() }
+        targetSockets.clear()
     }
 
     private var actualClientAddress: IPAddress? = null
@@ -214,9 +213,47 @@ class SOCKS5UDPRelayServer(
         
         logger.info("Relaying UDP: Client -> Target ({}:{}) | {} bytes payload", destHostStr, destPortInt, payloadData.size)
         
-        // Forward the actual payload to the target server using the relay socket
-        // Note: For UDP relay, we just use the existing socket to send to the destination host/port directly.
-        relaySocket?.send(payloadData, destHostStr, destPortInt)
+        // Retrieve or create the outbound socket for this specific target
+        val targetSocket = getOrCreateOutboundSocket(destHostStr, destPortInt)
+        
+        // Forward the actual payload to the target server
+        targetSocket?.send(payloadData, destHostStr, destPortInt)
+    }
+
+    /**
+     * Creates and caches an outbound UDP socket (e.g., Cellular) to talk to the actual remote target server.
+     */
+    private suspend fun getOrCreateOutboundSocket(destHostStr: String, destPortInt: Int): RawUDPSocketProtocol? {
+        val cacheKey = "$destHostStr:$destPortInt"
+        targetSockets[cacheKey]?.let { return it }
+
+        val activeInterface = if (outboundInterfaceType != NetworkInterfaceType.DEFAULT) {
+            outboundInterfaceType
+        } else {
+            GlobalNetworkManager.currentActiveInterface
+        }
+
+        val socket = if (PlatformDetector.isAndroid && activeInterface == NetworkInterfaceType.CELLULAR) {
+            RawCellularUDPSocket("0.0.0.0", 0)
+        } else {
+            KtorRawUDPSocket("0.0.0.0", 0)
+        }
+
+        socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
+            // This is data coming FROM the internet Target, going BACK to the local Client
+            handleIncomingDatagram(data, sourceAddress, sourcePort)
+        }
+
+        try {
+            socket.suspendBind(null, 0)
+            targetSockets[cacheKey] = socket
+            logger.debug("SOCKS5 UDP target socket created for {}", cacheKey)
+            return socket
+        } catch (e: Exception) {
+            logger.error("Failed to create SOCKS5 UDP target socket for {}: {}", cacheKey, e.message)
+            socket.disconnect()
+            return null
+        }
     }
 
     /**
@@ -274,10 +311,10 @@ class SOCKS5UDPRelayServer(
             expectedClientAddress.presentation, expectedClientPort.hostOrderValue, 
             data.size)
             
-        // Send back to the client
+        // Send back to the client using the main client socket
         // We use the learned client IP and port.
         val replyAddr = actualClientAddress ?: expectedClientAddress
         val replyPort = actualClientPort ?: expectedClientPort
-        relaySocket?.send(responseData, replyAddr.presentation, replyPort.hostOrderValue)
+        clientSocket?.send(responseData, replyAddr.presentation, replyPort.hostOrderValue)
     }
 }

@@ -1,6 +1,6 @@
-package com.example.nekit.Socket
+package nekit.Socket
 
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.ProxySocket.ProxySocket
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.ProxySocket.ProxySocket
 
 interface Socket

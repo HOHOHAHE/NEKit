@@ -1,12 +1,12 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
 // Assuming Rule.kt, DNSSession.kt, DNSSessionMatchType.kt, DNSSessionMatchResult.kt are available in this package.
 // Assuming ConnectSession.kt (from Messages) and AdapterFactory.kt, DirectAdapterFactory.kt (placeholders from Config) are available.
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
-import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
+import nekit.Messages.ConnectSession
+import nekit.IPStack.DNS.DNSSession
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
 
 /**
  * Rule that matches all DNS and connect sessions, applying a specified adapter factory.

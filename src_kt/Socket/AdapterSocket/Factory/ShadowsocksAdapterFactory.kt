@@ -1,8 +1,8 @@
-package com.example.nekit.Socket.AdapterSocket.Factory
+package nekit.Socket.AdapterSocket.Factory
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapter
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapter
 
 class ShadowsocksAdapterFactory(
     val serverHost: String,

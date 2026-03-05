@@ -1,12 +1,12 @@
-package com.example.nekit.Socket
+package nekit.Socket
 
 import java.lang.ref.WeakReference
 
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.ProxySocket.ProxySocket
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Messages.ConnectSession
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.ProxySocket.ProxySocket
 
 /**
  * Delegate interface for handling events from a [SocketProtocol] instance.

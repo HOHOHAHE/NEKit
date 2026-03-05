@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Native
+package nekit.IPStack.Native
 
 import com.sun.jna.Callback
 import com.sun.jna.Library
@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference // Though not directly used for JNA Callbacks storage here
 
 // Assuming LibTun2Socks.kt interfaces are in this package or imported
-// import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
-// import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
-// import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
+// import nekit.IPStack.Native.LibTun2SocksStackCallbacks
+// import nekit.IPStack.Native.LibTun2SocksSocketCallbacks
+// import nekit.IPStack.Native.LibTun2SocksStackInterface
 
 
 // --- JNA Callback Interfaces ---

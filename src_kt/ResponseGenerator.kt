@@ -1,7 +1,7 @@
 
-package com.example.nekit
+package nekit
 
-import com.example.nekit.Messages.ConnectSession
+import nekit.Messages.ConnectSession
 
 /**
  * Base class for generating responses, typically HTTP responses, based on a ConnectSession.

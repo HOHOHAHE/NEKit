@@ -1,12 +1,12 @@
-package com.example.nekit.RawSocket.protocol
+package nekit.RawSocket.protocol
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.SocketProtocol
-import com.example.nekit.Config.NetworkInterfaceType
-import com.example.nekit.Config.GlobalNetworkManager
-import com.example.nekit.Utils.PlatformDetector
-import com.example.nekit.RawSocket.cellular.RawCellularTCPSocket
-import com.example.nekit.RawSocket.ktor.RawTCPSocket
+import nekit.Messages.ConnectSession
+import nekit.Socket.SocketProtocol
+import nekit.Config.NetworkInterfaceType
+import nekit.Config.GlobalNetworkManager
+import nekit.Utils.PlatformDetector
+import nekit.RawSocket.cellular.RawCellularTCPSocket
+import nekit.RawSocket.ktor.RawTCPSocket
 
 object RawSocketFactory {
 

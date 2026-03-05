@@ -1,11 +1,11 @@
-package com.example.nekit.Socket.AdapterSocket.Shadowsocks
+package nekit.Socket.AdapterSocket.Shadowsocks
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.RawSocket.protocol.RawSocketFactory
-import com.example.nekit.Crypto.CryptoHelper
-import com.example.nekit.Crypto.JceStreamCipherAdapter
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.RawSocket.protocol.RawSocketFactory
+import nekit.Crypto.CryptoHelper
+import nekit.Crypto.JceStreamCipherAdapter
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.CoroutineScope
@@ -32,16 +32,16 @@ class ShadowsocksAdapter(
         _rawSocket = RawSocketFactory.getRawSocket(session!!)
         _rawSocket?.delegate = WeakReference(this)
 
-        val (encryptKey, encryptIv) = CryptoHelper.getShadowsocksKeyAndIv(key, com.example.nekit.Crypto.CryptoAlgorithm.fromString(method))
+        val (encryptKey, encryptIv) = CryptoHelper.getShadowsocksKeyAndIv(key, nekit.Crypto.CryptoAlgorithm.fromString(method))
         encryptor = JceStreamCipherAdapter(
-            operation = com.example.nekit.Crypto.CryptoOperation.ENCRYPT,
-            algorithm = com.example.nekit.Crypto.CryptoAlgorithm.fromString(method),
+            operation = nekit.Crypto.CryptoOperation.ENCRYPT,
+            algorithm = nekit.Crypto.CryptoAlgorithm.fromString(method),
             key = encryptKey,
             iv = encryptIv
         )
         decryptor = JceStreamCipherAdapter(
-            operation = com.example.nekit.Crypto.CryptoOperation.DECRYPT,
-            algorithm = com.example.nekit.Crypto.CryptoAlgorithm.fromString(method),
+            operation = nekit.Crypto.CryptoOperation.DECRYPT,
+            algorithm = nekit.Crypto.CryptoAlgorithm.fromString(method),
             key = encryptKey,
             iv = encryptIv
         )

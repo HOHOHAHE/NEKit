@@ -1,8 +1,8 @@
-package com.example.nekit.Event.Event
+package nekit.Event.Event
 
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.ProxySocket.ProxySocket
+import nekit.Messages.ConnectSession
+import nekit.Socket.ProxySocket.ProxySocket
 
 interface ProxySocketEvent : Event {
     class SocketOpened(val socket: ProxySocket) : ProxySocketEvent

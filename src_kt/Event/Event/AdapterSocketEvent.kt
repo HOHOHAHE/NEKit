@@ -1,7 +1,7 @@
-package com.example.nekit.Event.Event
+package nekit.Event.Event
 
 
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.AdapterSocket.AdapterSocket
 
 interface AdapterSocketEvent : Event {
     class SocketOpened(val socket: AdapterSocket, val session: Any) : AdapterSocketEvent

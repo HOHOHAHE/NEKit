@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket.ktor
+package nekit.RawSocket.ktor
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -14,13 +14,13 @@ import java.net.InetSocketAddress
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Utils.StreamScanner
-import com.example.nekit.Opt
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
-import com.example.nekit.RawSocket.core.NetworkDispatchers
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Utils.StreamScanner
+import nekit.Opt
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Ktor-based implementation of RawTCPSocketProtocol for client-side TCP connections.

@@ -1,14 +1,14 @@
-package com.example.nekit.Tunnel
+package nekit.Tunnel
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.ProxyServer.ProxyServer
-import com.example.nekit.Socket.ProxySocket.ProxySocket
-import com.example.nekit.Socket.SocketDelegate
-import com.example.nekit.Socket.SocketProtocol
-import com.example.nekit.Event.Event.TunnelEvent
-import com.example.nekit.Event.ObserverFactory
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Rule.RuleManager
+import nekit.Messages.ConnectSession
+import nekit.ProxyServer.ProxyServer
+import nekit.Socket.ProxySocket.ProxySocket
+import nekit.Socket.SocketDelegate
+import nekit.Socket.SocketProtocol
+import nekit.Event.Event.TunnelEvent
+import nekit.Event.ObserverFactory
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Rule.RuleManager
 import java.lang.ref.WeakReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import org.slf4j.LoggerFactory
 import kotlinx.coroutines.delay
-import com.example.nekit.Opt
+import nekit.Opt
 
 open class Tunnel(
     val proxySocket: ProxySocket

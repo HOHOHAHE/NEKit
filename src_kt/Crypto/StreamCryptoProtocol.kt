@@ -1,4 +1,4 @@
-package com.example.nekit.Crypto
+package nekit.Crypto
 /**
  * Protocol/interface for stream-based cryptographic operations (encryption/decryption).
  */

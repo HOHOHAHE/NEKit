@@ -1,6 +1,6 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.Utils.Port
+import nekit.Utils.Port
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -25,7 +25,7 @@ open class TCPMutablePacket(rawPacketBytes: ByteArray) : IPMutablePacket(rawPack
 
     // Ensure this packet is indeed TCP, otherwise operations are invalid.
     init {
-        if (super.protocol != com.example.nekit.IPStack.TransportProtocol.TCP) {
+        if (super.protocol != nekit.IPStack.TransportProtocol.TCP) {
             throw IllegalArgumentException("Packet is not TCP (protocol: ${super.protocol}), cannot use TCPMutablePacket.")
         }
         if (rawPacketBytes.size < super.ipHeaderLength + 20) { // Minimum TCP header size is 20 bytes

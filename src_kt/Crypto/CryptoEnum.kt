@@ -1,4 +1,4 @@
-package com.example.nekit.Crypto
+package nekit.Crypto
 
 import java.security.MessageDigest // For digestLength
 import javax.crypto.Cipher        // For ENCRYPT_MODE, DECRYPT_MODE

@@ -1,11 +1,11 @@
 
-package com.example.nekit.main
+package nekit.main
 
-import com.example.nekit.ProxyServer.SOCKS5ProxyServer
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Rule.RuleManager
-import com.example.nekit.Rule.DirectRule
+import nekit.ProxyServer.SOCKS5ProxyServer
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Rule.RuleManager
+import nekit.Rule.DirectRule
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 

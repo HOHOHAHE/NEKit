@@ -1,6 +1,6 @@
-package com.example.nekit.Event
+package nekit.Event
 
-import com.example.nekit.Event.Event.Event
+import nekit.Event.Event.Event
 
 /**
  * A generic interface for objects that can emit events.

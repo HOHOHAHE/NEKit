@@ -1,10 +1,10 @@
-package com.example.nekit.Event
+package nekit.Event
 
-import com.example.nekit.Event.Event.Event
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.ProxyServer.ProxyServer
-import com.example.nekit.Socket.ProxySocket.ProxySocket
-import com.example.nekit.Tunnel.Tunnel
+import nekit.Event.Event.Event
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.ProxyServer.ProxyServer
+import nekit.Socket.ProxySocket.ProxySocket
+import nekit.Tunnel.Tunnel
 
 interface Observer<T : Event> {
     fun signal(event: T)

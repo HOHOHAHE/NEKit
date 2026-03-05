@@ -1,3 +1,3 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
 class IPRangeException(message: String) : Exception(message)

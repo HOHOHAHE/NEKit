@@ -1,8 +1,8 @@
-package com.example.nekit.Crypto
+package nekit.Crypto
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import java.nio.charset.StandardCharsets
-import com.example.nekit.Crypto.HashAlgorithm // Import HashAlgorithm
+import nekit.Crypto.HashAlgorithm // Import HashAlgorithm
 
 object HMAC {
 

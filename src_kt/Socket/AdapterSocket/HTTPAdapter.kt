@@ -1,8 +1,8 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
-import com.example.nekit.RawSocket.protocol.RawSocketFactory
+import nekit.Messages.ConnectSession
+import nekit.Socket.ProxySocket.HTTPProxySocket
+import nekit.RawSocket.protocol.RawSocketFactory
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 

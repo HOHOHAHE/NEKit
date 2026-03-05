@@ -1,9 +1,9 @@
-package com.example.nekit.Socket.ProxySocket
+package nekit.Socket.ProxySocket
 
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.SocketProtocol
-import com.example.nekit.Messages.ConnectSession
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.SocketProtocol
+import nekit.Messages.ConnectSession
 
 interface ProxySocketInterface : SocketProtocol {
     override val rawSocket: RawTCPSocketProtocol

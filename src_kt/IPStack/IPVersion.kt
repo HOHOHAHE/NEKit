@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack
+package nekit.IPStack
 
 enum class IPVersion(val value: Int) {
     IPV4(4),

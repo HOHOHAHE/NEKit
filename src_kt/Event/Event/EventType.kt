@@ -1,3 +1,3 @@
-package com.example.nekit.Event.Event
+package nekit.Event.Event
 
 interface EventType

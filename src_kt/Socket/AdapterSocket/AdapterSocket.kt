@@ -1,18 +1,18 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 import java.lang.ref.WeakReference
 
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.Socket.SocketProtocol // Corrected import
-import com.example.nekit.Socket.SocketDelegate // Corrected import
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Event.Observer
-import com.example.nekit.Event.ObserverFactory
-import com.example.nekit.Socket.SocketStatus // Corrected import
-import com.example.nekit.Event.Event.AdapterSocketEvent // Corrected import
-import com.example.nekit.Messages.EventSource
+import nekit.Socket.SocketProtocol // Corrected import
+import nekit.Socket.SocketDelegate // Corrected import
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.Messages.ConnectSession
+import nekit.Event.Observer
+import nekit.Event.ObserverFactory
+import nekit.Socket.SocketStatus // Corrected import
+import nekit.Event.Event.AdapterSocketEvent // Corrected import
+import nekit.Messages.EventSource
 
 // --- Ensure EventSource is available for ConnectSession.disconnected ---
 // enum class EventSource { PROXY, ADAPTER, TUNNEL } // From ConnectSession.kt context
@@ -66,13 +66,13 @@ abstract class AdapterSocket(
      override val isConnected: Boolean
          get() = status == SocketStatus.ESTABLISHED
  
-     override val sourceIPAddress: com.example.nekit.Utils.IPAddress?
+     override val sourceIPAddress: nekit.Utils.IPAddress?
          get() = rawSocket?.sourceIPAddress
-     override val sourcePort: com.example.nekit.Utils.Port?
+     override val sourcePort: nekit.Utils.Port?
          get() = rawSocket?.sourcePort
-     override val destinationIPAddress: com.example.nekit.Utils.IPAddress?
+     override val destinationIPAddress: nekit.Utils.IPAddress?
          get() = rawSocket?.destinationIPAddress
-     override val destinationPort: com.example.nekit.Utils.Port?
+     override val destinationPort: nekit.Utils.Port?
          get() = rawSocket?.destinationPort
  
      override fun toString(): String {

@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Native
+package nekit.IPStack.Native
 
 enum class AddressFamily(val rawValue: Int) {
     AF_INET(2), // IPv4

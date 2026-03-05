@@ -1,7 +1,7 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 
-import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
-import com.example.nekit.Tunnel.Tunnel // Added missing import
+import nekit.Socket.ProxySocket.ProxySocketInterface
+import nekit.Tunnel.Tunnel // Added missing import
 
 /**
  * Represents events emitted by a ProxyServer.

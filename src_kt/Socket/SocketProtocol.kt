@@ -1,10 +1,10 @@
-package com.example.nekit.Socket
+package nekit.Socket
 
 import java.lang.ref.WeakReference
 
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 
 
 /**

@@ -1,4 +1,4 @@
-package com.example.nekit.GeoIP
+package nekit.GeoIP
 
 object GeoIP {
     fun initialize(databasePath: String) {

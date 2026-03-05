@@ -1,3 +1,3 @@
-package com.example.nekit.Socket.AdapterSocket.Factory
+package nekit.Socket.AdapterSocket.Factory
 
 interface ServerAdapterFactory : AdapterFactory

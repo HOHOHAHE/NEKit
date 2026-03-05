@@ -1,8 +1,8 @@
-package com.example.nekit.Socket.ProxySocket
+package nekit.Socket.ProxySocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.SocketProtocol
-import com.example.nekit.Event.Event.ProxySocketEvent
+import nekit.Messages.ConnectSession
+import nekit.Socket.SocketProtocol
+import nekit.Event.Event.ProxySocketEvent
 import org.slf4j.LoggerFactory
 
 class DirectProxySocket(

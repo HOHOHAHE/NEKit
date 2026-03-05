@@ -1,4 +1,4 @@
-package com.example.nekit.Config
+package nekit.Config
 
 import java.io.File
 import java.io.IOException
@@ -7,11 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.core.JsonProcessingException
 import org.slf4j.LoggerFactory
-import com.example.nekit.Rule.Rule
-import com.example.nekit.Rule.RuleManager
-import com.example.nekit.Config.RuleParser
-import com.example.nekit.GeoIP.GeoIP // Corrected import for GeoIP
-import com.example.nekit.Config.ConfigurationException // Import the new ConfigurationException
+import nekit.Rule.Rule
+import nekit.Rule.RuleManager
+import nekit.Config.RuleParser
+import nekit.GeoIP.GeoIP // Corrected import for GeoIP
+import nekit.Config.ConfigurationException // Import the new ConfigurationException
 
 // YamlNode typealias is no longer needed with Jackson.
 // typealias YamlRootNode = Map<String, Any>
@@ -22,7 +22,7 @@ import com.example.nekit.Config.ConfigurationException // Import the new Configu
 // --- Placeholders for dependent classes/objects ---
 // These should be defined in their respective modules/files.
 
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
+import nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
 
 // Removed placeholder Rule and RuleManager, as they are now imported from Rule package.
 // Removed placeholder RuleParser, as it's now imported from Config package.

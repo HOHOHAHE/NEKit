@@ -1,13 +1,13 @@
-package com.example.nekit.IPStack.DNS
+package nekit.IPStack.DNS
 import java.lang.ref.WeakReference
 
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.ktor.RawUDPSocket
-import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
-import com.example.nekit.IPStack.DNS.DNSSession // Replaced placeholder with actual import
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.RawSocket.ktor.RawUDPSocket
+import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.RawSocket.protocol.RawUDPSocketDelegate
+import nekit.IPStack.DNS.DNSSession // Replaced placeholder with actual import
 
 
 import org.slf4j.LoggerFactory

@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack
+package nekit.IPStack
 
 enum class TransportProtocol(val value: Int) {
     UNKNOWN(0), // Assuming 0 as UNKNOWN value

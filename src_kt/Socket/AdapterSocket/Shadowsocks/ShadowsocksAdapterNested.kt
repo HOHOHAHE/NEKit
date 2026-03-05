@@ -1,4 +1,4 @@
-package com.example.nekit.Socket.AdapterSocket.Shadowsocks
+package nekit.Socket.AdapterSocket.Shadowsocks
 
 interface ShadowsocksAdapterNested {
     interface ProtocolObfuscaterFactory

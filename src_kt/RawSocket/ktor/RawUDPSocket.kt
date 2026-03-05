@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket.ktor
+package nekit.RawSocket.ktor
 
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -11,11 +11,11 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.CancellationException
 import java.io.IOException
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
-import com.example.nekit.RawSocket.core.NetworkDispatchers
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.RawSocket.protocol.RawUDPSocketDelegate
+import nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Ktor-based implementation of RawUDPSocketProtocol for UDP connections.

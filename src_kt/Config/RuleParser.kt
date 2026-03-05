@@ -1,29 +1,29 @@
-package com.example.nekit.Config
+package nekit.Config
 
 import java.io.File
 import java.io.IOException
 import com.fasterxml.jackson.databind.JsonNode
 import org.slf4j.LoggerFactory
-import com.example.nekit.Config.ConfigurationException
-import com.example.nekit.Config.ConfigurationException.RuleParsingException
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
-import com.example.nekit.Config.getOptString
-import com.example.nekit.Config.getOptInt
-import com.example.nekit.Config.getOptBool
-import com.example.nekit.Config.getReqString
-import com.example.nekit.Config.getStringOrIntString
-import com.example.nekit.Config.getReqStringOrIntString
-import com.example.nekit.Config.getReqBool
+import nekit.Config.ConfigurationException
+import nekit.Config.ConfigurationException.RuleParsingException
+import nekit.Socket.AdapterSocket.Factory.AdapterFactoryManager // Corrected import
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory // Corrected import
+import nekit.Config.getOptString
+import nekit.Config.getOptInt
+import nekit.Config.getOptBool
+import nekit.Config.getReqString
+import nekit.Config.getStringOrIntString
+import nekit.Config.getReqStringOrIntString
+import nekit.Config.getReqBool
 
-import com.example.nekit.Rule.Rule
-import com.example.nekit.Rule.RuleManager
-import com.example.nekit.Rule.CountryRule
-import com.example.nekit.Rule.AllRule
-import com.example.nekit.Rule.DomainListRule
-import com.example.nekit.Rule.IPRangeListRule
-import com.example.nekit.Rule.DNSFailRule
-import com.example.nekit.Rule.MatchCriterion
+import nekit.Rule.Rule
+import nekit.Rule.RuleManager
+import nekit.Rule.CountryRule
+import nekit.Rule.AllRule
+import nekit.Rule.DomainListRule
+import nekit.Rule.IPRangeListRule
+import nekit.Rule.DNSFailRule
+import nekit.Rule.MatchCriterion
 
 // Removed placeholder Rule types and RuleManager, as they are now imported from Rule package.
 
@@ -142,7 +142,7 @@ object RuleParser {
         try {
             val content = File(filepath).readText(Charsets.UTF_8)
             val lines = content.lines().filter { it.isNotBlank() && !it.startsWith("#") }
-            val ranges = lines.map { com.example.nekit.Utils.IPRange.fromString(it) }
+            val ranges = lines.map { nekit.Utils.IPRange.fromString(it) }
             return IPRangeListRule(ranges, adapter)
         } catch (e: IOException) {
             throw ConfigurationException.RuleParsingException("Error reading IP range list file '$filepath': ${e.message}")

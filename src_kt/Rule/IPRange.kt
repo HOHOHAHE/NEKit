@@ -1,7 +1,7 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Config.ConfigurationException
+import nekit.Utils.IPAddress
+import nekit.Config.ConfigurationException
 
 interface IPRange {
     operator fun contains(ip: IPAddress): Boolean

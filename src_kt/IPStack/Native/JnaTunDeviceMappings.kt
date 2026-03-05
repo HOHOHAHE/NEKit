@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Native
+package nekit.IPStack.Native
 
 import com.sun.jna.Library
 import com.sun.jna.Native

@@ -1,4 +1,4 @@
-package com.example.nekit.Socket.AdapterSocket.Shadowsocks
+package nekit.Socket.AdapterSocket.Shadowsocks
 
 /**
  * Interface for stream cipher operations (encryption and decryption).

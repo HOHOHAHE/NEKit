@@ -1,4 +1,4 @@
-package com.example.nekit.Event
+package nekit.Event
 // TODO: Replace CocoaLumberjackSwift with a Kotlin logging framework (e.g., SLF4J + Logback/Log4j2)
 // For now, using println for basic logging.
 
@@ -6,18 +6,18 @@ package com.example.nekit.Event
 // These should be replaced with actual imports once those files are translated.
 
 import org.slf4j.LoggerFactory
-import com.example.nekit.Tunnel.Tunnel // Corrected import
-import com.example.nekit.ProxyServer.ProxyServer // Corrected import
-import com.example.nekit.Socket.ProxySocket.ProxySocket // Corrected import
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket // Corrected import
-import com.example.nekit.Rule.RuleManager // Corrected import
-import com.example.nekit.Event.Observer // Corrected import
-import com.example.nekit.Event.ObserverFactory // Corrected import
-import com.example.nekit.Event.Event.TunnelEvent // Corrected import
-import com.example.nekit.Event.Event.ProxySocketEvent // Corrected import
-import com.example.nekit.Event.Event.AdapterSocketEvent // Corrected import
-import com.example.nekit.Event.Event.ProxyServerEvent // Corrected import
-import com.example.nekit.Event.Event.RuleMatchEvent // Corrected import
+import nekit.Tunnel.Tunnel // Corrected import
+import nekit.ProxyServer.ProxyServer // Corrected import
+import nekit.Socket.ProxySocket.ProxySocket // Corrected import
+import nekit.Socket.AdapterSocket.AdapterSocket // Corrected import
+import nekit.Rule.RuleManager // Corrected import
+import nekit.Event.Observer // Corrected import
+import nekit.Event.ObserverFactory // Corrected import
+import nekit.Event.Event.TunnelEvent // Corrected import
+import nekit.Event.Event.ProxySocketEvent // Corrected import
+import nekit.Event.Event.AdapterSocketEvent // Corrected import
+import nekit.Event.Event.ProxyServerEvent // Corrected import
+import nekit.Event.Event.RuleMatchEvent // Corrected import
 
 // --- End Placeholders ---
 

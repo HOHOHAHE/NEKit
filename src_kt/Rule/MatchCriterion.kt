@@ -1,5 +1,5 @@
 
-package com.example.nekit.Rule
+package nekit.Rule
 
 abstract class MatchCriterion {
     /**

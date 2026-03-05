@@ -1,14 +1,14 @@
-package com.example.nekit.IPStack
+package nekit.IPStack
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.lang.ref.WeakReference
 import org.slf4j.LoggerFactory
-import com.example.nekit.IPStack.Native.JnaTunDevice
-import com.example.nekit.IPStack.Native.TunDeviceInterface
+import nekit.IPStack.Native.JnaTunDevice
+import nekit.IPStack.Native.TunDeviceInterface
 import java.io.IOException // For potential IO errors from TUN device
-import com.example.nekit.Tunnel.QueueFactory
+import nekit.Tunnel.QueueFactory
 
 @OptIn(kotlin.ExperimentalStdlibApi::class)
 /**

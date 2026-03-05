@@ -1,9 +1,9 @@
-package com.example.nekit.RawSocket.cellular
+package nekit.RawSocket.cellular
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Utils.StreamScanner
-import com.example.nekit.Opt
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Utils.StreamScanner
+import nekit.Opt
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.InputStream
@@ -16,10 +16,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.ssl.SSLSocketFactory
 import android.annotation.SuppressLint
 
-import com.example.nekit.Utils.CellularNetworkRequester
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
-import com.example.nekit.RawSocket.core.NetworkDispatchers
+import nekit.Utils.CellularNetworkRequester
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Implementation of RawTCPSocketProtocol targeting the cellular network.

@@ -1,4 +1,4 @@
-package com.example.nekit.Tunnel
+package nekit.Tunnel
 
 /**
  * Represents the current status of a Tunnel.

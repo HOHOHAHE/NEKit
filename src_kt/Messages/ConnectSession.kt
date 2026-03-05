@@ -1,17 +1,17 @@
-package com.example.nekit.Messages
+package nekit.Messages
 
 import java.net.InetAddress
 import java.net.UnknownHostException
 
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.IPStack.DNS.DNSServer
-import com.example.nekit.Rule.Rule
-import com.example.nekit.GeoIP.GeoIP
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.IPStack.DNS.DNSServer
+import nekit.Rule.Rule
+import nekit.GeoIP.GeoIP
 
-import com.example.nekit.Config.NetworkInterfaceType
+import nekit.Config.NetworkInterfaceType
 
 data class ConnectSession(
     var host: String,

@@ -1,10 +1,10 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.IPStack.AddressFamily
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.IPStack.IPVersion
-import com.example.nekit.IPStack.TransportProtocol
-// import com.example.nekit.IPStack.Packet.IPDefs.TransportProtocol // Import from IPDefs (Removed - already imported from package)
+import nekit.IPStack.AddressFamily
+import nekit.Utils.IPAddress
+import nekit.IPStack.IPVersion
+import nekit.IPStack.TransportProtocol
+// import nekit.IPStack.Packet.IPDefs.TransportProtocol // Import from IPDefs (Removed - already imported from package)
 
 interface IPPacket {
     val sourceAddress: IPAddress?

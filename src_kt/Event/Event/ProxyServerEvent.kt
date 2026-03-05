@@ -1,8 +1,8 @@
-package com.example.nekit.Event.Event
+package nekit.Event.Event
 
 
-import com.example.nekit.ProxyServer.ProxyServer
-import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
+import nekit.ProxyServer.ProxyServer
+import nekit.Socket.ProxySocket.ProxySocketInterface
 
 interface ProxyServerEvent : Event {
     class Started(val server: ProxyServer) : ProxyServerEvent

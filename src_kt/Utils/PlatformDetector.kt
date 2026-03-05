@@ -1,4 +1,4 @@
-package com.example.nekit.Utils
+package nekit.Utils
 
 /**
  * Runtime platform detection utility.

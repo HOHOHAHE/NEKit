@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket.tun
+package nekit.RawSocket.tun
 
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
@@ -9,22 +9,22 @@ import kotlinx.coroutines.sync.withLock // For withLock extension function
 
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol // Corrected import
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate // Corrected import
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Utils.StreamScanner
-import com.example.nekit.Tunnel.QueueFactory
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.SocketStatus
-import com.example.nekit.Event.Event.AdapterSocketEvent
-import com.example.nekit.Messages.EventSource
+import nekit.RawSocket.protocol.RawTCPSocketProtocol // Corrected import
+import nekit.RawSocket.protocol.RawTCPSocketDelegate // Corrected import
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Utils.StreamScanner
+import nekit.Tunnel.QueueFactory
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.SocketStatus
+import nekit.Event.Event.AdapterSocketEvent
+import nekit.Messages.EventSource
 // Import JNA related LibTun2Socks interfaces
-import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
-import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
+import nekit.IPStack.Native.LibTun2SocksSocketCallbacks
+import nekit.IPStack.Native.LibTun2SocksStackInterface
 
 // Assuming ConnectSession is imported or available for AdapterSocket's session property
-import com.example.nekit.Messages.ConnectSession
+import nekit.Messages.ConnectSession
 
 
 /**

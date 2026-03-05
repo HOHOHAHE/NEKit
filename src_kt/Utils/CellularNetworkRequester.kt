@@ -1,4 +1,4 @@
-package com.example.nekit.Utils
+package nekit.Utils
 
 import android.annotation.SuppressLint
 import android.content.Context

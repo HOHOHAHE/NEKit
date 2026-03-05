@@ -1,17 +1,17 @@
-package com.example.nekit.Socket.ProxySocket
+package nekit.Socket.ProxySocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.ProxyServer.SOCKS5UDPRelayServer
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.SocketStatus
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.Messages.ConnectSession
+import nekit.ProxyServer.SOCKS5UDPRelayServer
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.SocketStatus
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.io.IOException
-import com.example.nekit.Config.NetworkInterfaceType
+import nekit.Config.NetworkInterfaceType
 
 class SOCKS5ProxySocket(
     rawSocket: RawTCPSocketProtocol

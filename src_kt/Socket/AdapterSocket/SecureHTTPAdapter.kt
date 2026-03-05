@@ -1,9 +1,9 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
-import com.example.nekit.RawSocket.protocol.RawSocketFactory
-import com.example.nekit.RawSocket.core.TLSSocket
+import nekit.Messages.ConnectSession
+import nekit.Socket.ProxySocket.HTTPProxySocket
+import nekit.RawSocket.protocol.RawSocketFactory
+import nekit.RawSocket.core.TLSSocket
 import org.slf4j.LoggerFactory
 import java.lang.ref.WeakReference
 
@@ -25,7 +25,7 @@ class SecureHTTPAdapter(
         
         // Mark the session as requiring TLS for the proxy connection itself.
         val proxySession = session.copy(isTLS = true)
-        (rawSocket as? com.example.nekit.RawSocket.core.TLSSocket)?.isClient = true
+        (rawSocket as? nekit.RawSocket.core.TLSSocket)?.isClient = true
 
         httpProxySocket = HTTPProxySocket(rawSocket, proxySession)
         

@@ -1,4 +1,4 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 import kotlinx.coroutines.*
 // import kotlinx.coroutines.sync.Mutex // No longer needed if Netty handles thread safety for start/stop
 // import kotlinx.coroutines.sync.withLock // No longer needed
@@ -22,13 +22,13 @@ import io.ktor.network.sockets.*
 // Assuming ProxyServer.kt, IPAddress.kt, Port.kt, QueueFactory.kt (placeholders) are available.
 // Assuming RawTCPSocketProtocol.kt (from RawSocket module) is available for NettyAcceptedRawSocketAdapter.
 
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
-import com.example.nekit.RawSocket.ktor.AcceptedRawTCPSocket
-import com.example.nekit.RawSocket.core.NetworkDispatchers
-import com.example.nekit.Socket.ProxySocket.ProxySocketInterface
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.RawSocket.ktor.AcceptedRawTCPSocket
+import nekit.RawSocket.core.NetworkDispatchers
+import nekit.Socket.ProxySocket.ProxySocketInterface
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

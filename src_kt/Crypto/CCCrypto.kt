@@ -5,8 +5,8 @@ import javax.crypto.spec.SecretKeySpec
 import org.slf4j.LoggerFactory
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-import com.example.nekit.Crypto.CryptoOperation // Corrected import
-import com.example.nekit.Crypto.StreamCryptoProtocol // Corrected import
+import nekit.Crypto.CryptoOperation // Corrected import
+import nekit.Crypto.StreamCryptoProtocol // Corrected import
 
 
 class CCCryptoAdapter(

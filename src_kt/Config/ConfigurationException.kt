@@ -1,4 +1,4 @@
-package com.example.nekit.Config
+package nekit.Config
 
 open class ConfigurationException(message: String) : Exception(message) {
     open class RuleParsingException(message: String) : ConfigurationException(message)

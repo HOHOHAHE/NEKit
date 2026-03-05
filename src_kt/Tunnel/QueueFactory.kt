@@ -1,5 +1,5 @@
 @file:OptIn(ExperimentalStdlibApi::class)
-package com.example.nekit.Tunnel
+package nekit.Tunnel
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

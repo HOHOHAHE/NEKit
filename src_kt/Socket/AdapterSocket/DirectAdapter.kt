@@ -1,7 +1,7 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.protocol.RawSocketFactory
+import nekit.Messages.ConnectSession
+import nekit.RawSocket.protocol.RawSocketFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

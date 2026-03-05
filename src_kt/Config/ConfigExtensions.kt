@@ -1,4 +1,4 @@
-package com.example.nekit.Config
+package nekit.Config
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode // ArrayNode might be used in these extensions

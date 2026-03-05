@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.DNS
+package nekit.IPStack.DNS
 
 // Placeholder for DNSEnums.kt based on usage in other files.
 // This file should contain enums like DNSType, DNSMessageType, etc.

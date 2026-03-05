@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack
+package nekit.IPStack
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -7,19 +7,19 @@ import java.lang.ref.WeakReference // Import WeakReference
 
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
-import com.example.nekit.RawSocket.ktor.RawUDPSocket
-import com.example.nekit.RawSocket.cellular.RawCellularUDPSocket
-import com.example.nekit.Utils.PlatformDetector
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.IPStack.Packet.IPPacket
-import com.example.nekit.IPStack.Packet.UDPProtocolParser
-import com.example.nekit.IPStack.Packet.IPPacketImpl // Import IPPacketImpl
-import com.example.nekit.Config.NetworkInterfaceType
-import com.example.nekit.Config.GlobalNetworkManager
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.RawSocket.protocol.RawUDPSocketDelegate
+import nekit.RawSocket.ktor.RawUDPSocket
+import nekit.RawSocket.cellular.RawCellularUDPSocket
+import nekit.Utils.PlatformDetector
+import nekit.Messages.ConnectSession
+import nekit.IPStack.Packet.IPPacket
+import nekit.IPStack.Packet.UDPProtocolParser
+import nekit.IPStack.Packet.IPPacketImpl // Import IPPacketImpl
+import nekit.Config.NetworkInterfaceType
+import nekit.Config.GlobalNetworkManager
 
 data class ConnectInfo(
     val sourceAddress: IPAddress,
@@ -137,7 +137,7 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
         replyIpPacket.destinationAddress = connectInfo.sourceAddress   // Original src is now dest
         replyIpPacket.transportProtocol = TransportProtocol.UDP
 
-        val replyUdpParser = com.example.nekit.IPStack.Packet.UDPProtocolParserImpl() // Using placeholder Impl for now
+        val replyUdpParser = nekit.IPStack.Packet.UDPProtocolParserImpl() // Using placeholder Impl for now
         replyUdpParser.sourcePort = connectInfo.destinationPort // Original dest port is now src
         replyUdpParser.destinationPort = connectInfo.sourcePort   // Original src port is now dest
         replyUdpParser.payloadData = data
@@ -152,7 +152,7 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
         }
 
         replyIpPacket.packetData?.let { builtPacketData ->
-            val version = if (replyIpPacket.version == com.example.nekit.IPStack.IPVersion.IPV4) AddressFamily.AF_INET else AddressFamily.AF_INET6 // Use IPv4
+            val version = if (replyIpPacket.version == nekit.IPStack.IPVersion.IPV4) AddressFamily.AF_INET else AddressFamily.AF_INET6 // Use IPv4
             outputFunc?.invoke(listOf(builtPacketData), listOf(version))
         } ?: logger.error("Built reply packet data is null for {}.", connectInfo)
     }

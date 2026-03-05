@@ -1,2 +1,2 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 

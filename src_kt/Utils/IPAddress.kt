@@ -1,4 +1,4 @@
-package com.example.nekit.Utils
+package nekit.Utils
 
 import java.net.InetAddress
 import java.net.UnknownHostException

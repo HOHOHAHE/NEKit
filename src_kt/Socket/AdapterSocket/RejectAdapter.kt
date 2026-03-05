@@ -1,6 +1,6 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 
-import com.example.nekit.Messages.ConnectSession
+import nekit.Messages.ConnectSession
 import org.slf4j.LoggerFactory
 import java.io.IOException
 

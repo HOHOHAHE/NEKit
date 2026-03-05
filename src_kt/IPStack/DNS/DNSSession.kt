@@ -1,8 +1,8 @@
-package com.example.nekit.IPStack.DNS
+package nekit.IPStack.DNS
 
-import com.example.nekit.IPStack.Packet.DNSMessage
-import com.example.nekit.Rule.Rule
-import com.example.nekit.Utils.IPAddress
+import nekit.IPStack.Packet.DNSMessage
+import nekit.Rule.Rule
+import nekit.Utils.IPAddress
 
 interface DNSSession {
     val requestMessage: DNSMessage

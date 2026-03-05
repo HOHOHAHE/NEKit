@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.DNS
+package nekit.IPStack.DNS
 
 interface DNSQuery {
     val name: String

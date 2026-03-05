@@ -1,7 +1,7 @@
-package com.example.nekit.Socket.AdapterSocket
+package nekit.Socket.AdapterSocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory
 import org.slf4j.LoggerFactory
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference

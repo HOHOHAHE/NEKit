@@ -1,4 +1,4 @@
-package com.example.nekit.Messages
+package nekit.Messages
 
 enum class EventSource {
     PROXY,

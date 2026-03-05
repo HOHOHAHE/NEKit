@@ -1,15 +1,15 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.ktor.RawUDPSocket
-import com.example.nekit.RawSocket.cellular.RawCellularUDPSocket
-import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
-import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Config.NetworkInterfaceType
-import com.example.nekit.Config.GlobalNetworkManager
-import com.example.nekit.Utils.PlatformDetector
+import nekit.Messages.ConnectSession
+import nekit.RawSocket.ktor.RawUDPSocket
+import nekit.RawSocket.cellular.RawCellularUDPSocket
+import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.Socket.ProxySocket.SOCKS5ProxySocket
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Config.NetworkInterfaceType
+import nekit.Config.GlobalNetworkManager
+import nekit.Utils.PlatformDetector
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.IOException

@@ -1,8 +1,8 @@
-package com.example.nekit.RawSocket.cellular
+package nekit.RawSocket.cellular
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Opt
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Opt
 import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -14,10 +14,10 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import android.annotation.SuppressLint
 
-import com.example.nekit.Utils.CellularNetworkRequester
-import com.example.nekit.RawSocket.protocol.RawUDPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawUDPSocketDelegate
-import com.example.nekit.RawSocket.core.NetworkDispatchers
+import nekit.Utils.CellularNetworkRequester
+import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.RawSocket.protocol.RawUDPSocketDelegate
+import nekit.RawSocket.core.NetworkDispatchers
 
 /**
  * Native implementation of RawUDPSocketProtocol targeting the cellular network.

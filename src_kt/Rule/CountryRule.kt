@@ -1,13 +1,13 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.Rule.DNSSessionMatchType
-import com.example.nekit.Rule.DNSSessionMatchResult
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
-import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
-import com.example.nekit.GeoIP.GeoIP
-import com.example.nekit.Utils.IPAddress
+import nekit.Messages.ConnectSession
+import nekit.IPStack.DNS.DNSSession
+import nekit.Rule.DNSSessionMatchType
+import nekit.Rule.DNSSessionMatchResult
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
+import nekit.GeoIP.GeoIP
+import nekit.Utils.IPAddress
 
 open class CountryRule(
     private val countryCode: String,

@@ -1,4 +1,4 @@
-package com.example.nekit.Config
+package nekit.Config
 
 import java.util.concurrent.atomic.AtomicReference
 

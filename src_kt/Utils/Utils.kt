@@ -1,4 +1,4 @@
-package com.example.nekit.Utils
+package nekit.Utils
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

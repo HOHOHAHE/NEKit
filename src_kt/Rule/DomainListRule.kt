@@ -1,11 +1,11 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
-import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.IPStack.Packet.DNSMessage
+import nekit.IPStack.DNS.DNSSession
+import nekit.IPStack.Packet.DNSMessage
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
-import com.example.nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import nekit.Socket.AdapterSocket.Factory.DirectAdapterFactory
 // Assuming DNSQuery.kt placeholder (from DNSMessage.kt context) has a 'name: String' property.
 
 // --- Ensure DNSQuery placeholder has 'name' ---

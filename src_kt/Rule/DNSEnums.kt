@@ -1,4 +1,4 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
 enum class DNSSessionMatchType {
     DOMAIN, IP

@@ -1,4 +1,4 @@
-package com.example.nekit.GlobalInitializer
+package nekit.GlobalInitializer
 
 object GlobalInitializer {
     fun initialize() {

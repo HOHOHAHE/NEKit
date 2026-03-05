@@ -1,13 +1,13 @@
-package com.example.nekit.Crypto
+package nekit.Crypto
 import java.security.Security
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import org.slf4j.LoggerFactory
 import org.bouncycastle.jce.provider.BouncyCastleProvider // For BouncyCastle specific algorithms
-import com.example.nekit.Crypto.CryptoOperation // Import CryptoOperation
-import com.example.nekit.Crypto.CryptoAlgorithm // Import CryptoAlgorithm
-import com.example.nekit.Crypto.StreamCryptoProtocol as StreamCrypto // Import StreamCryptoProtocol and alias it to StreamCrypto
+import nekit.Crypto.CryptoOperation // Import CryptoOperation
+import nekit.Crypto.CryptoAlgorithm // Import CryptoAlgorithm
+import nekit.Crypto.StreamCryptoProtocol as StreamCrypto // Import StreamCryptoProtocol and alias it to StreamCrypto
 
 /**
  * Adapter for stream ciphers (like ChaCha20, Salsa20, RC4) using JCE and BouncyCastle.

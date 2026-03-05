@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.DNS
+package nekit.IPStack.DNS
 
 // Placeholder for DNSSessionMatchResult.
 // Actual implementation might vary based on usage in other files.

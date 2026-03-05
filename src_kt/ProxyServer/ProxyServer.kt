@@ -1,14 +1,14 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 
-import com.example.nekit.Event.Event.ProxyServerEvent
-import com.example.nekit.Event.Observer
-import com.example.nekit.Event.ObserverFactory
-import com.example.nekit.GlobalInitializer.GlobalInitializer
-import com.example.nekit.Socket.ProxySocket.ProxySocket
-import com.example.nekit.Tunnel.Tunnel
-import com.example.nekit.Tunnel.TunnelDelegate
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.Event.Event.ProxyServerEvent
+import nekit.Event.Observer
+import nekit.Event.ObserverFactory
+import nekit.GlobalInitializer.GlobalInitializer
+import nekit.Socket.ProxySocket.ProxySocket
+import nekit.Tunnel.Tunnel
+import nekit.Tunnel.TunnelDelegate
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

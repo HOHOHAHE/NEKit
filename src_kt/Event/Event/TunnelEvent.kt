@@ -1,8 +1,8 @@
-package com.example.nekit.Event.Event
+package nekit.Event.Event
 
 
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Tunnel.Tunnel
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Tunnel.Tunnel
 
 interface TunnelEvent : Event {
     class ReceivedRequest(val tunnel: Tunnel) : TunnelEvent

@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket.core
+package nekit.RawSocket.core
 
 interface TLSSocket {
     var isClient: Boolean

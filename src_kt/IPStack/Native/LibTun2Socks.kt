@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Native // Assuming this package structure
+package nekit.IPStack.Native // Assuming this package structure
 
 /**
  * Defines callback methods that the native tun2socks stack will invoke

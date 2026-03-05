@@ -1,10 +1,10 @@
-package com.example.nekit.Socket.ProxySocket
+package nekit.Socket.ProxySocket
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Utils.HTTPStreamScanner
-import com.example.nekit.Utils.ProcessedData
+import nekit.Messages.ConnectSession
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Utils.HTTPStreamScanner
+import nekit.Utils.ProcessedData
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory

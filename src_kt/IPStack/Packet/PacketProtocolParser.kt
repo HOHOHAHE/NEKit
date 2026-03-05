@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
 interface TransportProtocolParser {
     var ipPacketRawData: ByteArray

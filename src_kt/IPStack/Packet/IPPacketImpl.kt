@@ -1,17 +1,17 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.IPStack.AddressFamily
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.IPStack.AddressFamily
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 
 // Concrete implementation of IPPacket
 class IPPacketImpl : IPPacket {
     override var sourceAddress: IPAddress? = null
     override var destinationAddress: IPAddress? = null
-    override var transportProtocol: com.example.nekit.IPStack.TransportProtocol = com.example.nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
+    override var transportProtocol: nekit.IPStack.TransportProtocol = nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
     override var protocolParser: UDPProtocolParser? = null
     override var packetData: ByteArray? = null
-    override var version: com.example.nekit.IPStack.IPVersion = com.example.nekit.IPStack.IPVersion.IPV4 // Default to IPv4
+    override var version: nekit.IPStack.IPVersion = nekit.IPStack.IPVersion.IPV4 // Default to IPv4
 
     override fun buildPacket() {
         // Placeholder implementation for building the packet
@@ -24,16 +24,16 @@ class IPPacketImpl : IPPacket {
         this.packetData = packetData
         this.sourceAddress = IPAddress.parse("0.0.0.0")
         this.destinationAddress = IPAddress.parse("0.0.0.0")
-        this.transportProtocol = com.example.nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
-        this.version = com.example.nekit.IPStack.IPVersion.IPV4
+        this.transportProtocol = nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
+        this.version = nekit.IPStack.IPVersion.IPV4
     }
 
     constructor() : this(ByteArray(0))
 
     companion object {
-        fun peekProtocol(packet: ByteArray): com.example.nekit.IPStack.TransportProtocol {
+        fun peekProtocol(packet: ByteArray): nekit.IPStack.TransportProtocol {
             // Placeholder implementation
-            return com.example.nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
+            return nekit.IPStack.TransportProtocol.UNKNOWN // Referencing the one in IPDefs
         }
     }
 }

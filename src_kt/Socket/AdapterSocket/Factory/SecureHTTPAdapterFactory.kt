@@ -1,9 +1,9 @@
-package com.example.nekit.Socket.AdapterSocket.Factory
+package nekit.Socket.AdapterSocket.Factory
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Socket.AdapterSocket.SecureHTTPAdapter
-import com.example.nekit.Utils.HTTPAuthentication
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Socket.AdapterSocket.SecureHTTPAdapter
+import nekit.Utils.HTTPAuthentication
 
 class SecureHTTPAdapterFactory(
     val serverHost: String,

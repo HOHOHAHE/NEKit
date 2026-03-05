@@ -1,4 +1,4 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope // Added missing import
 import kotlinx.coroutines.Dispatchers
@@ -8,11 +8,11 @@ import org.slf4j.LoggerFactory
 // Assuming TCPProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from TCPProxyServer.kt context or common files.
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Socket.ProxySocket.HTTPProxySocket
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-// import com.example.nekit.Socket.ProxySocket // Removed as it's a package, not a class to import directly
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Socket.ProxySocket.HTTPProxySocket
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+// import nekit.Socket.ProxySocket // Removed as it's a package, not a class to import directly
 
 
 /**
@@ -45,7 +45,7 @@ class HTTPProxyServer : TCPProxyServer {
      */
     override fun handleNewAcceptedSocket(socket: RawTCPSocketProtocol) {
         httpLogger.info("New socket accepted, wrapping as HTTPProxySocket: {}", socket)
-        val httpProxySocket = HTTPProxySocket(socket, com.example.nekit.Messages.ConnectSession("", 0))
+        val httpProxySocket = HTTPProxySocket(socket, nekit.Messages.ConnectSession("", 0))
 
         // Launch the call to super.didAcceptNewSocket in the server's main coroutine scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.

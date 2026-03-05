@@ -1,14 +1,14 @@
-package com.example.nekit.Config
+package nekit.Config
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import org.slf4j.LoggerFactory
-import com.example.nekit.Utils.HTTPAuthentication
-import com.example.nekit.Crypto.CryptoAlgorithm
-import com.example.nekit.Config.ConfigurationException.AdapterParsingException
-import com.example.nekit.Config.ConfigurationException
-import com.example.nekit.Socket.AdapterSocket.Factory.*
-import com.example.nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested
+import nekit.Utils.HTTPAuthentication
+import nekit.Crypto.CryptoAlgorithm
+import nekit.Config.ConfigurationException.AdapterParsingException
+import nekit.Config.ConfigurationException
+import nekit.Socket.AdapterSocket.Factory.*
+import nekit.Socket.AdapterSocket.Shadowsocks.ShadowsocksAdapterNested
 
 object AdapterFactoryParser {
     private val logger = LoggerFactory.getLogger(AdapterFactoryParser::class.java)

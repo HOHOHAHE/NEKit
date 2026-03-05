@@ -1,7 +1,7 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 
 interface UDPProtocolParser {
     val sourcePort: Port?

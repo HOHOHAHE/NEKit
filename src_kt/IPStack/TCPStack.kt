@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack
+package nekit.IPStack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -9,18 +9,18 @@ import kotlinx.coroutines.sync.withLock
 import java.lang.ref.WeakReference
 import org.slf4j.LoggerFactory
 
-import com.example.nekit.IPStack.Native.JnaLibTun2Socks
-import com.example.nekit.IPStack.Native.LibTun2SocksStackCallbacks
-import com.example.nekit.IPStack.Native.LibTun2SocksSocketCallbacks
-import com.example.nekit.IPStack.Native.LibTun2SocksStackInterface
-import com.example.nekit.RawSocket.tun.TUNTCPSocket
-import com.example.nekit.ProxyServer.ProxyServer
-import com.example.nekit.Socket.ProxySocket.DirectProxySocket
-import com.example.nekit.Socket.AdapterSocket.AdapterSocket
-import com.example.nekit.Tunnel.QueueFactory
-import com.example.nekit.IPStack.Packet.IPPacket
-import com.example.nekit.IPStack.IPStackProtocol
-import com.example.nekit.IPStack.AddressFamily
+import nekit.IPStack.Native.JnaLibTun2Socks
+import nekit.IPStack.Native.LibTun2SocksStackCallbacks
+import nekit.IPStack.Native.LibTun2SocksSocketCallbacks
+import nekit.IPStack.Native.LibTun2SocksStackInterface
+import nekit.RawSocket.tun.TUNTCPSocket
+import nekit.ProxyServer.ProxyServer
+import nekit.Socket.ProxySocket.DirectProxySocket
+import nekit.Socket.AdapterSocket.AdapterSocket
+import nekit.Tunnel.QueueFactory
+import nekit.IPStack.Packet.IPPacket
+import nekit.IPStack.IPStackProtocol
+import nekit.IPStack.AddressFamily
 
 
 

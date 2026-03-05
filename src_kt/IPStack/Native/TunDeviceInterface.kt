@@ -1,4 +1,4 @@
-package com.example.nekit.IPStack.Native // Assuming this package structure
+package nekit.IPStack.Native // Assuming this package structure
 
 /**
  * Kotlin interface defining operations for interacting with a TUN device.

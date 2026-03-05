@@ -1,11 +1,11 @@
-package com.example.nekit.Rule
+package nekit.Rule
 
-import com.example.nekit.Messages.ConnectSession
-import com.example.nekit.Socket.AdapterSocket.Factory.AdapterFactory
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.IPStack.DNS.DNSSession
-import com.example.nekit.Rule.DNSSessionMatchType
-import com.example.nekit.Rule.DNSSessionMatchResult
+import nekit.Messages.ConnectSession
+import nekit.Socket.AdapterSocket.Factory.AdapterFactory
+import nekit.Utils.IPAddress
+import nekit.IPStack.DNS.DNSSession
+import nekit.Rule.DNSSessionMatchType
+import nekit.Rule.DNSSessionMatchResult
 
 class DNSFailRule(
     private val adapterFactory: AdapterFactory

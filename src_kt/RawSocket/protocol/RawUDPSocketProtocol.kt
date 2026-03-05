@@ -1,8 +1,8 @@
-package com.example.nekit.RawSocket.protocol
+package nekit.RawSocket.protocol
 
 import java.lang.ref.WeakReference
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
 
 interface RawUDPSocketProtocol {
     var delegate: WeakReference<RawUDPSocketDelegate?>?

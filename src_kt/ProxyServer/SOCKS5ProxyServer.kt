@@ -1,4 +1,4 @@
-package com.example.nekit.ProxyServer
+package nekit.ProxyServer
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope // For launching super.didAcceptNewSocket
@@ -8,11 +8,11 @@ import org.slf4j.LoggerFactory
 // Assuming TCPProxyServer.kt, IPAddress.kt, Port.kt are available.
 // Assuming KotlinAcceptedSocketInterface, ProxySocketInterface are available from TCPProxyServer.kt context or common files.
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.Socket.ProxySocket.SOCKS5ProxySocket
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.Config.NetworkInterfaceType
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.Socket.ProxySocket.SOCKS5ProxySocket
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.Config.NetworkInterfaceType
 
 
 /**

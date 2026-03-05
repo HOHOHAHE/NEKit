@@ -1,6 +1,6 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.Utils.Port
+import nekit.Utils.Port
 
 class UDPProtocolParserImpl : UDPProtocolParser {
     override var sourcePort: Port? = null

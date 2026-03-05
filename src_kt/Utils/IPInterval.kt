@@ -1,4 +1,4 @@
-package com.example.nekit.Utils
+package nekit.Utils
 
 sealed class IPInterval {
     data class IPv4(val value: UInt) : IPInterval()

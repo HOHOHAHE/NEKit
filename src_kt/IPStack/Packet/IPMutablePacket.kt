@@ -1,8 +1,8 @@
-package com.example.nekit.IPStack.Packet
+package nekit.IPStack.Packet
 
-import com.example.nekit.IPStack.IPVersion
-import com.example.nekit.IPStack.TransportProtocol
-import com.example.nekit.Utils.IPAddress
+import nekit.IPStack.IPVersion
+import nekit.IPStack.TransportProtocol
+import nekit.Utils.IPAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

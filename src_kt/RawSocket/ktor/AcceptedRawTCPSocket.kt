@@ -1,4 +1,4 @@
-package com.example.nekit.RawSocket.ktor
+package nekit.RawSocket.ktor
 
 import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
@@ -11,10 +11,10 @@ import java.io.IOException
 import java.lang.ref.WeakReference
 import java.net.InetSocketAddress
 
-import com.example.nekit.Utils.IPAddress
-import com.example.nekit.Utils.Port
-import com.example.nekit.RawSocket.protocol.RawTCPSocketProtocol
-import com.example.nekit.RawSocket.protocol.RawTCPSocketDelegate
+import nekit.Utils.IPAddress
+import nekit.Utils.Port
+import nekit.RawSocket.protocol.RawTCPSocketProtocol
+import nekit.RawSocket.protocol.RawTCPSocketDelegate
 
 /**
  * Adapts a Ktor `Socket` (representing an accepted client connection)

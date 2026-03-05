@@ -32,8 +32,9 @@ class SOCKS5UDPRelayServer(
     // The socket listening for UDP datagrams from the local SOCKS5 client
     private var clientSocket: RawUDPSocketProtocol? = null
     
-    // Cached outbound sockets to external targets (Key = Target IP:Port)
-    private val targetSockets = mutableMapOf<String, RawUDPSocketProtocol>()
+    // A single unified outbound socket to external targets (multiplexes all internet UDP traffic)
+    // This prevents Dispatchers.IO exhaustion from spawning too many blocking DatagramSocket.receive() threads
+    private var outboundSocket: RawUDPSocketProtocol? = null
     
     // Coroutine scope for handling UDP relay operations
     private val relayScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -94,8 +95,8 @@ class SOCKS5UDPRelayServer(
         clientSocket?.disconnect()
         clientSocket = null
         
-        targetSockets.values.forEach { it.disconnect() }
-        targetSockets.clear()
+        outboundSocket?.disconnect()
+        outboundSocket = null
     }
 
     private var actualClientAddress: IPAddress? = null
@@ -213,19 +214,18 @@ class SOCKS5UDPRelayServer(
         
         logger.info("Relaying UDP: Client -> Target ({}:{}) | {} bytes payload", destHostStr, destPortInt, payloadData.size)
         
-        // Retrieve or create the outbound socket for this specific target
-        val targetSocket = getOrCreateOutboundSocket(destHostStr, destPortInt)
+        // Retrieve or create the unified outbound socket
+        val targetSocket = getOrCreateOutboundSocket()
         
         // Forward the actual payload to the target server
         targetSocket?.send(payloadData, destHostStr, destPortInt)
     }
 
     /**
-     * Creates and caches an outbound UDP socket (e.g., Cellular) to talk to the actual remote target server.
+     * Creates and caches a single outbound UDP socket (e.g., Cellular) to talk to all external target servers.
      */
-    private suspend fun getOrCreateOutboundSocket(destHostStr: String, destPortInt: Int): RawUDPSocketProtocol? {
-        val cacheKey = "$destHostStr:$destPortInt"
-        targetSockets[cacheKey]?.let { return it }
+    private suspend fun getOrCreateOutboundSocket(): RawUDPSocketProtocol? {
+        outboundSocket?.let { return it }
 
         val activeInterface = if (outboundInterfaceType != NetworkInterfaceType.DEFAULT) {
             outboundInterfaceType
@@ -240,17 +240,17 @@ class SOCKS5UDPRelayServer(
         }
 
         socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
-            // This is data coming FROM the internet Target, going BACK to the local Client
+            // This is data coming FROM an internet Target, going BACK to the local Client
             handleIncomingDatagram(data, sourceAddress, sourcePort)
         }
 
         try {
             socket.suspendBind(null, 0)
-            targetSockets[cacheKey] = socket
-            logger.debug("SOCKS5 UDP target socket created for {}", cacheKey)
+            outboundSocket = socket
+            logger.debug("SOCKS5 UDP unified outbound socket created")
             return socket
         } catch (e: Exception) {
-            logger.error("Failed to create SOCKS5 UDP target socket for {}: {}", cacheKey, e.message)
+            logger.error("Failed to create SOCKS5 UDP unified outbound socket: {}", e.message)
             socket.disconnect()
             return null
         }

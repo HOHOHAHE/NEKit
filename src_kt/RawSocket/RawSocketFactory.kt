@@ -9,7 +9,11 @@ import com.example.nekit.Utils.PlatformDetector
 object RawSocketFactory {
 
     fun getRawSocket(session: ConnectSession? = null): RawTCPSocketProtocol {
-        val requestedInterface = session?.interfaceType ?: GlobalNetworkManager.currentActiveInterface
+        val requestedInterface = if (session != null && session.interfaceType != NetworkInterfaceType.DEFAULT) {
+            session.interfaceType
+        } else {
+            GlobalNetworkManager.currentActiveInterface
+        }
 
         // On Android: use RawCellularTCPSocket (supports network.bindSocket for cellular)
         // On macOS runLocal: fall back to KtorRawTCPClientSocket (no cellular concept on JVM)

@@ -29,7 +29,7 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
     private val logger = LoggerFactory.getLogger(RawCellularUDPSocket::class.java)
     private var socket: DatagramSocket? = null
     
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(NetworkDispatchers.CellularBlockingIO + SupervisorJob())
     private var readJob: Job? = null
     
     override var delegate: WeakReference<RawUDPSocketDelegate?>? = null
@@ -72,7 +72,7 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
 
         logger.info("Connecting Cellular UDP socket to {}:{}", host, port)
 
-        withContext(Dispatchers.IO) {
+        withContext(NetworkDispatchers.CellularBlockingIO) {
             try {
                 val newSocket = DatagramSocket(null) // Unbound
                 newSocket.reuseAddress = true
@@ -212,7 +212,7 @@ class RawCellularUDPSocket(private val host: String, private val port: Int) : Ra
 
         logger.info("Binding Cellular UDP socket to {}:{}", host ?: "0.0.0.0", port)
 
-        withContext(Dispatchers.IO) {
+        withContext(NetworkDispatchers.CellularBlockingIO) {
             try {
                 val newSocket = DatagramSocket(null) // Unbound
                 newSocket.reuseAddress = true

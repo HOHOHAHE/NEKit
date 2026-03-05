@@ -32,7 +32,7 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
     private var inputStream: InputStream? = null
     private var outputStream: OutputStream? = null
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope = CoroutineScope(NetworkDispatchers.CellularBlockingIO + SupervisorJob())
     private var readJob: Job? = null
 
     override var delegate: WeakReference<RawTCPSocketDelegate?>? = null
@@ -92,7 +92,7 @@ class RawCellularTCPSocket : RawTCPSocketProtocol {
 
         logger.info("Attempting to connect to {}:{} via Cellular with timeout {}ms", host, port, connectTimeoutMillis)
 
-        withContext(Dispatchers.IO) {
+        withContext(NetworkDispatchers.CellularBlockingIO) {
             try {
                 // 1. Create native socket
                 val baseSocket = Socket()

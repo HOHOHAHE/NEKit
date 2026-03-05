@@ -165,3 +165,10 @@ test_output/*
 Frameworks/*
 
 .build/*
+swift/.build/*
+kotlin/.build/*
+kotlin/.gradle/*
+kotlin/build/*
+kotlin/out/*
+kotlin/bin/*
+kotlin/out/*

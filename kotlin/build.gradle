@@ -44,11 +44,6 @@ android {
         jvmTarget = '1.8'
     }
     
-    sourceSets {
-        main {
-            java.srcDirs 'src_kt'
-        }
-    }
 }
 
 dependencies {
@@ -92,7 +87,7 @@ afterEvaluate {
         dependsOn 'compileDebugKotlin'
         
         // 指定 Main function 的進入點 (套件名稱 + 類別名稱)
-        mainClass.set('com.example.nekit.main.MainKt')
+        mainClass.set('nekit.main.MainKt')
         
         // 將 classpath 取值延後，避免設定階段找不到變數
         classpath = files("$buildDir/tmp/kotlin-classes/debug")

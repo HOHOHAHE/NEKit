@@ -48,6 +48,7 @@ abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
     private var serverSocket: ServerSocket? = null
     private var selectorManager: SelectorManager? = null
     private var serverJob: Job? = null
+    private val serverScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Throws(Exception::class)
     override suspend fun start() {
@@ -72,9 +73,9 @@ abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
             super.start() // Call ProxyServer's start for its logic (e.g., observer signals)
             
             // Start accepting connections in a coroutine
-            serverJob = GlobalScope.launch(Dispatchers.IO) {
-                try {
-                    while (true) {
+            serverJob = serverScope.launch {
+                while (isActive) {
+                    try {
                         val clientSocket = serverSocket!!.accept()
                         logger.info("Ktor accepted new client connection: {}", clientSocket)
                         
@@ -82,10 +83,11 @@ abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
                         launch {
                             handleKtorClientConnection(clientSocket)
                         }
-                    }
-                } catch (e: Exception) {
-                    if (e !is kotlinx.coroutines.CancellationException) {
-                        logger.error("Error accepting connections: {}", e.message, e)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        break
+                    } catch (e: Exception) {
+                        logger.error("Accept error, retrying in 500ms: {}", e.message, e)
+                        kotlinx.coroutines.delay(500)
                     }
                 }
             }
@@ -121,6 +123,7 @@ abstract class TCPProxyServer(address: IPAddress?, port: Port) : ProxyServer(add
         logger.info("Ktor selector manager reference cleared.")
 
         super.stop() // Call ProxyServer's stop for its logic
+        serverScope.cancel()
         logger.info("Ktor server stopped.")
     }
 

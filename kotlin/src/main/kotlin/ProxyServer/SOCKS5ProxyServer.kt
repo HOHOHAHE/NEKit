@@ -1,8 +1,9 @@
 package nekit.ProxyServer
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CoroutineScope // For launching super.didAcceptNewSocket
-import kotlinx.coroutines.launch     // For launching super.didAcceptNewSocket
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 
 // Assuming TCPProxyServer.kt, IPAddress.kt, Port.kt are available.
@@ -37,6 +38,8 @@ class SOCKS5ProxyServer : TCPProxyServer {
 
     var outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
 
+    private val serverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /**
      * Handles a newly accepted socket from the listening server socket by wrapping it
      * into a SOCKS5ProxySocket and passing it to the base class's tunnel management logic.
@@ -48,10 +51,9 @@ class SOCKS5ProxyServer : TCPProxyServer {
         val socks5ProxySocket = SOCKS5ProxySocket(socket)
         socks5ProxySocket.outboundInterfaceType = this.outboundInterfaceType
         
-        // Launch the call to super.didAcceptNewSocket in a coroutine scope
+        // Launch the call to super.didAcceptNewSocket on the server-managed scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.
-        val scope = CoroutineScope(Dispatchers.Default)
-        scope.launch {
+        serverScope.launch {
             try {
                 super.didAcceptNewSocket(socks5ProxySocket)
             } catch (e: Exception) {
@@ -63,5 +65,10 @@ class SOCKS5ProxyServer : TCPProxyServer {
                 }
             }
         }
+    }
+
+    override suspend fun stop() {
+        serverScope.cancel()
+        super.stop()
     }
 }

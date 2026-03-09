@@ -119,7 +119,7 @@ class SOCKS5UDPRelayServer(
                 val isFromClient = if (actualClientAddress != null && actualClientPort != null) {
                     sourceAddress.presentation == actualClientAddress!!.presentation && sourcePort.hostOrderValue == actualClientPort!!.hostOrderValue
                 } else if (sourceAddress.presentation == expectedClientAddress.presentation || expectedClientAddress.presentation == "0.0.0.0" || expectedClientAddress.presentation == "::" ||
-                           expectedClientAddress.presentation == "0:0:0:0:0:0:0:0" || expectedClientAddress.presentation == "127.0.0.1" && sourceAddress.presentation == "::1") {
+                           expectedClientAddress.presentation == "0:0:0:0:0:0:0:0" || (expectedClientAddress.presentation == "127.0.0.1" && sourceAddress.presentation == "::1")) {
                     // This is likely the first packet from the client. Update actual client info.
                     actualClientAddress = sourceAddress
                     actualClientPort = sourcePort

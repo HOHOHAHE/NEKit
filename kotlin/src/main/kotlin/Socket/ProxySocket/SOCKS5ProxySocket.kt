@@ -7,7 +7,10 @@ import nekit.Socket.AdapterSocket.AdapterSocket
 import nekit.Socket.SocketStatus
 import nekit.Utils.IPAddress
 import nekit.Utils.Port
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import java.io.IOException
@@ -24,6 +27,7 @@ class SOCKS5ProxySocket(
 
     private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
     private var state = State.INITIAL
+    private val socketScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     
     // For storing the relay server if it's a UDP associate connection
     private var udpRelayServer: SOCKS5UDPRelayServer? = null
@@ -253,7 +257,7 @@ class SOCKS5ProxySocket(
     }
     
     private fun startUdpRelay(clientIP: IPAddress, clientPort: Port) {
-        GlobalScope.launch {
+        socketScope.launch {
             val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket, outboundInterfaceType)
             val success = relayServer.start()
             
@@ -307,13 +311,23 @@ class SOCKS5ProxySocket(
     }
 
     override fun respondTo(adapter: AdapterSocket) {
-        super.respondTo(adapter)
+        // Do NOT call super.respondTo() - that would fire didBecomeReadyToForward immediately.
+        // Instead, we manually signal the observer and send the SOCKS5 success reply.
+        // didBecomeReadyToForward will be fired exactly once in didWrite when
+        // state transitions from SENDING_RESPONSE → FORWARDING.
+        if (isCancelled) {
+            logger.warn("respondTo called on a cancelled socket for session: {}", session)
+            return
+        }
+        logger.info("respondTo called with adapter {} for session {}.", adapter, session)
+        observer?.signal(nekit.Event.Event.ProxySocketEvent.AskedToResponseTo(adapter, this))
         // SOCKS5 success reply: VER | REP | RSV | ATYP | BND.ADDR | BND.PORT
         val response = byteArrayOf(0x05, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0)
         state = State.SENDING_RESPONSE
         write(response)
     }
     override fun forceDisconnect(becauseOf: Throwable?) {
+        socketScope.cancel()
         udpRelayServer?.stop()
         udpRelayServer = null
         super.forceDisconnect(becauseOf)

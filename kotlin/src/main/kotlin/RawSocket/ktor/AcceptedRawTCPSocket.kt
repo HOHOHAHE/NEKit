@@ -4,7 +4,6 @@ import io.ktor.network.sockets.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import org.slf4j.LoggerFactory
 import java.util.concurrent.CancellationException
 import java.io.IOException
@@ -32,9 +31,50 @@ class AcceptedRawTCPSocket(
     
     private val readChannel: ByteReadChannel = socket.openReadChannel()
     private val writeChannel: ByteWriteChannel = socket.openWriteChannel(autoFlush = true)
+    private val socketScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    /** Marked true once cleanup() is initiated, used to suppress write-failure callbacks on an already-closing socket. */
+    @Volatile private var _isClosed = false
+
+    /**
+     * Serialized write queue: all write() calls enqueue data here.
+     * A single actor coroutine drains this queue, ensuring writeFully() is never called concurrently.
+     */
+    private val writeQueue = Channel<Pair<ByteArray, () -> Unit>>(Channel.BUFFERED)
 
     init {
         logger.info("AcceptedRawTCPSocket created for socket: {}", socket)
+        // Single writer actor - the ONLY coroutine that calls writeChannel.writeFully()
+        socketScope.launch {
+            for ((data, onWritten) in writeQueue) {
+                if (_isClosed) break
+                try {
+                    if (!writeChannel.isClosedForWrite) {
+                        writeChannel.writeFully(data)
+                        writeChannel.flush()
+                        onWritten()
+                    }
+                } catch (e: CancellationException) {
+                    break
+                } catch (e: Exception) {
+                    val errorMsg = when {
+                        e.message?.contains("Connection reset") == true -> "Connection reset by peer"
+                        e.message?.contains("Broken pipe") == true -> "Broken pipe - connection closed"
+                        e.message?.contains("closed") == true -> "Connection closed"
+                        e is IOException -> "IO error during write"
+                        else -> "Write failed: ${e.javaClass.simpleName}"
+                    }
+                    if (_isClosed || socket.isClosed || writeChannel.isClosedForWrite ||
+                        e.message?.contains("Broken pipe") == true ||
+                        e.message?.contains("closed") == true) {
+                        logger.warn("Suppressed write error (connection already closing): {}", errorMsg)
+                    } else {
+                        logger.error("Failed to write {} bytes to socket: {}", data.size, errorMsg, e)
+                        delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
+                    }
+                }
+            }
+        }
     }
 
     override val isConnected: Boolean
@@ -92,51 +132,27 @@ class AcceptedRawTCPSocket(
     }
 
     override fun write(data: ByteArray) {
-        if (socket.isClosed) {
+        if (_isClosed || socket.isClosed) {
             logger.warn("write called on closed socket. Data not sent.")
-            delegate?.get()?.didErrorOccur(IOException("Socket is closed, write failed."), this@AcceptedRawTCPSocket)
             return
         }
-
-        // Launch coroutine for async write operation
-        GlobalScope.launch {
-            try {
-                // 检查写入通道是否仍然可用
-                if (writeChannel.isClosedForWrite) {
-                    logger.warn("Write channel is closed, cannot write {} bytes", data.size)
-                    delegate?.get()?.didErrorOccur(IOException("Write channel is closed"), this@AcceptedRawTCPSocket)
-                    return@launch
-                }
-                
-                logger.debug("Writing {} bytes to socket", data.size)
-                writeChannel.writeFully(data)
-                writeChannel.flush()
-                logger.trace("Successfully wrote {} bytes to socket", data.size)
-                delegate?.get()?.didWrite(data, this@AcceptedRawTCPSocket)
-            } catch (e: Exception) {
-                // 改进错误信息处理，避免乱码
-                val errorMsg = when {
-                    e.message?.contains("Connection reset") == true -> "Connection reset by peer"
-                    e.message?.contains("Broken pipe") == true -> "Broken pipe - connection closed"
-                    e.message?.contains("closed") == true -> "Connection closed"
-                    e is IOException -> "IO error during write operation"
-                    else -> "Write operation failed: ${e.javaClass.simpleName}"
-                }
-                logger.error("Failed to write {} bytes to socket: {}", data.size, errorMsg, e)
-                delegate?.get()?.didErrorOccur(e, this@AcceptedRawTCPSocket)
-                // 不要重新拋出異常，讓上層決定如何處理
-            }
+        // Enqueue write; the single actor coroutine will call writeFully() serially.
+        val offered = writeQueue.trySend(Pair(data) {
+            delegate?.get()?.didWrite(data, this@AcceptedRawTCPSocket)
+        })
+        if (offered.isFailure) {
+            logger.warn("Write queue full or closed, dropping {} bytes", data.size)
         }
     }
 
     override fun readData() {
-        if (socket.isClosed || readChannel.isClosedForRead) {
+        if (_isClosed || socket.isClosed || readChannel.isClosedForRead) {
             logger.warn("readData called on closed socket or read channel.")
             return
         }
 
         // Launch coroutine for async read operation
-        GlobalScope.launch {
+        socketScope.launch {
             try {
                 // 使用更大的緩衝區提高性能
                 val buffer = ByteArray(65536) // 64KB buffer for better performance
@@ -175,8 +191,8 @@ class AcceptedRawTCPSocket(
     }
 
     override fun readDataTo(length: Int) {
-        GlobalScope.launch {
-            if (socket.isClosed || readChannel.isClosedForRead) {
+        socketScope.launch {
+            if (_isClosed || socket.isClosed || readChannel.isClosedForRead) {
                 logger.warn("readDataTo called on closed socket or read channel.")
                 return@launch
             }
@@ -204,8 +220,8 @@ class AcceptedRawTCPSocket(
     }
 
     override fun readDataTo(data: ByteArray) {
-        GlobalScope.launch {
-            if (socket.isClosed || readChannel.isClosedForRead) {
+        socketScope.launch {
+            if (_isClosed || socket.isClosed || readChannel.isClosedForRead) {
                 logger.warn("readDataTo called on closed socket or read channel.")
                 return@launch
             }
@@ -232,8 +248,8 @@ class AcceptedRawTCPSocket(
     }
 
     override fun readDataTo(data: ByteArray, maxLength: Int) {
-        GlobalScope.launch {
-            if (socket.isClosed || readChannel.isClosedForRead) {
+        socketScope.launch {
+            if (_isClosed || socket.isClosed || readChannel.isClosedForRead) {
                 logger.warn("readDataTo called on closed socket or read channel.")
                 return@launch
             }
@@ -277,6 +293,9 @@ class AcceptedRawTCPSocket(
     }
 
     private fun cleanup() {
+        _isClosed = true
+        writeQueue.close()
+        socketScope.cancel()
         try {
             writeChannel.close()
             readChannel.cancel()

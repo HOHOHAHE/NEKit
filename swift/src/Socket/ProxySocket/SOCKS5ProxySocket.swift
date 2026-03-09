@@ -228,7 +228,7 @@ public class SOCKS5ProxySocket: ProxySocket {
         }
         
         // Use 0.0.0.0 as source hint for relay if domain was provided, though relay handles Any.
-        let parsedAddr = IPAddress.parse(destHost) ?? IPAddress.parse("0.0.0.0")!
+        let parsedAddr = IPAddress(fromString: destHost) ?? IPAddress(fromString: "0.0.0.0")!
         
         let relay = SOCKS5UDPRelayServer(
             expectedClientAddress: parsedAddr,

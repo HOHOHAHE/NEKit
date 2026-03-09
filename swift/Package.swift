@@ -18,7 +18,6 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-numerics", from: "1.0.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.8.0")),
         .package(url: "https://github.com/behrang/YamlSwift.git", from: "3.4.4"),
-        .package(url: "https://github.com/zhuhaow/tun2socks.git", branch: "master"),
         .package(url: "https://github.com/zhuhaow/Resolver.git", branch: "master"),
         .package(url: "https://github.com/Quick/Quick.git", from: "2.2.0"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "8.0.0")
@@ -35,7 +34,6 @@ let package = Package(
                 .product(name: "Yaml", package: "YamlSwift"),
                 .product(name: "Numerics", package: "swift-numerics"),
                 .product(name: "CryptoSwift", package: "CryptoSwift"),
-                "tun2socks",
                 "Resolver"
             ],
             path: "src"

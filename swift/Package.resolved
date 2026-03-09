@@ -83,15 +83,6 @@
         }
       },
       {
-        "package": "tun2socks",
-        "repositoryURL": "https://github.com/zhuhaow/tun2socks.git",
-        "state": {
-          "branch": "master",
-          "revision": "78294d5bff7f81152af64a2b66ffbfe917e1183b",
-          "version": null
-        }
-      },
-      {
         "package": "Yaml",
         "repositoryURL": "https://github.com/behrang/YamlSwift.git",
         "state": {

@@ -56,7 +56,7 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate {
         // We will return 0.0.0.0:0 and let the system handle it, or we need to expose local port from NWUDPSocket.
         // Assuming 0 for now as dummy.
         
-        self.boundAddress = IPAddress.parse("0.0.0.0")
+        self.boundAddress = IPAddress(fromString: "0.0.0.0")
         self.boundPort = Port(port: 0)
         
         DDLogInfo("SOCKS5 UDP Relay started for client requests.")

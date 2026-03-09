@@ -5,7 +5,7 @@ import CocoaAsyncSocket
 ///
 /// This shoule be the base class for any concrete implementation of proxy server (e.g., HTTP or SOCKS5) which needs to listen on some port.
 open class GCDProxyServer: ProxyServer, GCDAsyncSocketDelegate {
-    fileprivate var listenSocket: GCDAsyncSocket!
+    open var listenSocket: GCDAsyncSocket!
 
     /**
      Start the proxy server which creates a GCDAsyncSocket listening on specific port.

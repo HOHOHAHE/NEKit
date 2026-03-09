@@ -15,7 +15,8 @@ open class UDPDNSResolver: DNSResolverProtocol, NWUDPSocketDelegate {
     public weak var delegate: DNSResolverDelegate?
 
     public init(address: IPAddress, port: Port) {
-        socket = NWUDPSocket(host: address.presentation, port: Int(port.value))!
+        // Fallback to strict NWUDPSocket for DNS specifically if factory fails, though factory should handle it
+        socket = (RawSocketFactory.getRawUDPSocket(host: address.presentation, port: Int(port.value), requestedInterface: .default) as? NWUDPSocket) ?? NWUDPSocket(host: address.presentation, port: Int(port.value))!
         socket.delegate = self
     }
 

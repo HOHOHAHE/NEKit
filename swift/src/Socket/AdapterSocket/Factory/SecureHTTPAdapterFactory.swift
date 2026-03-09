@@ -15,7 +15,7 @@ open class SecureHTTPAdapterFactory: HTTPAdapterFactory {
      */
     override open func getAdapterFor(session: ConnectSession) -> AdapterSocket {
         let adapter = SecureHTTPAdapter(serverHost: serverHost, serverPort: serverPort, auth: auth)
-        adapter.socket = RawSocketFactory.getRawSocket()
+        adapter.socket = RawSocketFactory.getRawTCPSocket()
         return adapter
     }
 }

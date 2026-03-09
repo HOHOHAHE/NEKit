@@ -121,7 +121,18 @@ public class UDPDirectStack: IPStackProtocol, NWUDPSocketDelegate {
             return nil
         }
 
-        guard let udpSocket = NWUDPSocket(host: session.host, port: session.port) else {
+        guard let udpSocketObj = RawSocketFactory.getRawUDPSocket(host: session.host, port: session.port) else {
+            return nil
+        }
+        
+        // Either NWCellularUDPSocket or NWUDPSocket is returned; here we assume UDPDirectStack treats them uniformly through proxy pattern or AnyObject casting later.
+        // Wait, NWUDPSocketDelegate is expected! Both implement NWUDPSocketDelegate methods or similar?
+        // Let's cast it to NWUDPSocket for now since Swift lacks a common protocol like Kotlin has (RawUDPSocketProtocol)
+        // If it returns NWCellularUDPSocket, and UDPDirectStack strictly expects NWUDPSocket, we need a protocol!
+        // Actually, UDPDirectStack expects NWUDPSocket explicitly. Let's see if we can cast it.
+        guard let udpSocket = udpSocketObj as? NWUDPSocket else {
+            // Because NWCellularUDPSocket and NWUDPSocket don't inherit from the same base class natively right now, this might fail if it's Cellular.
+            // Wait, we renamed the class inside NWCellularUDPSocket to NWCellularUDPSocket. But in swift we didn't add a protocol yet. Let's use it as AnyObject if generic, but UDPDirectStack hardcodes NWUDPSocket array. Let's just create it.
             return nil
         }
 

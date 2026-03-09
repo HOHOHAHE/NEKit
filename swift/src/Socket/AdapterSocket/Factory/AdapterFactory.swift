@@ -22,7 +22,7 @@ open class AdapterFactory {
      */
     public func getDirectAdapter() -> AdapterSocket {
         let adapter = DirectAdapter()
-        adapter.socket = RawSocketFactory.getRawSocket()
+        adapter.socket = RawSocketFactory.getRawTCPSocket()
         return adapter
     }
 }

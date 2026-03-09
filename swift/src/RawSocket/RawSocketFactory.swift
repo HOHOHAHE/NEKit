@@ -19,24 +19,49 @@ open class RawSocketFactory {
     public static weak var TunnelProvider: NETunnelProvider?
 
     /**
-     Return `RawTCPSocket` instance.
+     Return `RawTCPSocketProtocol` instance.
 
-     - parameter type: The type of the socket.
+     - parameter type: The type of the socket (`SocketBaseType`).
+     - parameter requestedInterface: The required network interface (`NetworkInterfaceType`).
 
      - returns: The created socket instance.
      */
-    public static func getRawSocket(_ type: SocketBaseType? = nil) -> RawTCPSocketProtocol {
+    public static func getRawTCPSocket(_ type: SocketBaseType? = nil, requestedInterface: NetworkInterfaceType? = nil) -> RawTCPSocketProtocol {
+        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.currentActiveInterface
+
         switch type {
         case .some(.nw):
-            return NWTCPSocket()
+            return activeInterface == .cellular ? NWCellularTCPSocket() : NWTCPSocket()
         case .some(.gcd):
+            // GCD sockets don't naturally support cellular binding through NWParameters easily here.
             return GCDTCPSocket()
         case nil:
             if RawSocketFactory.TunnelProvider == nil {
                 return GCDTCPSocket()
             } else {
-                return NWTCPSocket()
+                return activeInterface == .cellular ? NWCellularTCPSocket() : NWTCPSocket()
             }
+        }
+    }
+
+    /**
+     Return `NWUDPSocket` instance.
+     Note: In Swift, GCDUDPSocket may not be fully managed by this factory, so we focus on NWUDPSocket.
+
+     - parameter host: The host to connect to.
+     - parameter port: The port to connect to.
+     - parameter timeout: The timeout for the socket.
+     - parameter requestedInterface: The required network interface (`NetworkInterfaceType`).
+
+     - returns: The created socket instance or nil if initialization failed.
+     */
+    public static func getRawUDPSocket(host: String, port: Int, timeout: Int = Opt.UDPSocketActiveTimeout, requestedInterface: NetworkInterfaceType? = nil) -> AnyObject? {
+        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.currentActiveInterface
+        
+        if activeInterface == .cellular {
+            return NWCellularUDPSocket(host: host, port: port, timeout: timeout)
+        } else {
+            return NWUDPSocket(host: host, port: port, timeout: timeout)
         }
     }
 }

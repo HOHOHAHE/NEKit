@@ -11,8 +11,7 @@ import nekit.Utils.IPAddress
 import nekit.Utils.Port
 import nekit.RawSocket.protocol.RawUDPSocketProtocol
 import nekit.RawSocket.protocol.RawUDPSocketDelegate
-import nekit.RawSocket.ktor.RawUDPSocket
-import nekit.RawSocket.cellular.RawCellularUDPSocket
+import nekit.RawSocket.protocol.RawSocketFactory
 import nekit.Utils.PlatformDetector
 import nekit.Messages.ConnectSession
 import nekit.IPStack.Packet.IPPacket
@@ -108,11 +107,10 @@ class UDPDirectStack : IPStackProtocol, RawUDPSocketDelegate {
             logger.info("Creating new UDP socket for {}", connectInfo)
             // On Android + CELLULAR: use RawCellularUDPSocket (network.bindSocket capable)
             // On macOS runLocal: always fall back to RawUDPSocket
-            val newUdpSocket = if (PlatformDetector.isAndroid && GlobalNetworkManager.currentActiveInterface == NetworkInterfaceType.CELLULAR) {
-                RawCellularUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
-            } else {
-                RawUDPSocket(connectInfo.destinationAddress.presentation, connectInfo.destinationPort.hostOrderValue)
-            }
+            val newUdpSocket = RawSocketFactory.getRawUDPSocket(
+                connectInfo.destinationAddress.presentation,
+                connectInfo.destinationPort.hostOrderValue
+            )
             newUdpSocket.delegate = WeakReference(this@UDPDirectStack)
             newUdpSocket
         }

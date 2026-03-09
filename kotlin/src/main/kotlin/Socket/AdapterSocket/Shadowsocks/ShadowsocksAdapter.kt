@@ -29,7 +29,7 @@ class ShadowsocksAdapter(
         super.openSocketWith(session)
         logger.info("Opening Shadowsocks connection for session: ${session.host}:${session.port}")
 
-        _rawSocket = RawSocketFactory.getRawSocket(session!!)
+        _rawSocket = RawSocketFactory.getRawTCPSocket(session!!)
         _rawSocket?.delegate = WeakReference(this)
 
         val (encryptKey, encryptIv) = CryptoHelper.getShadowsocksKeyAndIv(key, nekit.Crypto.CryptoAlgorithm.fromString(method))

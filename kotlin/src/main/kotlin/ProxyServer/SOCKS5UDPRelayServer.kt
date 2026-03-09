@@ -1,9 +1,8 @@
 package nekit.ProxyServer
 
 import nekit.Messages.ConnectSession
-import nekit.RawSocket.ktor.RawUDPSocket
-import nekit.RawSocket.cellular.RawCellularUDPSocket
 import nekit.RawSocket.protocol.RawUDPSocketProtocol
+import nekit.RawSocket.protocol.RawSocketFactory
 import nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import nekit.Utils.IPAddress
 import nekit.Utils.Port
@@ -55,7 +54,7 @@ class SOCKS5UDPRelayServer(
             // The CLIENT listening socket must ALWAYS be a standard socket (not cellular bound)
             // because SOCKS5 clients on the same device communicate via loopback (127.0.0.1).
             // Cellular interfaces cannot route 127.0.0.1.
-            val socket = RawUDPSocket("0.0.0.0", 0)
+            val socket = RawSocketFactory.getRawUDPSocket("0.0.0.0", 0, NetworkInterfaceType.DEFAULT)
             
             // Set up our callback listener BEFORE binding so we don't miss packets
             socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
@@ -227,17 +226,7 @@ class SOCKS5UDPRelayServer(
     private suspend fun getOrCreateOutboundSocket(): RawUDPSocketProtocol? {
         outboundSocket?.let { return it }
 
-        val activeInterface = if (outboundInterfaceType != NetworkInterfaceType.DEFAULT) {
-            outboundInterfaceType
-        } else {
-            GlobalNetworkManager.currentActiveInterface
-        }
-
-        val socket = if (PlatformDetector.isAndroid && activeInterface == NetworkInterfaceType.CELLULAR) {
-            RawCellularUDPSocket("0.0.0.0", 0)
-        } else {
-            RawUDPSocket("0.0.0.0", 0)
-        }
+        val socket = RawSocketFactory.getRawUDPSocket("0.0.0.0", 0, outboundInterfaceType)
 
         socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
             // This is data coming FROM an internet Target, going BACK to the local Client

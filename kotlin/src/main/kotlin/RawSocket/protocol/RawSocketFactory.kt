@@ -7,10 +7,12 @@ import nekit.Config.GlobalNetworkManager
 import nekit.Utils.PlatformDetector
 import nekit.RawSocket.cellular.RawCellularTCPSocket
 import nekit.RawSocket.ktor.RawTCPSocket
+import nekit.RawSocket.cellular.RawCellularUDPSocket
+import nekit.RawSocket.ktor.RawUDPSocket
 
 object RawSocketFactory {
 
-    fun getRawSocket(session: ConnectSession? = null): RawTCPSocketProtocol {
+    fun getRawTCPSocket(session: ConnectSession? = null): RawTCPSocketProtocol {
         val requestedInterface = if (session != null && session.interfaceType != NetworkInterfaceType.DEFAULT) {
             session.interfaceType
         } else {
@@ -23,6 +25,20 @@ object RawSocketFactory {
             RawCellularTCPSocket()
         } else {
             RawTCPSocket()
+        }
+    }
+
+    fun getRawUDPSocket(host: String, port: Int, requestedInterface: NetworkInterfaceType? = null): RawUDPSocketProtocol {
+        val activeInterface = if (requestedInterface != null && requestedInterface != NetworkInterfaceType.DEFAULT) {
+            requestedInterface
+        } else {
+            GlobalNetworkManager.currentActiveInterface
+        }
+
+        return if (PlatformDetector.isAndroid && activeInterface == NetworkInterfaceType.CELLULAR) {
+            RawCellularUDPSocket(host, port)
+        } else {
+            RawUDPSocket(host, port)
         }
     }
 }

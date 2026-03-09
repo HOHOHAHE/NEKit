@@ -2,6 +2,8 @@ import Foundation
 
 /// The SOCKS5 proxy server.
 public final class GCDSOCKS5ProxyServer: GCDProxyServer {
+    public var outboundInterfaceType: NetworkInterfaceType = .default
+
     /**
      Create an instance of SOCKS5 proxy server.
 
@@ -19,6 +21,7 @@ public final class GCDSOCKS5ProxyServer: GCDProxyServer {
      */
     override func handleNewGCDSocket(_ socket: GCDTCPSocket) {
         let proxySocket = SOCKS5ProxySocket(socket: socket)
+        proxySocket.outboundInterfaceType = self.outboundInterfaceType
         didAcceptNewSocket(proxySocket)
     }
 }

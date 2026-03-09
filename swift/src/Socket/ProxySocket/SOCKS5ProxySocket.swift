@@ -67,6 +67,14 @@ public class SOCKS5ProxySocket: ProxySocket {
     /// The remote port to connect to.
     public var destinationPort: Int!
 
+    public var outboundInterfaceType: NetworkInterfaceType = .default
+    
+    // Holds the relay server if this is a UDP ASSOCIATE request
+    private var udpRelayServer: SOCKS5UDPRelayServer?
+    
+    // Command type requested (1 = CONNECT, 3 = UDP ASSOCIATE)
+    private var requestedCommand: UInt8 = 1
+
     private var readStatus: SOCKS5ProxyReadStatus = .invalid
     private var writeStatus: SOCKS5ProxyWriteStatus = .invalid
 
@@ -133,11 +141,15 @@ public class SOCKS5ProxySocket: ProxySocket {
             socket.readDataTo(length: 4)
         case .readingConnectHeader:
             data.withUnsafeBytes { (pointer: UnsafePointer<UInt8>) in
-                guard pointer.pointee == 5 && pointer.successor().pointee == 1 else {
+                let cmd = pointer.successor().pointee
+                guard pointer.pointee == 5 && (cmd == 1 || cmd == 3) else {
                     // TODO: notify observer
                     self.disconnect()
                     return
                 }
+                
+                self.requestedCommand = cmd
+                
                 switch pointer.advanced(by: 3).pointee {
                 case 1:
                     readStatus = .readingIPv4Address
@@ -194,12 +206,66 @@ public class SOCKS5ProxySocket: ProxySocket {
                 destinationPort = Int($0.load(as: UInt16.self).bigEndian)
             }
 
-            readStatus = .forwarding
-            session = ConnectSession(host: destinationHost, port: destinationPort)
-            observer?.signal(.receivedRequest(session!, on: self))
-            delegate?.didReceive(session: session!, from: self)
+            if requestedCommand == 3 {
+                // UDP ASSOCIATE
+                startUDPRelayServer()
+            } else {
+                // TCP CONNECT
+                readStatus = .forwarding
+                session = ConnectSession(host: destinationHost, port: destinationPort)
+                observer?.signal(.receivedRequest(session!, on: self))
+                delegate?.didReceive(session: session!, from: self)
+            }
         default:
             return
+        }
+    }
+    
+    private func startUDPRelayServer() {
+        guard let destHost = destinationHost, let destPort = destinationPort else {
+            disconnect()
+            return
+        }
+        
+        // Use 0.0.0.0 as source hint for relay if domain was provided, though relay handles Any.
+        let parsedAddr = IPAddress.parse(destHost) ?? IPAddress.parse("0.0.0.0")!
+        
+        let relay = SOCKS5UDPRelayServer(
+            expectedClientAddress: parsedAddr,
+            expectedClientPort: Port(port: UInt16(destPort)),
+            socks5ProxySocket: self,
+            outboundInterfaceType: outboundInterfaceType
+        )
+        
+        if relay.start() {
+            self.udpRelayServer = relay
+            
+            // Reply with success and bound address/port
+            var responseBytes = [UInt8](repeating: 0, count: 10)
+            responseBytes[0...3] = [0x05, 0x00, 0x00, 0x01]
+            let boundIpBytes = relay.boundAddress?.presentation.components(separatedBy: ".").compactMap { UInt8($0) } ?? [0, 0, 0, 0]
+            for (i, byte) in boundIpBytes.enumerated() {
+                if i < 4 { responseBytes[4 + i] = byte }
+            }
+            let port = relay.boundPort?.value ?? 0
+            responseBytes[8] = UInt8(port >> 8)
+            responseBytes[9] = UInt8(port & 0xFF)
+            
+            let responseData = Data(bytes: responseBytes)
+            
+            // For UDP ASSOCIATE, the TCP connection stays open just to keep the UDP relay alive.
+            // We just enter a dummy forwarding state or a "wait for close" state.
+            writeStatus = .forwarding
+            readStatus = .forwarding 
+            write(data: responseData)
+        } else {
+            // Send failure (General SOCKS server failure)
+            var responseBytes = [UInt8](repeating: 0, count: 10)
+            responseBytes[0...3] = [0x05, 0x01, 0x00, 0x01]
+            let responseData = Data(bytes: responseBytes)
+            writeStatus = .stopped
+            write(data: responseData)
+            disconnect()
         }
     }
 

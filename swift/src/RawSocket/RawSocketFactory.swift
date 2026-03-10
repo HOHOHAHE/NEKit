@@ -37,7 +37,9 @@ open class RawSocketFactory {
             return GCDTCPSocket()
         case nil:
             if RawSocketFactory.TunnelProvider == nil {
-                return GCDTCPSocket()
+                // No tunnel extension — use NWCellularTCPSocket when cellular is requested,
+                // otherwise fall back to GCDTCPSocket (OS picks the default route).
+                return activeInterface == .cellular ? NWCellularTCPSocket() : GCDTCPSocket()
             } else {
                 return activeInterface == .cellular ? NWCellularTCPSocket() : NWTCPSocket()
             }

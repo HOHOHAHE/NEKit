@@ -16,7 +16,7 @@ open class SpeedAdapterFactory: AdapterFactory {
     override open func getAdapterFor(session: ConnectSession) -> AdapterSocket {
         let adapters = adapterFactories.map { adapterFactory, delay -> (AdapterSocket, Int) in
             let adapter = adapterFactory.getAdapterFor(session: session)
-            adapter.socket = RawSocketFactory.getRawTCPSocket()
+            adapter.socket = RawSocketFactory.getRawTCPSocket(requestedInterface: session.interfaceType)
             return (adapter, delay)
         }
         let speedAdapter = SpeedAdapter()

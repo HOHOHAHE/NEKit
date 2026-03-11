@@ -213,6 +213,7 @@ public class SOCKS5ProxySocket: ProxySocket {
                 // TCP CONNECT
                 readStatus = .forwarding
                 session = ConnectSession(host: destinationHost, port: destinationPort)
+                session?.interfaceType = outboundInterfaceType
                 observer?.signal(.receivedRequest(session!, on: self))
                 delegate?.didReceive(session: session!, from: self)
             }

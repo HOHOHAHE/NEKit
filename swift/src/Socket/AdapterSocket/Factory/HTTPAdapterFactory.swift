@@ -15,7 +15,7 @@ open class HTTPAdapterFactory: HTTPAuthenticationAdapterFactory {
      */
     override open func getAdapterFor(session: ConnectSession) -> AdapterSocket {
         let adapter = HTTPAdapter(serverHost: serverHost, serverPort: serverPort, auth: auth)
-        adapter.socket = RawSocketFactory.getRawTCPSocket()
+        adapter.socket = RawSocketFactory.getRawTCPSocket(requestedInterface: session.interfaceType)
         return adapter
     }
 }

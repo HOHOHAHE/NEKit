@@ -1,8 +1,13 @@
 import Foundation
+import NetworkExtension
 
 /// The SOCKS5 proxy server.
 public final class GCDSOCKS5ProxyServer: GCDProxyServer {
     public var outboundInterfaceType: NetworkInterfaceType = .default
+    
+    /// The tunnel provider used to create NWUDPSession / NWTCPConnection that bypass the VPN TUN.
+    /// Set this to `self` from your `NEPacketTunnelProvider` subclass.
+    public weak var tunnelProvider: NETunnelProvider?
 
     /**
      Create an instance of SOCKS5 proxy server.
@@ -12,6 +17,13 @@ public final class GCDSOCKS5ProxyServer: GCDProxyServer {
      */
     override public init(address: IPAddress?, port: Port) {
         super.init(address: address, port: port)
+    }
+    
+    override public func start() throws {
+        if let tp = tunnelProvider {
+            RawSocketFactory.TunnelProvider = tp
+        }
+        try super.start()
     }
 
     /**

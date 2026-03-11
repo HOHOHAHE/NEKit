@@ -15,7 +15,7 @@ open class SOCKS5AdapterFactory: ServerAdapterFactory {
      */
     override open func getAdapterFor(session: ConnectSession) -> AdapterSocket {
         let adapter = SOCKS5Adapter(serverHost: serverHost, serverPort: serverPort)
-        adapter.socket = RawSocketFactory.getRawTCPSocket()
+        adapter.socket = RawSocketFactory.getRawTCPSocket(requestedInterface: session.interfaceType)
         return adapter
     }
 }

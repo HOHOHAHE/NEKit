@@ -6,6 +6,9 @@ public final class ConnectSession {
         case proxy, adapter, tunnel
     }
     
+    /// The required network interface for outbound connections.
+    public var interfaceType: NetworkInterfaceType = .default
+    
     /// The requested host.
     ///
     /// This is the host received in the request. May be a domain, a real IP or a fake IP.

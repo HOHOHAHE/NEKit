@@ -26,6 +26,10 @@ public class NWUDPSocket: NSObject {
     private let timer: DispatchSourceTimer
     private let timeout: Int
     
+    public let host: String
+    public let port: Int
+    
+    
     /// The delegate instance.
     public weak var delegate: NWUDPSocketDelegate?
     
@@ -46,6 +50,8 @@ public class NWUDPSocket: NSObject {
         }
         
         session = udpsession
+        self.host = host
+        self.port = port
         self.timeout = timeout
         
         timer = DispatchSource.makeTimerSource(queue: queue)
@@ -70,10 +76,13 @@ public class NWUDPSocket: NSObject {
                 
                 sSelf.updateActivityTimer()
                 
-                guard error == nil, let dataArray = dataArray else {
-                    DDLogError("Error when reading from remote server. \(error?.localizedDescription ?? "Connection reset")")
-                    return
+                if let error = error {
+                    // Ignore transient POSIX errors for UDP
+                    DDLogError("NWUDPSocket error when reading from remote server: \(error.localizedDescription)")
+                    // Do not disconnect immediately on UDP error since it's connectionless
                 }
+                
+                guard let dataArray = dataArray else { return }
                 
                 for data in dataArray {
                     sSelf.delegate?.didReceive(data: data, from: sSelf)

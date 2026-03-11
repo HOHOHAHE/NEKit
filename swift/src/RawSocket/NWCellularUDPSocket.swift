@@ -28,6 +28,10 @@ public class NWCellularUDPSocket: NSObject {
     private let timeout: Int
     private var cancelled = false
     
+    public let host: String
+    public let port: Int
+    
+    
     /// The delegate instance.
     public weak var delegate: NWCellularUDPSocketDelegate?
     
@@ -43,6 +47,8 @@ public class NWCellularUDPSocket: NSObject {
      - parameter port: The port.
      */
     public init?(host: String, port: Int, timeout: Int = Opt.UDPSocketActiveTimeout) {
+        self.host = host
+        self.port = port
         self.timeout = timeout
         
         timer = DispatchSource.makeTimerSource(queue: queue)
@@ -116,10 +122,10 @@ public class NWCellularUDPSocket: NSObject {
             self.queueCall {
                 self.updateActivityTimer()
                 
-                guard error == nil else {
-                    DDLogError("NWCellularUDPSocket receive error: \(error!)")
-                    self.disconnect()
-                    return
+                if let error = error {
+                    // Ignore transient POSIX errors for UDP
+                    DDLogError("NWCellularUDPSocket receive error: \(error)")
+                    // Do not disconnect immediately on UDP error since it's connectionless
                 }
                 
                 if let data = data, !data.isEmpty {
@@ -152,8 +158,8 @@ public class NWCellularUDPSocket: NSObject {
             guard let self = self else { return }
             self.queueCall {
                 self.writing = false
-                guard error == nil else {
-                    DDLogError("NWCellularUDPSocket write error: \(error!)")
+                if let error = error {
+                    DDLogError("NWCellularUDPSocket write error: \(error)")
                     self.disconnect()
                     return
                 }

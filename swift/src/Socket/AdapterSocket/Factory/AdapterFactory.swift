@@ -12,7 +12,7 @@ open class AdapterFactory {
      - returns: The built adapter.
      */
     open func getAdapterFor(session: ConnectSession) -> AdapterSocket {
-        return getDirectAdapter()
+        return getDirectAdapter(session: session)
     }
 
     /**
@@ -20,9 +20,9 @@ open class AdapterFactory {
 
      - returns: A direct adapter.
      */
-    public func getDirectAdapter() -> AdapterSocket {
+    public func getDirectAdapter(session: ConnectSession? = nil) -> AdapterSocket {
         let adapter = DirectAdapter()
-        adapter.socket = RawSocketFactory.getRawTCPSocket()
+        adapter.socket = RawSocketFactory.getRawTCPSocket(requestedInterface: session?.interfaceType)
         return adapter
     }
 }

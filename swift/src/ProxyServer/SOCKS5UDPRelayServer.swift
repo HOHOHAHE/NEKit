@@ -1,12 +1,13 @@
 import Foundation
 import NetworkExtension
 import CocoaLumberjackSwift
+import CocoaAsyncSocket
 
 /// Handles the UDP ASSOCIATE relay process for SOCKS5.
 ///
 /// When a SOCKS5 client requests UDP ASSOCIATE, this server binds to an ephemeral UDP port
 /// and relays datagrams between the client and the target server.
-public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate {
+public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate, GCDAsyncUdpSocketDelegate, NWCellularUDPSocketDelegate {
     
     // The expected client address and port from the TCP connection
     private let expectedClientAddress: IPAddress
@@ -15,16 +16,17 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate {
     public let outboundInterfaceType: NetworkInterfaceType
     
     // The socket listening for UDP datagrams from the local SOCKS5 client
-    private var clientSocket: NWUDPSocket?
+    private var clientSocket: GCDAsyncUdpSocket?
     
-    // A single unified outbound socket to external targets
-    private var outboundSocket: AnyObject? // NWUDPSocket or NWCellularUDPSocket
-    
+    // A dictionary of outbound sockets mapped by target "host:port"
+    private var outboundSockets: [String: AnyObject] = [:]
     public private(set) var boundAddress: IPAddress?
     public private(set) var boundPort: Port?
     
     private var actualClientAddress: IPAddress?
     private var actualClientPort: Port?
+    
+    private let queue = DispatchQueue(label: "com.zyxel.proxy.socks5udprelay")
     
     public init(expectedClientAddress: IPAddress, expectedClientPort: Port, socks5ProxySocket: SOCKS5ProxySocket, outboundInterfaceType: NetworkInterfaceType = .default) {
         self.expectedClientAddress = expectedClientAddress
@@ -37,66 +39,104 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate {
     /// Starts the UDP relay server by binding to an ephemeral port.
     /// - Returns: true if successful, false otherwise.
     public func start() -> Bool {
-        // The CLIENT listening socket must ALWAYS be a standard socket on 0.0.0.0
-        // because SOCKS5 clients on the same device communicate via loopback.
-        // We use port 0 to let the OS assign an ephemeral port.
-        guard let socket = NWUDPSocket(host: "0.0.0.0", port: 0) else {
-            DDLogError("Failed to create listening UDP socket for SOCKS5 Relay.")
+        // Create the UDP socket for the client
+        let socket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.global(qos: .userInitiated))
+        
+        do {
+            // Bind to 127.0.0.1 on port 0 to get an ephemeral port
+            try socket.bind(toPort: 0, interface: "127.0.0.1")
+            try socket.beginReceiving()
+        } catch {
+            DDLogError("Failed to bind UDP socket for SOCKS5 Relay: \(error)")
             return false
         }
         
-        socket.delegate = self
         self.clientSocket = socket
         
-        // Wait, NWUDPSocket in Swift binds natively based on the endpoint, but it might not 
-        // expose the bound port synchronously via NWEndpoint. 
-        // For local relay, we will just assume port 0 works or try to fetch it if NWConnection supports it.
-        // For now, since NWUDPSocket may not have a synchronously readable boundPort, we will return a default or dummy
-        // Note: Kotlin implementation could suspendBind. In Swift NEKit NWUDPSocket abstracts it.
-        // We will return 0.0.0.0:0 and let the system handle it, or we need to expose local port from NWUDPSocket.
-        // Assuming 0 for now as dummy.
+        // Fetch the local port that was assigned by the OS
+        let boundPortValue = socket.localPort()
         
-        self.boundAddress = IPAddress(fromString: "0.0.0.0")
-        self.boundPort = Port(port: 0)
+        self.boundAddress = IPAddress(fromString: "127.0.0.1")
+        self.boundPort = Port(port: boundPortValue)
         
-        DDLogInfo("SOCKS5 UDP Relay started for client requests.")
+        DDLogInfo("SOCKS5 UDP Relay started for client requests on 127.0.0.1:\(boundPortValue).")
         return true
     }
     
     public func stop() {
         DDLogInfo("Stopping SOCKS5 UDP Relay.")
-        clientSocket?.disconnect()
+        clientSocket?.close()
         clientSocket = nil
         
-        if let outSock = outboundSocket as? NWUDPSocket {
-            outSock.disconnect()
-        } else if let outCellSock = outboundSocket as? NWCellularUDPSocket {
-            outCellSock.disconnect()
+        queue.sync {
+            for (_, outSock) in outboundSockets {
+                if let sock = outSock as? NWUDPSocket {
+                    sock.disconnect()
+                } else if let sock = outSock as? NWCellularUDPSocket {
+                    sock.disconnect()
+                }
+            }
+            outboundSockets.removeAll()
         }
-        outboundSocket = nil
     }
     
-    // MARK: NWUDPSocketDelegate
+    // MARK: NWUDPSocketDelegate (for outbound)
     
     public func didReceive(data: Data, from: NWUDPSocket) {
-        // Find if this is from client or from target
-        if from === clientSocket {
-            handleDatagramFromClient(data: data)
-        } else {
-            // Note: Currently NWUDPSocketDelegate doesn't pass the source IP/Port of the datagram in didReceive(data:from:). 
-            // In NEKit Swift, NWUDPSocket is typically connected to a specific host/port.
-            // If it's a unified socket `0.0.0.0:0`, receiving data without source IP is problematic.
-            // For now, we stub it. Real implementation in Swift might require NWConnection's receiveMessage context parsing.
-            DDLogWarn("Received datagram from outbound socket, but NEKit NWUDPSocketDelegate lacks source address context. Forwarding may be incomplete.")
-            // handleDatagramFromTarget(data: data, targetAddress: ..., targetPort: ...)
+        var expectedPortValue: UInt16 = 0
+        var expectedIpStr = ""
+        
+        queue.sync {
+            expectedPortValue = actualClientPort?.value ?? expectedClientPort.value
+            expectedIpStr = actualClientAddress?.presentation ?? expectedClientAddress.presentation
         }
+
+        let response = buildSOCKS5ResponseHeader(host: from.host, port: from.port, data: data)
+        clientSocket?.send(response, toHost: expectedIpStr, port: expectedPortValue, withTimeout: -1, tag: 0)
     }
     
     public func didCancel(socket: NWUDPSocket) {
-        if socket === clientSocket {
-            DDLogInfo("SOCKS5 UDP Relay client socket cancelled.")
-            stop()
+        // Outbound socket cancelled
+    }
+    
+    // MARK: NWCellularUDPSocketDelegate (for outbound cellular)
+    
+    public func didReceive(data: Data, from: NWCellularUDPSocket) {
+        var expectedPortValue: UInt16 = 0
+        var expectedIpStr = ""
+        
+        queue.sync {
+            expectedPortValue = actualClientPort?.value ?? expectedClientPort.value
+            expectedIpStr = actualClientAddress?.presentation ?? expectedClientAddress.presentation
         }
+
+        let response = buildSOCKS5ResponseHeader(host: from.host, port: from.port, data: data)
+        clientSocket?.send(response, toHost: expectedIpStr, port: expectedPortValue, withTimeout: -1, tag: 0)
+    }
+    
+    public func didCancel(socket: NWCellularUDPSocket) {
+        // Outbound socket cancelled
+    }
+    
+    // MARK: GCDAsyncUdpSocketDelegate (for incoming client)
+    
+    public func udpSocket(_ sock: GCDAsyncUdpSocket, didReceive data: Data, fromAddress address: Data, withFilterContext filterContext: Any?) {
+        // Record the actual client address and port for the reply
+        var host: NSString? = nil
+        var port: UInt16 = 0
+        GCDAsyncUdpSocket.getHost(&host, port: &port, fromAddress: address)
+        
+        queue.sync {
+            self.actualClientAddress = IPAddress(fromString: (host as String?) ?? "")
+            self.actualClientPort = Port(port: port)
+        }
+        
+        handleDatagramFromClient(data: data)
+    }
+    
+    public func udpSocketDidClose(_ sock: GCDAsyncUdpSocket, withError error: Error?) {
+        DDLogInfo("SOCKS5 UDP Relay client socket closed.")
+        stop()
     }
     
     private func handleDatagramFromClient(data: Data) {
@@ -148,31 +188,83 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate {
             let payloadData = data.subdata(in: offset..<data.count)
             DDLogInfo("Relaying UDP: Client -> Target (\(destHostStr):\(destPortInt)) | \(payloadData.count) bytes payload")
             
-            getOrCreateOutboundSocket(host: destHostStr, port: destPortInt)?.write(data: payloadData)
+            let outSocket = getOrCreateOutboundSocket(host: destHostStr, port: destPortInt)
+            if let sock = outSocket as? NWUDPSocket {
+                sock.write(data: payloadData)
+            } else if let sock = outSocket as? NWCellularUDPSocket {
+                sock.write(data: payloadData)
+            }
         }
     }
     
-    private func getOrCreateOutboundSocket(host: String, port: Int) -> NWUDPSocket? {
-        // Swift NEKit NWUDPSocket is currently strictly connected to a single host/port instance (unlike Kotlin's unified DatagramSocket).
-        // Therefore, we must create a socket per target for full functionality, or modify NWUDPSocket.
-        // For exact Kotlin mirroring, we will just create one if none exists, assuming standard behavior.
-        if let existing = outboundSocket as? NWUDPSocket {
+    private func getOrCreateOutboundSocket(host: String, port: Int) -> AnyObject? {
+        let key = "\(host):\(port)"
+        
+        var existingResult: AnyObject?
+        queue.sync {
+            existingResult = outboundSockets[key]
+        }
+        
+        if let existing = existingResult {
             return existing
-        } else if let existingCellular = outboundSocket as? NWCellularUDPSocket {
-            // Can't return NWUDPSocket type if it's Cellular.
-            // Using weak ANY type in Swift is hard for protocol matching without one.
-            // For now let's just create a new NWUDPSocket as the base structure.
+        }
+        
+        guard let socketObj = RawSocketFactory.getRawUDPSocket(host: host, port: port, requestedInterface: outboundInterfaceType) else {
             return nil
         }
         
-        let socketObj = RawSocketFactory.getRawUDPSocket(host: host, port: port, requestedInterface: outboundInterfaceType)
-        outboundSocket = socketObj
+        queue.sync {
+            // Check again after lock to avoid duplicate sockets for the same target
+            if let existing = outboundSockets[key] {
+                existingResult = existing
+            } else {
+                outboundSockets[key] = socketObj
+                existingResult = socketObj
+            }
+        }
         
-        // Also need to set delegate if it conforms
+        // If we picked up an existing one in the second check, return it.
+        // Otherwise use the new one and set the delegate.
+        if existingResult !== socketObj {
+            return existingResult
+        }
+        
         if let socket = socketObj as? NWUDPSocket {
             socket.delegate = self
-            return socket
+        } else if let socket = socketObj as? NWCellularUDPSocket {
+            socket.delegate = self
         }
-        return nil
+        return socketObj
+    }
+    
+    private func buildSOCKS5ResponseHeader(host: String, port: Int, data: Data) -> Data {
+        var response = Data([0x00, 0x00, 0x00]) // RSV + FRAG
+        
+        if let ip = IPAddress(fromString: host) {
+            if ip.family == .IPv4 {
+                response.append(0x01) // IPv4
+                let ipBytes = host.components(separatedBy: ".").compactMap { UInt8($0) }
+                if ipBytes.count == 4 {
+                    response.append(contentsOf: ipBytes)
+                } else {
+                    response.append(contentsOf: [0, 0, 0, 0])
+                }
+            } else {
+                response.append(0x04) // IPv6
+                // Simplified, fallback if needed
+                response.append(contentsOf: [UInt8](repeating: 0, count: 16))
+            }
+        } else {
+            response.append(0x03) // Domain
+            let hostData = host.data(using: .utf8) ?? Data()
+            response.append(UInt8(hostData.count))
+            response.append(hostData)
+        }
+        
+        response.append(UInt8((port >> 8) & 0xFF))
+        response.append(UInt8(port & 0xFF))
+        response.append(data)
+        
+        return response
     }
 }

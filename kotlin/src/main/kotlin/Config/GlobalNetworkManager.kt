@@ -12,9 +12,9 @@ import java.util.concurrent.atomic.AtomicReference
  */
 object GlobalNetworkManager {
     // Thread-safe reference to the active network interface preference.
-    private val activeInterface = AtomicReference(NetworkInterfaceType.DEFAULT)
+    private val activeInterfaceRef = AtomicReference(NetworkInterfaceType.DEFAULT)
 
-    var currentActiveInterface: NetworkInterfaceType
-        get() = activeInterface.get()
-        set(value) { activeInterface.set(value) }
+    var activeInterface: NetworkInterfaceType
+        get() = activeInterfaceRef.get()
+        set(value) { activeInterfaceRef.set(value) }
 }

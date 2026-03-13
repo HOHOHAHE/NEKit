@@ -3,7 +3,11 @@ import NetworkExtension
 
 /// The SOCKS5 proxy server.
 public final class GCDSOCKS5ProxyServer: GCDProxyServer {
-    public var outboundInterfaceType: NetworkInterfaceType = .default
+    private var _outboundInterfaceType: NetworkInterfaceType?
+    public var outboundInterfaceType: NetworkInterfaceType {
+        get { return _outboundInterfaceType ?? GlobalNetworkManager.shared.activeInterface }
+        set { _outboundInterfaceType = newValue }
+    }
     
     /// The tunnel provider used to create NWUDPSession / NWTCPConnection that bypass the VPN TUN.
     /// Set this to `self` from your `NEPacketTunnelProvider` subclass.

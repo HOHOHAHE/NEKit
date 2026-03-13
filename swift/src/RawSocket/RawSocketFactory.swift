@@ -27,7 +27,7 @@ open class RawSocketFactory {
      - returns: The created socket instance.
      */
     public static func getRawTCPSocket(_ type: SocketBaseType? = nil, requestedInterface: NetworkInterfaceType? = nil) -> RawTCPSocketProtocol {
-        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.currentActiveInterface
+        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.activeInterface
 
         switch type {
         case .some(.nw):
@@ -58,7 +58,7 @@ open class RawSocketFactory {
      - returns: The created socket instance or nil if initialization failed.
      */
     public static func getRawUDPSocket(host: String, port: Int, timeout: Int = Opt.UDPSocketActiveTimeout, requestedInterface: NetworkInterfaceType? = nil) -> AnyObject? {
-        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.currentActiveInterface
+        let activeInterface = requestedInterface ?? GlobalNetworkManager.shared.activeInterface
         
         if activeInterface == .cellular {
             return NWCellularUDPSocket(host: host, port: port, timeout: timeout)

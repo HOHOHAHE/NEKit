@@ -3,7 +3,7 @@ import Foundation
 public class GlobalNetworkManager {
     public static let shared = GlobalNetworkManager()
     
-    public var currentActiveInterface: NetworkInterfaceType = .default
+    public var activeInterface: NetworkInterfaceType = .default
     
     private init() {}
 }

@@ -16,7 +16,7 @@ object RawSocketFactory {
         val requestedInterface = if (session != null && session.interfaceType != NetworkInterfaceType.DEFAULT) {
             session.interfaceType
         } else {
-            GlobalNetworkManager.currentActiveInterface
+            GlobalNetworkManager.activeInterface
         }
 
         // On Android: use RawCellularTCPSocket (supports network.bindSocket for cellular)
@@ -32,7 +32,7 @@ object RawSocketFactory {
         val activeInterface = if (requestedInterface != null && requestedInterface != NetworkInterfaceType.DEFAULT) {
             requestedInterface
         } else {
-            GlobalNetworkManager.currentActiveInterface
+            GlobalNetworkManager.activeInterface
         }
 
         return if (PlatformDetector.isAndroid && activeInterface == NetworkInterfaceType.CELLULAR) {

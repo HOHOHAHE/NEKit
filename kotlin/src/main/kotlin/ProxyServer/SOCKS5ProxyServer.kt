@@ -14,6 +14,7 @@ import nekit.Utils.Port
 import nekit.Socket.ProxySocket.SOCKS5ProxySocket
 import nekit.RawSocket.protocol.RawTCPSocketProtocol
 import nekit.Config.NetworkInterfaceType
+import nekit.Config.GlobalNetworkManager
 
 
 /**
@@ -36,7 +37,10 @@ class SOCKS5ProxyServer : TCPProxyServer {
         port: Port
     ) : super(address, port)
 
-    var outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
+    private var _outboundInterfaceType: NetworkInterfaceType? = null
+    var outboundInterfaceType: NetworkInterfaceType
+        get() = _outboundInterfaceType ?: GlobalNetworkManager.activeInterface
+        set(value) { _outboundInterfaceType = value }
 
     private val serverScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

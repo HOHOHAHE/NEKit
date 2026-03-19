@@ -28,11 +28,14 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate, GCDAsyncUdpSoc
     
     private let queue = DispatchQueue(label: "com.zyxel.proxy.socks5udprelay")
     
-    public init(expectedClientAddress: IPAddress, expectedClientPort: Port, socks5ProxySocket: SOCKS5ProxySocket, outboundInterfaceType: NetworkInterfaceType = .default) {
+    private let bindAddress: IPAddress?
+    
+    public init(expectedClientAddress: IPAddress, expectedClientPort: Port, socks5ProxySocket: SOCKS5ProxySocket, outboundInterfaceType: NetworkInterfaceType = .default, bindAddress: IPAddress? = nil) {
         self.expectedClientAddress = expectedClientAddress
         self.expectedClientPort = expectedClientPort
         self.socks5ProxySocket = socks5ProxySocket
         self.outboundInterfaceType = outboundInterfaceType
+        self.bindAddress = bindAddress
         super.init()
     }
     
@@ -43,8 +46,9 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate, GCDAsyncUdpSoc
         let socket = GCDAsyncUdpSocket(delegate: self, delegateQueue: DispatchQueue.global(qos: .userInitiated))
         
         do {
-            // Bind to 127.0.0.1 on port 0 to get an ephemeral port
-            try socket.bind(toPort: 0, interface: "127.0.0.1")
+            // Bind to the same address as the SOCKS5 TCP server so clients can reach the relay.
+            let bindInterface = bindAddress?.presentation ?? "0.0.0.0"
+            try socket.bind(toPort: 0, interface: bindInterface)
             try socket.beginReceiving()
         } catch {
             DDLogError("Failed to bind UDP socket for SOCKS5 Relay: \(error)")
@@ -56,10 +60,10 @@ public class SOCKS5UDPRelayServer: NSObject, NWUDPSocketDelegate, GCDAsyncUdpSoc
         // Fetch the local port that was assigned by the OS
         let boundPortValue = socket.localPort()
         
-        self.boundAddress = IPAddress(fromString: "127.0.0.1")
+        self.boundAddress = bindAddress ?? IPAddress(fromString: "0.0.0.0")
         self.boundPort = Port(port: boundPortValue)
         
-        DDLogInfo("SOCKS5 UDP Relay started for client requests on 127.0.0.1:\(boundPortValue).")
+        DDLogInfo("SOCKS5 UDP Relay started for client requests on \(self.boundAddress?.presentation ?? "?"):\(boundPortValue).")
         return true
     }
     

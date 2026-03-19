@@ -28,7 +28,10 @@ object RawSocketFactory {
         }
     }
 
-    fun getRawUDPSocket(host: String, port: Int, requestedInterface: NetworkInterfaceType? = null): RawUDPSocketProtocol {
+    fun getRawUDPSocket(host: String, port: Int, requestedInterface: NetworkInterfaceType? = null, forceDefault: Boolean = false): RawUDPSocketProtocol {
+        if (forceDefault) {
+            return RawUDPSocket(host, port)
+        }
         val activeInterface = if (requestedInterface != null && requestedInterface != NetworkInterfaceType.DEFAULT) {
             requestedInterface
         } else {

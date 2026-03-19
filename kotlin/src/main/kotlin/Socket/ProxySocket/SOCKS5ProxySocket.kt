@@ -25,6 +25,9 @@ class SOCKS5ProxySocket(
 
     var outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
 
+    /// The address the SOCKS5 server is listening on. Used as BND.ADDR in UDP ASSOCIATE replies.
+    var serverAddress: IPAddress? = null
+
     private val logger = LoggerFactory.getLogger(SOCKS5ProxySocket::class.java)
     private var state = State.INITIAL
     private val socketScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -258,12 +261,12 @@ class SOCKS5ProxySocket(
     
     private fun startUdpRelay(clientIP: IPAddress, clientPort: Port) {
         socketScope.launch {
-            val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket, outboundInterfaceType)
+            val relayServer = SOCKS5UDPRelayServer(clientIP, clientPort, this@SOCKS5ProxySocket, outboundInterfaceType, bindAddress = serverAddress)
             val success = relayServer.start()
             
             if (success) {
                 udpRelayServer = relayServer
-                val boundIPStr = relayServer.boundAddress?.presentation ?: "0.0.0.0"
+                val boundIPStr = serverAddress?.presentation ?: "0.0.0.0"
                 val boundPortInt = relayServer.boundPort?.hostOrderValue ?: 0
                 
                 // Reply to the client with the IP and Port they should send UDP datagrams to

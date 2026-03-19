@@ -54,6 +54,7 @@ class SOCKS5ProxyServer : TCPProxyServer {
         socks5Logger.info("New socket accepted, wrapping as SOCKS5ProxySocket: {}", socket)
         val socks5ProxySocket = SOCKS5ProxySocket(socket)
         socks5ProxySocket.outboundInterfaceType = this.outboundInterfaceType
+        socks5ProxySocket.serverAddress = this.address
         
         // Launch the call to super.didAcceptNewSocket on the server-managed scope
         // as didAcceptNewSocket in ProxyServer is a suspend function using a Mutex.

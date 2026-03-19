@@ -38,6 +38,7 @@ public final class GCDSOCKS5ProxyServer: GCDProxyServer {
     override func handleNewGCDSocket(_ socket: GCDTCPSocket) {
         let proxySocket = SOCKS5ProxySocket(socket: socket)
         proxySocket.outboundInterfaceType = self.outboundInterfaceType
+        proxySocket.serverAddress = self.address
         didAcceptNewSocket(proxySocket)
     }
 }

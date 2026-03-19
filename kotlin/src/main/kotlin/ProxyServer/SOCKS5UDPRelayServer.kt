@@ -24,7 +24,8 @@ class SOCKS5UDPRelayServer(
     private val expectedClientAddress: IPAddress,
     private val expectedClientPort: Port,
     private val socks5ProxySocket: SOCKS5ProxySocket,
-    val outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT
+    val outboundInterfaceType: NetworkInterfaceType = NetworkInterfaceType.DEFAULT,
+    private val bindAddress: IPAddress? = null
 ) {
     private val logger = LoggerFactory.getLogger(SOCKS5UDPRelayServer::class.java)
     
@@ -54,7 +55,9 @@ class SOCKS5UDPRelayServer(
             // The CLIENT listening socket must ALWAYS be a standard socket (not cellular bound)
             // because SOCKS5 clients on the same device communicate via loopback (127.0.0.1).
             // Cellular interfaces cannot route 127.0.0.1.
-            val socket = RawSocketFactory.getRawUDPSocket("0.0.0.0", 0, NetworkInterfaceType.DEFAULT)
+            // Bind to the same address as the SOCKS5 TCP server so clients can reach the relay.
+            val bindAddr = bindAddress?.presentation ?: "0.0.0.0"
+            val socket = RawSocketFactory.getRawUDPSocket(bindAddr, 0, NetworkInterfaceType.DEFAULT, forceDefault = true)
             
             // Set up our callback listener BEFORE binding so we don't miss packets
             socket.onDatagramReceived = { data, sourceAddress, sourcePort ->
@@ -62,14 +65,14 @@ class SOCKS5UDPRelayServer(
             }
             
             // Wait for it to bind
-            socket.suspendBind(null, 0)
+            socket.suspendBind(bindAddress?.presentation, 0)
             
             // Retrieve the bound port info
             val localAddr = socket.localAddress
             val localPort = socket.sourcePort
             
             if (localAddr != null && localPort != null) {
-                boundAddress = localAddr
+                boundAddress = bindAddress ?: localAddr
                 boundPort = localPort
                 clientSocket = socket
                 logger.info("SOCKS5 UDP Relay started on {}:{} for client requests", boundAddress?.presentation, boundPort?.hostOrderValue)

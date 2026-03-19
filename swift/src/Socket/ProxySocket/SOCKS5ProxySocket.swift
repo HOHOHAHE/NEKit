@@ -69,6 +69,9 @@ public class SOCKS5ProxySocket: ProxySocket {
 
     public var outboundInterfaceType: NetworkInterfaceType = .default
     
+    /// The address the SOCKS5 server is listening on. Used as BND.ADDR in UDP ASSOCIATE replies.
+    public var serverAddress: IPAddress?
+    
     // Holds the relay server if this is a UDP ASSOCIATE request
     private var udpRelayServer: SOCKS5UDPRelayServer?
     
@@ -235,7 +238,8 @@ public class SOCKS5ProxySocket: ProxySocket {
             expectedClientAddress: parsedAddr,
             expectedClientPort: Port(port: UInt16(destPort)),
             socks5ProxySocket: self,
-            outboundInterfaceType: outboundInterfaceType
+            outboundInterfaceType: outboundInterfaceType,
+            bindAddress: serverAddress
         )
         
         if relay.start() {
@@ -244,7 +248,10 @@ public class SOCKS5ProxySocket: ProxySocket {
             // Reply with success and bound address/port
             var responseBytes = [UInt8](repeating: 0, count: 10)
             responseBytes[0...3] = [0x05, 0x00, 0x00, 0x01]
-            let boundIpBytes = relay.boundAddress?.presentation.components(separatedBy: ".").compactMap { UInt8($0) } ?? [0, 0, 0, 0]
+            // Per RFC 1928, BND.ADDR should be the address the client can reach.
+            // Use the SOCKS5 server's listening address.
+            let replyIp = serverAddress?.presentation ?? "0.0.0.0"
+            let boundIpBytes = replyIp.components(separatedBy: ".").compactMap { UInt8($0) }
             for (i, byte) in boundIpBytes.enumerated() {
                 if i < 4 { responseBytes[4 + i] = byte }
             }

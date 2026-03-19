@@ -2,8 +2,8 @@ import socket
 import struct
 
 # --- 設定區 ---
-PROXY_ADDR = "192.168.212.67"
-PROXY_PORT = 57600
+PROXY_ADDR = "10.0.0.98"
+PROXY_PORT = 1080
 TARGET_ADDR = "8.8.8.8"  # 測試目標，例如 Google DNS
 TARGET_PORT = 53
 PAYLOAD = b"\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x05baidu\x03com\x00\x00\x01\x00\x01" # DNS Query 範例
